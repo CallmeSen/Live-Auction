@@ -18,7 +18,7 @@ public enum ErrorType {
     // Auth errors
     EMAIL_ALREADY_EXISTS("Email already exists", 4100, HttpStatus.BAD_REQUEST),
     EMAIL_NOT_FOUND("Email not found", 4101, HttpStatus.NOT_FOUND),
-    INVALID_PASSWORD("Invalid password", 4102, HttpStatus.BAD_REQUEST),
+    INVALID_PASSWORD_OR_EMAIL("Invalid password or email", 4102, HttpStatus.BAD_REQUEST),
     USER_NOT_FOUND("User not found", 4103, HttpStatus.NOT_FOUND),
     USER_INACTIVE("User account is inactive", 4104, HttpStatus.FORBIDDEN),
 
