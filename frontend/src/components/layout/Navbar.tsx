@@ -56,6 +56,13 @@ export default function Navbar() {
                 <p className="mt-0.5 text-[10px] text-[#C9A227]">{roleLabel[user.role]}</p>
               </div>
               <Link to="/profile" className="flex h-9 w-9 items-center justify-center rounded-full border border-[#3a4d40] bg-[#16241c] text-xs font-semibold text-[#C9A227] transition hover:border-[#C9A227]" aria-label="Hồ sơ">{initials}</Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="hidden rounded-md border border-[#8f4538] px-3 py-2 text-xs font-medium text-[#ff9a86] transition hover:border-[#c95f4b] hover:bg-[#8f4538]/15 sm:inline-flex"
+              >
+                Đăng xuất
+              </button>
             </>
           ) : (
             <Link to="/login" className="rounded-md border border-[#C9A227] px-4 py-2 text-xs font-semibold text-[#C9A227] hover:bg-[#C9A227] hover:text-[#0F1B14]">Đăng nhập</Link>

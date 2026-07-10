@@ -3,9 +3,16 @@ import Input from '../../../components/common/Input';
 import Button from '../../../components/common/Button';
 import useAuth from '../../../hooks/useAuth';
 import { roleLabel } from '../../../store/authStore';
+import { useNavigate } from 'react-router-dom';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
   const [saved, setSaved] = useState(false);
   const submit = (event: React.FormEvent) => { event.preventDefault(); setSaved(true); setTimeout(() => setSaved(false), 2500); };
 
@@ -26,6 +33,14 @@ export default function ProfilePage() {
             <div className="bg-[#16241c] p-4"><dt className="font-display text-2xl">{user?.role === 'ADMIN' ? 18 : user?.role === 'SELLER' ? 4 : 12}</dt><dd className="mt-1 text-[10px] text-[#607468]">{user?.role === 'ADMIN' ? 'Tác vụ quản trị' : user?.role === 'SELLER' ? 'Phiên đã tạo' : 'Phiên tham gia'}</dd></div>
             <div className="bg-[#16241c] p-4"><dt className="font-display text-2xl">{user?.role === 'ADMIN' ? '100%' : '4.9'}</dt><dd className="mt-1 text-[10px] text-[#607468]">{user?.role === 'ADMIN' ? 'Quyền hệ thống' : 'Đánh giá'}</dd></div>
           </dl>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-5 inline-flex w-full items-center justify-center rounded-md border border-[#8f4538] px-5 py-2.5 text-sm font-semibold text-[#ff9a86] transition hover:border-[#c95f4b] hover:bg-[#8f4538]/15"
+          >
+            Đăng xuất
+          </button>
         </aside>
 
         <form onSubmit={submit} className="rounded-2xl border border-[#2a3f31] bg-[#14231a] p-6 sm:p-8">
