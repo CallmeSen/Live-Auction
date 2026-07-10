@@ -40,3 +40,6 @@ Các endpoint theo use case đã được khai báo trong `src/api`. Khi backend
 npm run lint
 npm run build
 ```
+url web frontend đã đẩy lên AWS: copy cai link trong ngoặc ->(d2mnpdp12er73n.cloudfront.net)
+sửa code → git push develop → GitHub tự cập nhật website
+sau k cần chạy code trên vs code nữa, chỉ cần sửa code nếu cần, push lên git nó sẽ tự thông cập nhật web và chạy bằng link trên
