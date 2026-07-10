@@ -5,7 +5,7 @@ export default function Logo({ className = '' }: { className?: string }) {
         A
       </span>
       <span className="font-display text-xl tracking-tight text-[#F3EFE6]">
-        Auction<span className="text-[#C9A227]">App</span>
+        Live<span className="text-[#C9A227]">Auction</span>
       </span>
     </div>
   );

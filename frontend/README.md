@@ -1,16 +1,42 @@
-# React + Vite
+# Live Auction Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend React + TypeScript + Vite + Tailwind CSS. Bản hiện tại chạy bằng mock data và có phân quyền demo cho bidder, seller và admin.
 
-Currently, two official plugins are available:
+## Chạy local
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+## Tài khoản demo
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Vai trò | Email | Mật khẩu |
+|---|---|---|
+| Bidder | `user1@gmail.com` | `123456` |
+| Seller | `sell1@gmail.com` | `123456` |
+| Admin | `admin@gmail.com` | `123456` |
 
-## Expanding the ESLint configuration
+## Chức năng theo vai trò
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Guest: đăng ký, đăng nhập, xem danh sách và chi tiết phiên.
+- Bidder: đặt giá, xem My Bids, ví, nạp/rút tiền và hồ sơ.
+- Seller: tạo phiên, xem My Auctions, sửa và hủy phiên UPCOMING.
+- Admin: dashboard, quản lý tài khoản, kiểm duyệt phiên và danh mục.
+
+## Kết nối backend
+
+Sao chép `.env.example` thành `.env.local` và cấu hình:
+
+```env
+VITE_API_BASE_URL=http://localhost:8080/api/v1
+```
+
+Các endpoint theo use case đã được khai báo trong `src/api`. Khi backend sẵn sàng, thay nguồn dữ liệu trong `src/mocks` bằng các hàm API tương ứng.
+
+## Kiểm tra
+
+```bash
+npm run lint
+npm run build
+```

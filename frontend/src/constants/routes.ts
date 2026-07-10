@@ -1,0 +1,15 @@
+export const ROUTES = {
+  HOME: '/auctions',
+  AUCTION_DETAIL: '/auctions/:id',
+  CREATE_AUCTION: '/auctions/create',
+  MY_AUCTIONS: '/my-auctions',
+  MY_BIDS: '/my-bids',
+  WALLET: '/wallet',
+  DEPOSIT: '/wallet/deposit',
+  WITHDRAW: '/wallet/withdraw',
+  PROFILE: '/profile',
+  ADMIN: '/admin',
+  ADMIN_USERS: '/admin/users',
+  ADMIN_AUCTIONS: '/admin/auctions',
+  ADMIN_CATEGORIES: '/admin/categories',
+} as const;

@@ -1,59 +1,66 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Input from '../../../components/common/Input';
 import Button from '../../../components/common/Button';
-
-// Tài khoản demo - dùng tạm khi chưa nối backend thật
-const DEMO_EMAIL = 'demo@auction.com';
-const DEMO_PASSWORD = '123456';
+import { demoAccounts, getRoleHome, loginDemo } from '../../../store/authStore';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const chooseAccount = (email: string, password: string) => {
+    setForm({ email, password });
+    setError('');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
     setError('');
     setLoading(true);
 
-    // TODO: thay đoạn này bằng authApi.login(form) khi nối backend thật
-    setTimeout(() => {
-      if (form.email === DEMO_EMAIL && form.password === DEMO_PASSWORD) {
-        localStorage.setItem('accessToken', 'demo-token');
-        navigate('/home');
-      } else {
-        setError('Email hoặc mật khẩu không đúng');
-      }
+    window.setTimeout(() => {
+      const user = loginDemo(form.email, form.password);
       setLoading(false);
-    }, 500);
+      if (!user) {
+        setError('Email hoặc mật khẩu không đúng. Vui lòng chọn một tài khoản demo bên dưới.');
+        return;
+      }
+      const requestedPath = (location.state as { from?: string } | null)?.from;
+      navigate(requestedPath || getRoleHome(user.role), { replace: true });
+    }, 350);
   };
 
   return (
     <div>
-      <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[#C9A227]">
-        Đăng nhập
-      </span>
-      <h2 className="font-display text-3xl mt-2 text-[#F3EFE6]">Chào mừng trở lại</h2>
-      <p className="mt-2 text-sm text-[#7d9186]">
-        Đăng nhập để tiếp tục theo dõi các phiên đấu giá của bạn.
-      </p>
+      <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[#C9A227]">Đăng nhập</span>
+      <h2 className="mt-2 font-display text-3xl text-[#F3EFE6]">Chào mừng trở lại</h2>
+      <p className="mt-2 text-sm leading-6 text-[#7d9186]">Chọn nhanh một vai trò demo hoặc nhập tài khoản của bạn.</p>
 
-      <div className="mt-5 rounded-md border border-[#2a3f31] bg-[#16241c] px-4 py-3">
-        <p className="text-xs text-[#7d9186]">
-          Tài khoản demo (chưa nối backend):
-        </p>
-        <p className="font-mono-tag text-xs text-[#C9A227] mt-1">
-          {DEMO_EMAIL} / {DEMO_PASSWORD}
-        </p>
+      <div className="mt-5 grid gap-2.5">
+        {demoAccounts.map((account) => (
+          <button
+            type="button"
+            key={account.email}
+            onClick={() => chooseAccount(account.email, account.password)}
+            className={`rounded-lg border p-3 text-left transition ${
+              form.email === account.email
+                ? 'border-[#C9A227] bg-[#C9A227]/10'
+                : 'border-[#2a3f31] bg-[#16241c] hover:border-[#566b5c]'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold text-[#F3EFE6]">{account.label}</span>
+              <span className="font-mono-tag text-[10px] text-[#C9A227]">{account.email}</span>
+            </div>
+            <p className="mt-1 text-[11px] text-[#607468]">{account.description}</p>
+          </button>
+        ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
         <Input
           label="Email"
           type="email"
@@ -61,39 +68,30 @@ export default function LoginPage() {
           placeholder="ban@email.com"
           required
           value={form.email}
-          onChange={handleChange}
+          onChange={(event) => setForm((previous) => ({ ...previous, email: event.target.value }))}
         />
         <Input
           label="Mật khẩu"
           type="password"
           name="password"
-          placeholder="••••••••"
+          placeholder="••••••"
           required
           value={form.password}
-          onChange={handleChange}
+          onChange={(event) => setForm((previous) => ({ ...previous, password: event.target.value }))}
           error={error}
         />
 
         <div className="flex items-center justify-between text-sm">
-          <label className="flex items-center gap-2 text-[#7d9186]">
-            <input type="checkbox" className="accent-[#C9A227]" />
-            Ghi nhớ đăng nhập
-          </label>
-          <a href="#" className="text-[#C9A227] hover:text-[#e0c15a]">
-            Quên mật khẩu?
-          </a>
+          <label className="flex items-center gap-2 text-[#7d9186]"><input type="checkbox" className="accent-[#C9A227]" /> Ghi nhớ đăng nhập</label>
+          <button type="button" className="text-[#C9A227] hover:text-[#e0c15a]">Quên mật khẩu?</button>
         </div>
 
-        <Button type="submit" disabled={loading} className="w-full mt-2">
-          {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-        </Button>
+        <Button type="submit" disabled={loading} className="mt-1 w-full">{loading ? 'Đang đăng nhập...' : 'Đăng nhập'}</Button>
       </form>
 
-      <p className="mt-8 text-sm text-center text-[#7d9186]">
+      <p className="mt-7 text-center text-sm text-[#7d9186]">
         Chưa có tài khoản?{' '}
-        <Link to="/register" className="text-[#C9A227] hover:text-[#e0c15a] font-medium">
-          Đăng ký ngay
-        </Link>
+        <Link to="/register" className="font-medium text-[#C9A227] hover:text-[#e0c15a]">Đăng ký ngay</Link>
       </p>
     </div>
   );
