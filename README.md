@@ -7,14 +7,14 @@ sau đó trên terminal, cd backend/backend để tiến hành thao tác kết n
 
 **2. Chạy MySQL bằng Docker**
 👉 Nếu chưa có container, trên terminal, chạy:
-docker run -d \
-  --name auction-mysql \
-  -e MYSQL_ROOT_PASSWORD=Asdf1234! \
-  -e MYSQL_DATABASE=auction_dbb \
-  -e MYSQL_USER=user_name \ (muốn đặt gì cũng được nhưng lúc câu hình file .env phải đúng tên)
-  -e MYSQL_PASSWORD= your_password \
-  -p 3306:3306 \
-  mysql:8.0
+  docker run -d `
+--name auction-mysql `
+-e MYSQL_ROOT_PASSWORD=Asdf1234! `
+-e MYSQL_DATABASE=auction_dbb `
+-e MYSQL_USER=username ` (đặt tên tuy ý nhưng xuống dưới phải ghi đúng tên)
+-e MYSQL_PASSWORD=123456 ` (tương tự)
+-p 3306:3306 `
+mysql:8.0
 
 - Kiểm tra container bằng lệnh: docker ps
 - -Phải thấy: auction-mysql
