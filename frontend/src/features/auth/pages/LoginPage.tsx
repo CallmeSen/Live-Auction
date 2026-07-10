@@ -7,6 +7,7 @@ import { demoAccounts, getRoleHome, loginDemo } from '../../../store/authStore';
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,8 +29,7 @@ export default function LoginPage() {
         setError('Email hoặc mật khẩu không đúng. Vui lòng chọn một tài khoản demo bên dưới.');
         return;
       }
-      const requestedPath = (location.state as { from?: string } | null)?.from;
-      navigate(requestedPath || getRoleHome(user.role), { replace: true });
+      navigate(from || getRoleHome(user.role), { replace: true });
     }, 350);
   };
 
@@ -45,11 +45,10 @@ export default function LoginPage() {
             type="button"
             key={account.email}
             onClick={() => chooseAccount(account.email, account.password)}
-            className={`rounded-lg border p-3 text-left transition ${
-              form.email === account.email
-                ? 'border-[#C9A227] bg-[#C9A227]/10'
-                : 'border-[#2a3f31] bg-[#16241c] hover:border-[#566b5c]'
-            }`}
+            className={`rounded-lg border p-3 text-left transition ${form.email === account.email
+              ? 'border-[#C9A227] bg-[#C9A227]/10'
+              : 'border-[#2a3f31] bg-[#16241c] hover:border-[#566b5c]'
+              }`}
           >
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-semibold text-[#F3EFE6]">{account.label}</span>
@@ -91,7 +90,7 @@ export default function LoginPage() {
 
       <p className="mt-7 text-center text-sm text-[#7d9186]">
         Chưa có tài khoản?{' '}
-        <Link to="/register" className="font-medium text-[#C9A227] hover:text-[#e0c15a]">Đăng ký ngay</Link>
+        <Link to="/register" state={{ from }} className="font-medium text-[#C9A227] hover:text-[#e0c15a]" >Đăng ký ngay</Link>
       </p>
     </div>
   );

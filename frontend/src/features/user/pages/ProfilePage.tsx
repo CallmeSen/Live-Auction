@@ -11,7 +11,7 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login', { replace: true });
+    navigate('/auctions', { replace: true });
   };
   const [saved, setSaved] = useState(false);
   const submit = (event: React.FormEvent) => { event.preventDefault(); setSaved(true); setTimeout(() => setSaved(false), 2500); };

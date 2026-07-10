@@ -7,6 +7,7 @@ import { formatCurrency } from '../../../utils/formatCurrency';
 import { formatDateTime, getTimeLeft } from '../../../utils/formatDate';
 import { auctionStatusLabel, auctionStatusTone } from '../../../constants/auctionStatus';
 import useAuth from '../../../hooks/useAuth';
+import AuthRequiredModal from '../../../components/common/AuthRequiredModal';
 
 export default function AuctionDetailPage() {
   const { id } = useParams();
@@ -14,6 +15,7 @@ export default function AuctionDetailPage() {
   const auction = mockAuctions.find((item) => item.id === Number(id));
   const [currentPrice, setCurrentPrice] = useState(auction?.currentPrice ?? 0);
   const [moderationMessage, setModerationMessage] = useState('');
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   if (!auction) return <div className="mx-auto max-w-7xl px-6 py-24 text-center"><h1 className="font-display text-3xl">Không tìm thấy phiên đấu giá</h1><Link to="/auctions" className="mt-4 inline-block text-[#C9A227]">Quay về danh sách</Link></div>;
 
@@ -46,7 +48,33 @@ export default function AuctionDetailPage() {
           </dl>
 
           <div className="mt-7">
-            {!user && <div className="rounded-2xl border border-[#3a4d40] bg-[#16241c] p-6 text-center"><p className="text-sm text-[#8ca093]">Đăng nhập bằng tài khoản bidder để tham gia trả giá.</p><Link to="/login" className="mt-4 inline-block rounded-md bg-[#C9A227] px-5 py-2.5 text-sm font-semibold text-[#0F1B14]">Đăng nhập để đặt giá</Link></div>}
+            {!user && auction.status === 'ACTIVE' && (
+              <div className="rounded-2xl border border-[#3a4d40] bg-[#16241c] p-6 text-center">
+                <p className="text-sm leading-6 text-[#8ca093]">
+                  Bạn có thể xem thông tin phiên đấu giá mà không cần tài khoản.
+                  Hãy đăng nhập hoặc đăng ký khi muốn tham gia trả giá.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setAuthModalOpen(true)}
+                  className="mt-4 rounded-md bg-[#C9A227] px-5 py-2.5 text-sm font-semibold text-[#0F1B14] hover:bg-[#e0c15a]"
+                >
+                  Tham gia đấu giá
+                </button>
+              </div>
+            )}
+
+            {!user && auction.status !== 'ACTIVE' && statusMessage && (
+              <div className="rounded-xl border border-[#3a4d40] bg-[#16241c] p-5 text-sm text-[#e0c15a]">
+                {statusMessage}
+              </div>
+            )}
+
+            <AuthRequiredModal
+              open={authModalOpen}
+              onClose={() => setAuthModalOpen(false)}
+            />
             {canBid && <BidForm currentPrice={currentPrice} minimumBidIncrement={auction.minimumBidIncrement} walletBalance={37_000_000} onPlaceBid={setCurrentPrice} />}
             {user && !canBid && user.role === 'BIDDER' && statusMessage && <div className="rounded-xl border border-[#3a4d40] bg-[#16241c] p-5 text-sm text-[#e0c15a]">{statusMessage}</div>}
             {isOwner && user?.role === 'SELLER' && <div className="rounded-xl border border-[#C9A227]/40 bg-[#C9A227]/10 p-5"><p className="text-sm text-[#e0c15a]">Đây là phiên của bạn. Người bán không thể tự đặt giá.</p><Link to={`/my-auctions/${auction.id}/edit`} className="mt-4 inline-block text-sm font-semibold text-[#F3EFE6]">Chỉnh sửa phiên →</Link></div>}

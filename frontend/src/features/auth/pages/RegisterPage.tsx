@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Input from '../../../components/common/Input';
 import Button from '../../../components/common/Button';
 import { registerDemo } from '../../../store/authStore';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
   const [form, setForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,7 +27,10 @@ export default function RegisterPage() {
       setLoading(false);
       if (!result.success) return setError(result.message);
       setSuccess(result.message);
-      window.setTimeout(() => navigate('/login', { replace: true }), 900);
+      window.setTimeout(
+        () => navigate('/login', { replace: true, state: { from } }),
+        900,
+      );
     }, 450);
   };
 
@@ -44,7 +49,7 @@ export default function RegisterPage() {
         <Button type="submit" disabled={loading} className="mt-1 w-full">{loading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}</Button>
       </form>
 
-      <p className="mt-7 text-center text-sm text-[#7d9186]">Đã có tài khoản?{' '}<Link to="/login" className="font-medium text-[#C9A227]">Đăng nhập</Link></p>
+      <p className="mt-7 text-center text-sm text-[#7d9186]">Đã có tài khoản?{' '}<Link to="/login" state={{ from }} className="font-medium text-[#C9A227]">Đăng nhập</Link></p>
     </div>
   );
 }

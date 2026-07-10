@@ -32,7 +32,7 @@ export default function Navbar() {
   const handleLogout = () => {
     logout();
     setMobileOpen(false);
-    navigate('/login', { replace: true });
+    navigate('/auctions', { replace: true });
   };
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -65,7 +65,21 @@ export default function Navbar() {
               </button>
             </>
           ) : (
-            <Link to="/login" className="rounded-md border border-[#C9A227] px-4 py-2 text-xs font-semibold text-[#C9A227] hover:bg-[#C9A227] hover:text-[#0F1B14]">Đăng nhập</Link>
+            <>
+              <Link
+                to="/login"
+                className="rounded-md border border-[#C9A227] px-3 py-2 text-xs font-semibold text-[#C9A227] hover:bg-[#C9A227]/10"
+              >
+                Đăng nhập
+              </Link>
+
+              <Link
+                to="/register"
+                className="hidden rounded-md bg-[#C9A227] px-3 py-2 text-xs font-semibold text-[#0F1B14] hover:bg-[#e0c15a] sm:inline-flex"
+              >
+                Đăng ký
+              </Link>
+            </>
           )}
           <button onClick={() => setMobileOpen((value) => !value)} className="flex h-9 w-9 items-center justify-center rounded-md border border-[#3a4d40] text-lg text-[#F3EFE6] lg:hidden" aria-expanded={mobileOpen} aria-label="Mở menu">{mobileOpen ? '×' : '≡'}</button>
         </div>
@@ -76,6 +90,25 @@ export default function Navbar() {
           <nav className="flex flex-col gap-4">
             {visibleItems.map((item) => <NavLink key={item.to} to={item.to} onClick={() => setMobileOpen(false)} className={navClass}>{item.label}</NavLink>)}
             {user?.role === 'SELLER' && <Link to="/auctions/create" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-[#C9A227]">＋ Tạo phiên đấu giá</Link>}
+            {!user && (
+              <div className="grid grid-cols-2 gap-3 border-t border-[#2a3f31] pt-4">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-md border border-[#C9A227] px-4 py-2 text-center text-sm text-[#C9A227]"
+                >
+                  Đăng nhập
+                </Link>
+
+                <Link
+                  to="/register"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-md bg-[#C9A227] px-4 py-2 text-center text-sm font-semibold text-[#0F1B14]"
+                >
+                  Đăng ký
+                </Link>
+              </div>
+            )}
             {user && <button onClick={handleLogout} className="border-t border-[#2a3f31] pt-4 text-left text-sm text-[#ff9a86]">Đăng xuất</button>}
           </nav>
         </div>
