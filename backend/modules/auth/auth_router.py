@@ -3,13 +3,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import get_db
 from modules.auth.auth_schema import (
+    LoginRequest,
+    LoginResponse,
     RegisterRequest,
     RegisterResponse,
     RegisterUserData,
 )
 from modules.auth.auth_service import AuthService
-from app.core.database import get_db
 from modules.users.user_repository import UserRepository
 
 
@@ -25,6 +27,17 @@ def get_auth_service() -> AuthService:
     )
 
 
+DatabaseSession = Annotated[
+    AsyncSession,
+    Depends(get_db),
+]
+
+AuthServiceDependency = Annotated[
+    AuthService,
+    Depends(get_auth_service),
+]
+
+
 @router.post(
     "/register",
     status_code=status.HTTP_201_CREATED,
@@ -32,8 +45,8 @@ def get_auth_service() -> AuthService:
 )
 async def register(
     request: RegisterRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    db: DatabaseSession,
+    auth_service: AuthServiceDependency,
 ) -> RegisterResponse:
     user = await auth_service.register(
         db=db,
@@ -45,4 +58,27 @@ async def register(
         code=1000,
         message="Register successfully",
         data=RegisterUserData.model_validate(user),
+    )
+
+
+@router.post(
+    "/login",
+    response_model=LoginResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def login(
+    request: LoginRequest,
+    db: DatabaseSession,
+    auth_service: AuthServiceDependency,
+) -> LoginResponse:
+    login_data = await auth_service.login(
+        db=db,
+        request=request,
+    )
+
+    return LoginResponse(
+        status=status.HTTP_200_OK,
+        code=1000,
+        message="Login successfully",
+        data=login_data,
     )

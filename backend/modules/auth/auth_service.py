@@ -1,7 +1,9 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import status
 
-from modules.auth.auth_schema import RegisterRequest
+from modules.auth.auth_schema import LoginUserResponse, RegisterRequest, RegisterResponse, LoginRequest, LoginData
+from app.core.security import create_access_token, verify_password
 from common.enum import UserRole, UserStatus
 from app.core.exceptions import AppException
 from app.core.security import hash_password
@@ -21,7 +23,6 @@ class AuthService:
         db: AsyncSession,
         request: RegisterRequest,
     ) -> User:
-        # 1. Check whether email is already registered.
         existing_user = await self.user_repository.find_by_email(
             db=db,
             email=str(request.email),
@@ -34,10 +35,8 @@ class AuthService:
                 message="Email already exists",
             )
 
-        # 2. Hash the password before creating the database model.
         password_hash = hash_password(request.password)
 
-        # 3. Create server-controlled user data.
         user = User(
             email=str(request.email),
             password_hash=password_hash,
@@ -48,13 +47,10 @@ class AuthService:
         )
 
         try:
-            # 4. Stage INSERT through the repository.
             created_user = await self.user_repository.create(
                 db=db,
                 user=user,
             )
-
-            # 5. Finalize the complete use case.
             await db.commit()
 
             return created_user
@@ -62,8 +58,6 @@ class AuthService:
         except IntegrityError as exception:
             await db.rollback()
 
-            # The database unique constraint may detect a duplicate
-            # created by two concurrent requests.
             raise AppException(
                 status_code=400,
                 code="EMAIL_ALREADY_EXISTS",
@@ -72,4 +66,62 @@ class AuthService:
 
         except Exception:
             await db.rollback()
-            raise
+            
+            
+    async def login(
+        self,
+        db: AsyncSession,
+        request: LoginRequest,
+    ) -> LoginData:
+        normalized_email = request.email.lower().strip()
+
+        user = await self.user_repository.find_by_email(
+            db=db,
+            email=normalized_email,
+        )
+
+        if user is None:
+            raise AppException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                code="INVALID_CREDENTIALS",
+                message="Email or password is incorrect",
+            )
+
+        password_is_correct = verify_password(
+            plain_password=request.password,
+            hashed_password=user.password_hash,
+        )
+
+        if not password_is_correct:
+            raise AppException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                code="INVALID_CREDENTIALS",
+                message="Email or password is incorrect",
+            )
+
+        if user.status == UserStatus.BANNED:
+            raise AppException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                code="USER_BANNED",
+                message="User account is banned",
+            )
+
+        access_token = create_access_token(
+            subject=str(user.id),
+            additional_claims={
+                "email": user.email,
+                "role": user.role.value,
+            },
+        )
+
+        return LoginData(
+            access_token=access_token,
+            token_type="Bearer",
+            user=LoginUserResponse(
+                id=user.id,
+                email=user.email,
+                full_name=user.full_name,
+                role=user.role,
+                status=user.status,
+            ),
+        )

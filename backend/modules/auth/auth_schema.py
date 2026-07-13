@@ -76,3 +76,32 @@ class RegisterResponse(BaseModel):
     code: int
     message: str
     data: RegisterUserData
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6, max_length=72)
+
+
+class LoginUserResponse(BaseModel):
+    id: uuid.UUID
+    email: EmailStr
+    full_name: str = Field(serialization_alias="fullName")
+    role: UserRole
+    status: UserStatus
+
+
+class LoginData(BaseModel):
+    access_token: str = Field(serialization_alias="accessToken")
+    token_type: str = Field(
+        default="Bearer",
+        serialization_alias="tokenType",
+    )
+    user: LoginUserResponse
+
+
+class LoginResponse(BaseModel):
+    status: int
+    code: int
+    message: str
+    data: LoginData

@@ -1,4 +1,9 @@
 import bcrypt
+import jwt
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+from app.core.config import settings
 
 
 def hash_password(password: str) -> str:
@@ -9,12 +14,40 @@ def hash_password(password: str) -> str:
 
     return hashed_password.decode("utf-8")
 
-
 def verify_password(
     plain_password: str,
-    password_hash: str,
+    hashed_password: str,
 ) -> bool:
-    return bcrypt.checkpw(
-        plain_password.encode("utf-8"),
-        password_hash.encode("utf-8"),
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            hashed_password.encode("utf-8"),
+        )
+    except (ValueError, TypeError):
+        return False
+
+def create_access_token(
+    subject: str,
+    additional_claims: dict[str, Any] | None = None,
+) -> str:
+    now = datetime.now(timezone.utc)
+
+    expires_at = now + timedelta(
+        minutes=settings.access_token_expire_minutes
+    )
+
+    payload: dict[str, Any] = {
+        "sub": subject,
+        "type": "access",
+        "iat": now,
+        "exp": expires_at,
+    }
+
+    if additional_claims:
+        payload.update(additional_claims)
+
+    return jwt.encode(
+        payload,
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
     )

@@ -12,8 +12,6 @@ from modules.users.user_model import User  # noqa: F401
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Suitable for learning and local development.
-    # Use Alembic migrations in production.
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
 

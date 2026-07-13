@@ -38,6 +38,9 @@ services:
       - "${BACKEND_HOST_PORT}:${BACKEND_CONTAINER_PORT}"
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
     volumes:
       - ./backend:/app
     command:
