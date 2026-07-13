@@ -1,0 +1,32 @@
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from modules.users.user_model import User
+
+
+class UserRepository:
+    async def find_by_email(
+        self,
+        db: AsyncSession,
+        email: str,
+    ) -> User | None:
+        statement = select(User).where(User.email == email)
+
+        result = await db.execute(statement)
+
+        return result.scalar_one_or_none()
+
+    async def create(
+        self,
+        db: AsyncSession,
+        user: User,
+    ) -> User:
+        db.add(user)
+
+        # Sends INSERT to database without ending the transaction.
+        await db.flush()
+
+        # Reload database-generated values such as timestamps.
+        await db.refresh(user)
+
+        return user
