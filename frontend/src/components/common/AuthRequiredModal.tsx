@@ -19,7 +19,7 @@ export default function AuthRequiredModal({
       title="Bạn cần đăng nhập"
       onClose={onClose}
     >
-      <p className="text-sm leading-6 text-[#8ca093]">
+      <p className="text-sm leading-6 text-[var(--color-text-soft)]">
         Vui lòng đăng nhập hoặc đăng ký tài khoản để tham gia đấu giá
         và sử dụng các tính năng dành cho thành viên.
       </p>
@@ -29,7 +29,7 @@ export default function AuthRequiredModal({
           to="/login"
           state={{ from }}
           onClick={onClose}
-          className="rounded-md bg-[#C9A227] px-5 py-3 text-center text-sm font-semibold text-[#0F1B14] hover:bg-[#e0c15a]"
+          className="rounded-md bg-[var(--color-primary)] px-5 py-3 text-center text-sm font-semibold text-[var(--color-bg)] hover:bg-[var(--color-primary-hover)]"
         >
           Đăng nhập
         </Link>
@@ -38,13 +38,13 @@ export default function AuthRequiredModal({
           to="/register"
           state={{ from }}
           onClick={onClose}
-          className="rounded-md border border-[#3a4d40] px-5 py-3 text-center text-sm font-semibold text-[#F3EFE6] hover:border-[#C9A227] hover:text-[#C9A227]"
+          className="rounded-md border border-[var(--color-border-strong)] px-5 py-3 text-center text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
         >
           Đăng ký
         </Link>
       </div>
 
-      <p className="mt-4 text-center text-xs text-[#607468]">
+      <p className="mt-4 text-center text-xs text-[var(--color-text-dim)]">
         Bạn vẫn có thể đóng thông báo để tiếp tục xem vật phẩm.
       </p>
     </Modal>

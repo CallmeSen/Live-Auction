@@ -1,4 +1,5 @@
 export type AuctionStatus = 'ACTIVE' | 'UPCOMING' | 'ENDED' | 'CANCELLED';
+export type AuctionApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export interface Auction {
   id: number;
@@ -15,6 +16,7 @@ export interface Auction {
   endTime: string;
   createdAt: string;
   status: AuctionStatus;
+  approvalStatus: AuctionApprovalStatus;
   seller: string;
   sellerEmail: string;
   location: string;

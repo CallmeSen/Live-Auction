@@ -20,6 +20,7 @@ import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
 import AdminUsersPage from '../features/admin/pages/AdminUsersPage';
 import AdminAuctionsPage from '../features/admin/pages/AdminAuctionsPage';
 import AdminCategoriesPage from '../features/admin/pages/AdminCategoriesPage';
+import NotificationsPage from '../features/notifications/pages/NotificationsPage';
 
 export default function AppRoutes() {
   return (
@@ -38,19 +39,14 @@ export default function AppRoutes() {
 
         <Route element={<ProtectedRoute />}>
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/forbidden" element={<AccessDeniedPage />} />
 
-          <Route element={<RoleRoute allowedRoles={['BIDDER', 'SELLER']} />}>
+          <Route element={<RoleRoute allowedRoles={['USER']} />}>
             <Route path="/wallet" element={<WalletPage />} />
             <Route path="/wallet/deposit" element={<DepositPage />} />
             <Route path="/wallet/withdraw" element={<WithdrawPage />} />
-          </Route>
-
-          <Route element={<RoleRoute allowedRoles={['BIDDER']} />}>
             <Route path="/my-bids" element={<MyBidsPage />} />
-          </Route>
-
-          <Route element={<RoleRoute allowedRoles={['SELLER']} />}>
             <Route path="/auctions/create" element={<CreateAuctionPage />} />
             <Route path="/my-auctions" element={<MyAuctionsPage />} />
             <Route path="/my-auctions/:id/edit" element={<EditAuctionPage />} />

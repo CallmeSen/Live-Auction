@@ -1,28 +1,123 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
+/* Giao diện tối mặc định */
+:root,
+html[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #0F1B14;
+  --color-bg-deep: #0B140F;
+
+  --color-surface: #14231a;
+  --color-surface-alt: #16241c;
+  --color-surface-raised: #1b3022;
+
+  --color-border: #2a3f31;
+  --color-border-strong: #3a4d40;
+
+  --color-text: #F3EFE6;
+  --color-text-muted: #7d9186;
+  --color-text-soft: #8ca093;
+  --color-text-dim: #607468;
+
+  --color-primary: #C9A227;
+  --color-primary-hover: #e0c15a;
+
+  --color-success: #8fc99c;
+  --color-success-bg: #2f6541;
+  --color-success-border: #4e8b5e;
+
+  --color-danger: #ff9a86;
+  --color-danger-border: #8f4538;
+  --color-danger-solid: #C2452D;
+}
+
+/* Giao diện sáng màu vàng kem sang trọng */
+html[data-theme='light'] {
+  color-scheme: light;
+
+  --color-bg: #FFFFCC;
+  --color-bg-deep: #f3edb4;
+
+  --color-surface: #fffde5;
+  --color-surface-alt: #f8f2c9;
+  --color-surface-raised: #fffbea;
+
+  --color-border: #d8ca7d;
+  --color-border-strong: #bba958;
+
+  --color-text: #302a15;
+  --color-text-muted: #71683a;
+  --color-text-soft: #5d5835;
+  --color-text-dim: #8b8050;
+
+  --color-primary: #9a7000;
+  --color-primary-hover: #765500;
+
+  --color-success: #34704a;
+  --color-success-bg: #34704a;
+  --color-success-border: #4c805d;
+
+  --color-danger: #a73e2f;
+  --color-danger-border: #b64b39;
+  --color-danger-solid: #a83d2d;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--color-bg);
+}
+
 body {
-  background-color: #0F1B14;
-  color: #F3EFE6;
+  background-color: var(--color-bg);
+  color: var(--color-text);
   font-family: 'Inter', sans-serif;
   margin: 0;
   min-width: 320px;
+  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  transition:
+    background-color 250ms ease,
+    color 250ms ease;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html { scroll-behavior: smooth; }
+button,
+a,
+input,
+select,
+textarea {
+  font: inherit;
+}
 
-button, a, input, select, textarea { font: inherit; }
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
 
-button, a { -webkit-tap-highlight-color: transparent; }
+::selection {
+  background: var(--color-primary);
+  color: var(--color-bg);
+}
 
-::selection { background: #C9A227; color: #0F1B14; }
+::-webkit-scrollbar {
+  width: 10px;
+  height: 8px;
+}
 
-::-webkit-scrollbar { width: 10px; height: 8px; }
-::-webkit-scrollbar-track { background: #0F1B14; }
-::-webkit-scrollbar-thumb { background: #2a3f31; border: 2px solid #0F1B14; border-radius: 999px; }
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border: 2px solid var(--color-bg);
+  border-radius: 999px;
+}
 
 .font-display {
   font-family: 'Fraunces', serif;

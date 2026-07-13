@@ -1,4 +1,4 @@
-export type UserRole = 'BIDDER' | 'SELLER' | 'ADMIN';
+export type UserRole = 'USER' | 'ADMIN';
 
 export interface AuthUser {
   id: string;
@@ -6,6 +6,7 @@ export interface AuthUser {
   fullName: string;
   role: UserRole;
   phone: string;
+  address?: string;
   status: 'ACTIVE' | 'INACTIVE';
 }
 

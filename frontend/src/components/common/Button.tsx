@@ -16,10 +16,10 @@ export default function Button({
 
   const variants: Record<string, string> = {
     primary:
-      'bg-[#C9A227] text-[#0F1B14] hover:bg-[#e0c15a] shadow-[0_0_0_1px_rgba(201,162,39,0.3)] hover:shadow-[0_0_20px_rgba(201,162,39,0.35)]',
+      'bg-[var(--color-primary)] text-[var(--color-bg)] hover:bg-[var(--color-primary-hover)] shadow-[0_0_0_1px_rgba(201,162,39,0.3)] hover:shadow-[0_0_20px_rgba(201,162,39,0.35)]',
     secondary:
-      'bg-transparent text-[#F3EFE6] border border-[#3a4d40] hover:border-[#C9A227] hover:text-[#C9A227]',
-    ghost: 'bg-transparent text-[#7d9186] hover:text-[#F3EFE6]',
+      'bg-transparent text-[var(--color-text)] border border-[var(--color-border-strong)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]',
+    ghost: 'bg-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]',
   };
 
   return (
