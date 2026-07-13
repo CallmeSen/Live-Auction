@@ -5,15 +5,6 @@ from sqlalchemy.types import TypeDecorator
 
 
 class BinaryUUID(TypeDecorator):
-    """
-    Store a Python UUID as MySQL BINARY(16).
-
-    Python:
-        UUID("550e8400-e29b-41d4-a716-446655440000")
-
-    Database:
-        16 raw bytes
-    """
 
     impl = BINARY(16)
     cache_ok = True

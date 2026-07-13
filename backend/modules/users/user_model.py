@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, Enum, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from common.enum import UserRole, UserStatus
 from common.uuid_type import BinaryUUID
@@ -34,6 +34,8 @@ class User(Base):
         String(255),
         nullable=False,
         default="user",
+        server_default=UserRole.USER.value,
+
     )
 
     phone: Mapped[str] = mapped_column(
@@ -51,6 +53,8 @@ class User(Base):
         Enum(UserStatus),
         nullable=False,
         default=UserStatus.ACTIVE,
+        server_default=UserRole.USER.value,
+
     )
 
     created_at: Mapped[datetime] = mapped_column(
@@ -64,4 +68,19 @@ class User(Base):
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
+    )
+    auction_sessions = relationship(
+        "AuctionSession",
+        back_populates="seller",
+    )
+
+    bids = relationship(
+        "Bid",
+        back_populates="bidder",
+    )
+
+    won_items = relationship(
+        "AuctionItem",
+        back_populates="winner",
+        foreign_keys="AuctionItem.winner_user_id",
     )
