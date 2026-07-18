@@ -1,0 +1,38 @@
+version: 0.2
+
+# ============================================================================
+# BUILDSPEC SMOKE TEST — chỉ để kiểm tra pipeline chạy thông.
+# Đặt file này ở GỐC repo (cùng thư mục với .git), commit + push.
+# Khi đã có backend thật, thay bằng buildspec đầy đủ trong
+# live-auction-cicd-console-setup.md (Bước 0).
+# ============================================================================
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.13
+    commands:
+      - echo "=== Runtime OK ==="
+      - python --version
+
+  pre_build:
+    commands:
+      - echo "=== Repo structure ==="
+      - ls -la
+      - echo "=== Nếu có backend thì test, không có thì bỏ qua ==="
+      - |
+        if [ -d backend/tests/unit ]; then
+          pip install -q -r backend/common/requirements.txt pytest
+          cd backend && PYTHONPATH=common:. pytest tests/unit -q && cd ..
+        else
+          echo "Chưa có backend/tests — bỏ qua test (smoke test)."
+        fi
+
+  build:
+    commands:
+      - echo "=== Build stage chạy tới đây là pipeline THÔNG ==="
+      - echo "Nếu thấy dòng này màu xanh trong CodeBuild log -> plumbing OK."
+
+# KHÔNG có artifacts: vì smoke test chưa deploy.
+# -> Nhớ XÓA stage Deploy (CodeDeploy) khỏi pipeline khi test đường A,
+#    vì CodeDeploy cần file appspec.yml mà smoke test không sinh ra.
