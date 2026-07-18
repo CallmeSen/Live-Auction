@@ -1,22 +1,24 @@
-import uuid
-from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, String, func
+from sqlalchemy import String, text
+from sqlalchemy.dialects.mysql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from common.enum import UserRole, UserStatus
-from common.uuid_type import BinaryUUID
-from app.core.database import Base
+from app.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.enums import UserRole, UserStatus
+
+if TYPE_CHECKING:
+    from app.models.auction_item import AuctionItem
+    from app.models.auction_session import AuctionSession
+    from app.models.bid import Bid
 
 
-class User(Base):
+class User(
+    UUIDPrimaryKeyMixin,
+    TimestampMixin,
+    Base,
+):
     __tablename__ = "users"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        BinaryUUID(),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
 
     email: Mapped[str] = mapped_column(
         String(255),
@@ -33,9 +35,7 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-        default="user",
-        server_default=UserRole.USER.value,
-
+        server_default=text("'user'"),
     )
 
     phone: Mapped[str] = mapped_column(
@@ -44,43 +44,43 @@ class User(Base):
     )
 
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole),
+        ENUM(
+            UserRole,
+            name="user_role",
+            values_callable=lambda enum: [item.value for item in enum],
+        ),
         nullable=False,
         default=UserRole.USER,
+        server_default=text("'USER'"),
     )
 
     status: Mapped[UserStatus] = mapped_column(
-        Enum(UserStatus),
+        ENUM(
+            UserStatus,
+            name="user_status",
+            values_callable=lambda enum: [item.value for item in enum],
+        ),
         nullable=False,
         default=UserStatus.ACTIVE,
-        server_default=UserRole.USER.value,
-
+        server_default=text("'ACTIVE'"),
     )
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default=func.now(),
-    )
-
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now(),
-    )
-    auction_sessions = relationship(
-        "AuctionSession",
+    auction_sessions: Mapped[list["AuctionSession"]] = relationship(
         back_populates="seller",
+        foreign_keys="AuctionSession.seller_id",
     )
 
-    bids = relationship(
-        "Bid",
-        back_populates="bidder",
+    selling_items: Mapped[list["AuctionItem"]] = relationship(
+        back_populates="seller",
+        foreign_keys="AuctionItem.seller_id",
     )
 
-    won_items = relationship(
-        "AuctionItem",
+    won_items: Mapped[list["AuctionItem"]] = relationship(
         back_populates="winner",
         foreign_keys="AuctionItem.winner_user_id",
+    )
+
+    bids: Mapped[list["Bid"]] = relationship(
+        back_populates="bidder",
+        foreign_keys="Bid.bidder_id",
     )

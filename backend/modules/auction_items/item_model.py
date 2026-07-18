@@ -1,92 +1,76 @@
-import enum
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from common.enum import AuctionItemStatus
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    CheckConstraint,
+    DECIMAL,
     DateTime,
-    Enum,
     ForeignKey,
     Index,
-    Numeric,
     String,
     Text,
-    func,
+    text,
 )
+from sqlalchemy.dialects.mysql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
-from common.uuid_type import BinaryUUID
+from app.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.database.types import UUIDBinary
+from app.models.enums import AuctionItemStatus
+
+if TYPE_CHECKING:
+    from app.models.auction_session import AuctionSession
+    from app.models.bid import Bid
+    from app.models.category import Category
+    from app.models.item_image import ItemImage
+    from app.models.user import User
 
 
-class AuctionItem(Base):
+class AuctionItem(
+    UUIDPrimaryKeyMixin,
+    TimestampMixin,
+    Base,
+):
     __tablename__ = "auction_items"
 
     __table_args__ = (
-        CheckConstraint(
-            "starting_price >= 0",
-            name="chk_auction_items_starting_price",
-        ),
-        CheckConstraint(
-            "current_price IS NULL OR current_price >= starting_price",
-            name="chk_auction_items_current_price",
-        ),
-        CheckConstraint(
-            "final_price IS NULL OR final_price >= starting_price",
-            name="chk_auction_items_final_price",
-        ),
-        CheckConstraint(
-            """
-            closed_at IS NULL
-            OR opened_at IS NULL
-            OR closed_at >= opened_at
-            """,
-            name="chk_auction_items_open_close_time",
-        ),
         Index(
-            "idx_auction_items_session_id",
+            "ix_auction_items_session_status",
             "session_id",
-        ),
-        Index(
-            "idx_auction_items_category_id",
-            "category_id",
-        ),
-        Index(
-            "idx_auction_items_status",
             "status",
-        ),
-        Index(
-            "idx_auction_items_winner_user_id",
-            "winner_user_id",
         ),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        BinaryUUID(),
-        primary_key=True,
-        default=uuid.uuid4,
+    seller_id: Mapped[uuid.UUID] = mapped_column(
+        UUIDBinary(),
+        ForeignKey(
+            "users.id",
+            name="fk_auction_items_seller",
+        ),
+        nullable=False,
+        index=True,
     )
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        BinaryUUID(),
+        UUIDBinary(),
         ForeignKey(
             "auction_sessions.id",
             ondelete="CASCADE",
-            onupdate="CASCADE",
+            name="fk_auction_items_session",
         ),
         nullable=False,
+        index=True,
     )
 
     category_id: Mapped[uuid.UUID | None] = mapped_column(
-        BinaryUUID(),
+        UUIDBinary(),
         ForeignKey(
             "categories.id",
-            ondelete="SET NULL",
-            onupdate="CASCADE",
+            name="fk_auction_items_category",
         ),
         nullable=True,
+        index=True,
     )
 
     title: Mapped[str] = mapped_column(
@@ -100,37 +84,41 @@ class AuctionItem(Base):
     )
 
     starting_price: Mapped[Decimal] = mapped_column(
-        Numeric(18, 2),
+        DECIMAL(18, 2),
         nullable=False,
     )
 
-    current_price: Mapped[Decimal | None] = mapped_column(
-        Numeric(18, 2),
-        nullable=True,
+    current_price: Mapped[Decimal] = mapped_column(
+        DECIMAL(18, 2),
+        nullable=False,
+        default=Decimal("0.00"),
+        server_default=text("0.00"),
     )
 
     status: Mapped[AuctionItemStatus] = mapped_column(
-        Enum(
+        ENUM(
             AuctionItemStatus,
             name="auction_item_status",
+            values_callable=lambda enum: [item.value for item in enum],
         ),
         nullable=False,
-        default=AuctionItemStatus.DRAFT,
-        server_default=AuctionItemStatus.DRAFT.value,
+        default=AuctionItemStatus.UNSOLD,
+        server_default=text("'UNSOLD'"),
+        index=True,
     )
 
     winner_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        BinaryUUID(),
+        UUIDBinary(),
         ForeignKey(
             "users.id",
-            ondelete="RESTRICT",
-            onupdate="CASCADE",
+            name="fk_auction_items_winner",
         ),
         nullable=True,
+        index=True,
     )
 
     final_price: Mapped[Decimal | None] = mapped_column(
-        Numeric(18, 2),
+        DECIMAL(18, 2),
         nullable=True,
     )
 
@@ -144,42 +132,32 @@ class AuctionItem(Base):
         nullable=True,
     )
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default=func.now(),
+    seller: Mapped["User"] = relationship(
+        back_populates="selling_items",
+        foreign_keys=[seller_id],
     )
 
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now(),
-    )
-
-    session = relationship(
-        "AuctionSession",
-        back_populates="items",
-    )
-
-    category = relationship(
-        "Category",
-        back_populates="auction_items",
-    )
-
-    winner = relationship(
-        "User",
+    winner: Mapped["User | None"] = relationship(
         back_populates="won_items",
         foreign_keys=[winner_user_id],
     )
 
-    images = relationship(
-        "ItemImage",
-        back_populates="item",
-        cascade="all, delete-orphan",
+    session: Mapped["AuctionSession"] = relationship(
+        back_populates="items",
     )
 
-    bids = relationship(
-        "Bid",
+    category: Mapped["Category | None"] = relationship(
+        back_populates="auction_items",
+    )
+
+    images: Mapped[list["ItemImage"]] = relationship(
         back_populates="item",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="ItemImage.sort_order",
+    )
+
+    bids: Mapped[list["Bid"]] = relationship(
+        back_populates="item",
+        cascade="all, delete-orphan",
     )

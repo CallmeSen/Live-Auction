@@ -31,3 +31,10 @@ class BidStatus(str, Enum):
     WINNING = "WINNING"
     OUTBID = "OUTBID"
     CANCELLED = "CANCELLED"
+
+
+
+
+
+
+

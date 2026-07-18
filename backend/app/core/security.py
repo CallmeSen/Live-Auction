@@ -3,6 +3,7 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from app.core.exceptions import AppException
 from app.core.config import settings
 
 
@@ -51,3 +52,33 @@ def create_access_token(
         settings.jwt_secret_key,
         algorithm=settings.jwt_algorithm,
     )
+
+
+def decode_access_token(token: str) -> dict[str, Any]:
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+    except jwt.ExpiredSignatureError as exception:
+        raise AppException(
+            status_code=401,
+            code="TOKEN_EXPIRED",
+            message="Access token has expired",
+        ) from exception
+    except jwt.InvalidTokenError as exception:
+        raise AppException(
+            status_code=401,
+            code="INVALID_TOKEN",
+            message="Invalid access token",
+        ) from exception
+
+    if payload.get("type") != "access":
+        raise AppException(
+            status_code=401,
+            code="INVALID_TOKEN",
+            message="Invalid access token",
+        )
+
+    return payload

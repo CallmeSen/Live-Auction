@@ -1,32 +1,26 @@
-import enum
-import uuid
-from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, String, func
+from sqlalchemy import String, text
+from sqlalchemy.dialects.mysql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
-from common.uuid_type import BinaryUUID
-from common.enum import CategoryStatus
+from app.database.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
+from app.models.enums import CategoryStatus
+
+if TYPE_CHECKING:
+    from app.models.auction_item import AuctionItem
 
 
-
-
-
-
-class Category(Base):
+class Category(
+    UUIDPrimaryKeyMixin,
+    CreatedAtMixin,
+    Base,
+):
     __tablename__ = "categories"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        BinaryUUID(),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
 
     name: Mapped[str] = mapped_column(
         String(150),
         nullable=False,
-        unique=True,
     )
 
     slug: Mapped[str] = mapped_column(
@@ -37,26 +31,16 @@ class Category(Base):
     )
 
     status: Mapped[CategoryStatus] = mapped_column(
-        Enum(CategoryStatus, name="category_status"),
+        ENUM(
+            CategoryStatus,
+            name="category_status",
+            values_callable=lambda enum: [item.value for item in enum],
+        ),
         nullable=False,
         default=CategoryStatus.ACTIVE,
-        server_default=CategoryStatus.ACTIVE.value,
+        server_default=text("'ACTIVE'"),
     )
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default=func.now(),
-    )
-
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now(),
-    )
-
-    auction_items = relationship(
-        "AuctionItem",
+    auction_items: Mapped[list["AuctionItem"]] = relationship(
         back_populates="category",
     )

@@ -1,66 +1,37 @@
-import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import (
-    CheckConstraint,
-    DateTime,
-    Enum,
-    ForeignKey,
-    Index,
-    String,
-    Text,
-    func,
-)
+from sqlalchemy import DateTime, ForeignKey, String, Text, text
+from sqlalchemy.dialects.mysql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
-from common.uuid_type import BinaryUUID
+from app.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.database.types import UUIDBinary
+from app.models.enums import AuctionSessionStatus
+
+if TYPE_CHECKING:
+    from app.models.auction_item import AuctionItem
+    from app.models.auction_session_rule import AuctionSessionRule
+    from app.models.bid import Bid
+    from app.models.user import User
 
 
-from common.enum import AuctionSessionStatus
-
-
-class AuctionSession(Base):
+class AuctionSession(
+    UUIDPrimaryKeyMixin,
+    TimestampMixin,
+    Base,
+):
     __tablename__ = "auction_sessions"
 
-    __table_args__ = (
-        CheckConstraint(
-            "end_time > start_time",
-            name="chk_auction_sessions_time",
-        ),
-        Index(
-            "idx_auction_sessions_seller_id",
-            "seller_id",
-        ),
-        Index(
-            "idx_auction_sessions_status",
-            "status",
-        ),
-        Index(
-            "idx_auction_sessions_start_time",
-            "start_time",
-        ),
-        Index(
-            "idx_auction_sessions_end_time",
-            "end_time",
-        ),
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        BinaryUUID(),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-
     seller_id: Mapped[uuid.UUID] = mapped_column(
-        BinaryUUID(),
+        UUIDBinary(),
         ForeignKey(
             "users.id",
-            ondelete="RESTRICT",
-            onupdate="CASCADE",
+            name="fk_auction_sessions_seller",
         ),
         nullable=False,
+        index=True,
     )
 
     title: Mapped[str] = mapped_column(
@@ -84,42 +55,35 @@ class AuctionSession(Base):
     )
 
     status: Mapped[AuctionSessionStatus] = mapped_column(
-        Enum(
+        ENUM(
             AuctionSessionStatus,
             name="auction_session_status",
+            values_callable=lambda enum: [item.value for item in enum],
         ),
         nullable=False,
         default=AuctionSessionStatus.SCHEDULED,
-        server_default=AuctionSessionStatus.SCHEDULED.value,
+        server_default=text("'SCHEDULED'"),
+        index=True,
     )
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default=func.now(),
-    )
-
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now(),
-    )
-
-    seller = relationship(
-        "User",
+    seller: Mapped["User"] = relationship(
         back_populates="auction_sessions",
+        foreign_keys=[seller_id],
     )
 
-    rules = relationship(
-        "AuctionSessionRule",
+    rules: Mapped["AuctionSessionRule | None"] = relationship(
         back_populates="session",
         uselist=False,
         cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
-    items = relationship(
-        "AuctionItem",
+    items: Mapped[list["AuctionItem"]] = relationship(
         back_populates="session",
         cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    bids: Mapped[list["Bid"]] = relationship(
+        back_populates="session",
     )

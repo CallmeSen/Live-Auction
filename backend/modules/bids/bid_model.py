@@ -1,105 +1,99 @@
-import enum
 import uuid
-from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
-from sqlalchemy import (
-    CheckConstraint,
-    DateTime,
-    Enum,
-    ForeignKey,
-    Index,
-    Numeric,
-    func,
-)
+from sqlalchemy import DECIMAL, ForeignKey, Index, text
+from sqlalchemy.dialects.mysql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
-from common.uuid_type import BinaryUUID
+from app.database.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
+from app.database.types import UUIDBinary
+from app.models.enums import BidStatus
 
-from common.enum import BidStatus
+if TYPE_CHECKING:
+    from app.models.auction_item import AuctionItem
+    from app.models.auction_session import AuctionSession
+    from app.models.user import User
 
 
-class Bid(Base):
+class Bid(
+    UUIDPrimaryKeyMixin,
+    CreatedAtMixin,
+    Base,
+):
     __tablename__ = "bids"
 
     __table_args__ = (
-        CheckConstraint(
-            "amount > 0",
-            name="chk_bids_amount",
-        ),
         Index(
-            "idx_bids_item_created_at",
+            "ix_bids_item_created_at",
             "item_id",
             "created_at",
         ),
         Index(
-            "idx_bids_item_amount",
-            "item_id",
-            "amount",
-        ),
-        Index(
-            "idx_bids_bidder_created_at",
-            "bidder_id",
-            "created_at",
-        ),
-        Index(
-            "idx_bids_item_status",
+            "ix_bids_item_status",
             "item_id",
             "status",
         ),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        BinaryUUID(),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-
     item_id: Mapped[uuid.UUID] = mapped_column(
-        BinaryUUID(),
+        UUIDBinary(),
         ForeignKey(
             "auction_items.id",
-            ondelete="RESTRICT",
-            onupdate="CASCADE",
+            ondelete="CASCADE",
+            name="fk_bids_item",
         ),
         nullable=False,
+        index=True,
+    )
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUIDBinary(),
+        ForeignKey(
+            "auction_sessions.id",
+            ondelete="CASCADE",
+            name="fk_bids_session",
+        ),
+        nullable=False,
+        index=True,
     )
 
     bidder_id: Mapped[uuid.UUID] = mapped_column(
-        BinaryUUID(),
+        UUIDBinary(),
         ForeignKey(
             "users.id",
-            ondelete="RESTRICT",
-            onupdate="CASCADE",
+            name="fk_bids_bidder",
         ),
         nullable=False,
+        index=True,
     )
 
     amount: Mapped[Decimal] = mapped_column(
-        Numeric(18, 2),
+        DECIMAL(18, 2),
         nullable=False,
     )
 
     status: Mapped[BidStatus] = mapped_column(
-        Enum(BidStatus, name="bid_status"),
+        ENUM(
+            BidStatus,
+            name="bid_status",
+            values_callable=lambda enum: [item.value for item in enum],
+        ),
         nullable=False,
         default=BidStatus.OUTBID,
-        server_default=BidStatus.OUTBID.value,
+        server_default=text("'OUTBID'"),
+        index=True,
     )
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default=func.now(),
-    )
-
-    item = relationship(
-        "AuctionItem",
+    item: Mapped["AuctionItem"] = relationship(
         back_populates="bids",
     )
 
-    bidder = relationship(
-        "User",
+    session: Mapped["AuctionSession"] = relationship(
         back_populates="bids",
+    )
+
+    bidder: Mapped["User"] = relationship(
+        back_populates="bids",
+        foreign_keys=[bidder_id],
     )

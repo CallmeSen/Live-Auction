@@ -4,10 +4,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from modules.auth.auth_router import router as auth_router
-from app.core.database import Base, engine
+from modules.auction_sessions.session_router import (
+    router as auction_sessions_router,
+)
+import app.models  # noqa: F401
+from app.core.database import engine
 from app.core.exceptions import AppException
-
-from modules.users.user_model import User  # noqa: F401
+from app.database.base import Base
 
 
 @asynccontextmanager
@@ -44,6 +47,7 @@ async def app_exception_handler(
 
 
 app.include_router(auth_router)
+app.include_router(auction_sessions_router)
 
 
 @app.get("/health")

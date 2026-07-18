@@ -1,9 +1,8 @@
+"""upgrade schema
 
-"""create auction tables
-
-Revision ID: d0409409c97a
-Revises: 
-Create Date: 2026-07-13 14:11:45.036767
+Revision ID: 4518d1a038f1
+Revises: 171bf3dda30e
+Create Date: 2026-07-18 12:33:27.739278
 
 """
 from typing import Sequence, Union
@@ -13,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'd0409409c97a'
-down_revision: Union[str, Sequence[str], None] = None
+revision: str = '4518d1a038f1'
+down_revision: Union[str, Sequence[str], None] = '171bf3dda30e'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
