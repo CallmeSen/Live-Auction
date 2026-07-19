@@ -8,11 +8,10 @@ from pydantic import (
 )
 
 from common.enum import AuctionItemStatus
-from common.uuid_utils import OptionalFlexibleUUID
 
 
 class CreateAuctionItemRequest(BaseModel):
-    category_id: OptionalFlexibleUUID = Field(default=None, alias="categoryId")
+    category_id: uuid.UUID | None = Field(default=None, alias="categoryId")
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
     starting_price: Decimal = Field(alias="startingPrice", gt=0)

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
 from common.enum import AuctionItemStatus, AuctionSessionStatus
-from modules.auction_items.item_model import AuctionItem
+from app.models.item_model import AuctionItem
 from modules.auction_items.item_repository import AuctionItemRepository
 from modules.auction_items.item_schema import CreateAuctionItemRequest
 from modules.auction_sessions.session_repository import (

@@ -6,10 +6,10 @@ from sqlalchemy import DECIMAL, ForeignKey, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from app.database.types import UUIDBinary
+from app.database.types import UUIDString
 
 if TYPE_CHECKING:
-    from app.models.auction_session import AuctionSession
+    from app.models.session_model import AuctionSession
 
 
 class AuctionSessionRule(
@@ -20,7 +20,7 @@ class AuctionSessionRule(
     __tablename__ = "auction_session_rules"
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUIDBinary(),
+        UUIDString(),
         ForeignKey(
             "auction_sessions.id",
             ondelete="CASCADE",

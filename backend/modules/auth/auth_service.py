@@ -7,7 +7,7 @@ from app.core.security import create_access_token, verify_password
 from common.enum import UserRole, UserStatus
 from app.core.exceptions import AppException
 from app.core.security import hash_password
-from modules.users.user_model import User
+from app.models.user_model import User
 from modules.users.user_repository import UserRepository
 
 

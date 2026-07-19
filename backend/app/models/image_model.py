@@ -5,10 +5,10 @@ from sqlalchemy import Boolean, ForeignKey, Integer, String, UniqueConstraint, f
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
-from app.database.types import UUIDBinary
+from app.database.types import UUIDString
 
 if TYPE_CHECKING:
-    from app.models.auction_item import AuctionItem
+    from app.models.item_model import AuctionItem
 
 
 class ItemImage(
@@ -27,7 +27,7 @@ class ItemImage(
     )
 
     item_id: Mapped[uuid.UUID] = mapped_column(
-        UUIDBinary(),
+        UUIDString(),
         ForeignKey(
             "auction_items.id",
             ondelete="CASCADE",

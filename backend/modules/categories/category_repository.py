@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from modules.categories.category_model import Category
+from app.models.category_model import Category
 
 
 class CategoryRepository:

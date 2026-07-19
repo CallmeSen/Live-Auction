@@ -8,7 +8,7 @@ from app.database.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
 from app.models.enums import CategoryStatus
 
 if TYPE_CHECKING:
-    from app.models.auction_item import AuctionItem
+    from app.models.item_model import AuctionItem
 
 
 class Category(

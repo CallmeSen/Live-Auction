@@ -16,15 +16,15 @@ from sqlalchemy.dialects.mysql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from app.database.types import UUIDBinary
+from app.database.types import UUIDString
 from app.models.enums import AuctionItemStatus
 
 if TYPE_CHECKING:
-    from app.models.auction_session import AuctionSession
-    from app.models.bid import Bid
-    from app.models.category import Category
-    from app.models.item_image import ItemImage
-    from app.models.user import User
+    from app.models.session_model import AuctionSession
+    from app.models.bid_model import Bid
+    from app.models.category_model import Category
+    from app.models.image_model import ItemImage
+    from app.models.user_model import User
 
 
 class AuctionItem(
@@ -43,7 +43,7 @@ class AuctionItem(
     )
 
     seller_id: Mapped[uuid.UUID] = mapped_column(
-        UUIDBinary(),
+        UUIDString(),
         ForeignKey(
             "users.id",
             name="fk_auction_items_seller",
@@ -53,7 +53,7 @@ class AuctionItem(
     )
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUIDBinary(),
+        UUIDString(),
         ForeignKey(
             "auction_sessions.id",
             ondelete="CASCADE",
@@ -64,7 +64,7 @@ class AuctionItem(
     )
 
     category_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUIDBinary(),
+        UUIDString(),
         ForeignKey(
             "categories.id",
             name="fk_auction_items_category",
@@ -108,7 +108,7 @@ class AuctionItem(
     )
 
     winner_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUIDBinary(),
+        UUIDString(),
         ForeignKey(
             "users.id",
             name="fk_auction_items_winner",

@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from modules.auction_sessions.session_model import AuctionSession
+from app.models.session_model import AuctionSession
 
 
 class AuctionSessionRepository:

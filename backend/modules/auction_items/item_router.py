@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user_id, security
-from common.uuid_utils import parse_uuid
 from modules.auction_items.item_repository import AuctionItemRepository
 from modules.auction_items.item_schema import (
     CreateAuctionItemData,
@@ -58,13 +57,9 @@ CurrentUserId = Annotated[
 )
 async def create_auction_item(
     session_id: Annotated[
-        str,
+        uuid.UUID,
         Path(
-            description=(
-                "Auction session UUID. Accepts standard format "
-                "(4381bbad-04ac-4088-b0b4-85fca226ef68d) "
-                "or MySQL hex (0x4381BBAD...)."
-            ),
+            description="Auction session UUID.",
             examples=["4381bbad-04ac-4088-b0b4-85fca226ef68d"],
         ),
     ],
@@ -73,11 +68,9 @@ async def create_auction_item(
     seller_id: CurrentUserId,
     item_service: AuctionItemServiceDependency,
 ) -> CreateAuctionItemResponse:
-    parsed_session_id = parse_uuid(session_id)
-
     item = await item_service.create_item(
         db=db,
-        session_id=parsed_session_id,
+        session_id=session_id,
         seller_id=seller_id,
         request=request,
     )

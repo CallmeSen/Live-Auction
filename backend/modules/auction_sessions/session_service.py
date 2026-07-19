@@ -5,10 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
 from common.enum import AuctionSessionStatus
-from modules.auction_session_rule.auction_session_rule_model import (
-    AuctionSessionRule,
-)
-from modules.auction_sessions.session_model import AuctionSession
+from app.models.auction_session_rule_model import AuctionSessionRule
+from app.models.session_model import AuctionSession
 from modules.auction_sessions.session_repository import (
     AuctionSessionRepository,
 )

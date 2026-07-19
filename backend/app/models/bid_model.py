@@ -7,13 +7,13 @@ from sqlalchemy.dialects.mysql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
-from app.database.types import UUIDBinary
+from app.database.types import UUIDString
 from app.models.enums import BidStatus
 
 if TYPE_CHECKING:
-    from app.models.auction_item import AuctionItem
-    from app.models.auction_session import AuctionSession
-    from app.models.user import User
+    from app.models.item_model import AuctionItem
+    from app.models.session_model import AuctionSession
+    from app.models.user_model import User
 
 
 class Bid(
@@ -37,7 +37,7 @@ class Bid(
     )
 
     item_id: Mapped[uuid.UUID] = mapped_column(
-        UUIDBinary(),
+        UUIDString(),
         ForeignKey(
             "auction_items.id",
             ondelete="CASCADE",
@@ -48,7 +48,7 @@ class Bid(
     )
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUIDBinary(),
+        UUIDString(),
         ForeignKey(
             "auction_sessions.id",
             ondelete="CASCADE",
@@ -59,7 +59,7 @@ class Bid(
     )
 
     bidder_id: Mapped[uuid.UUID] = mapped_column(
-        UUIDBinary(),
+        UUIDString(),
         ForeignKey(
             "users.id",
             name="fk_bids_bidder",

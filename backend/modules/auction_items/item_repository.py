@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from modules.auction_items.item_model import AuctionItem
-
+from app.models.item_model import AuctionItem
 
 class AuctionItemRepository:
     async def create(

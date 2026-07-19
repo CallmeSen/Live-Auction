@@ -8,9 +8,9 @@ from app.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from app.models.enums import UserRole, UserStatus
 
 if TYPE_CHECKING:
-    from app.models.auction_item import AuctionItem
-    from app.models.auction_session import AuctionSession
-    from app.models.bid import Bid
+    from app.models.item_model import AuctionItem
+    from app.models.session_model import AuctionSession
+    from app.models.bid_model import Bid
 
 
 class User(
