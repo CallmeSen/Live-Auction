@@ -8,6 +8,8 @@ from modules.auction_items.item_router import router as auction_items_router
 from modules.auction_sessions.session_router import (
     router as auction_sessions_router,
 )
+from modules.admin.admin_router import router as admin_router
+from modules.categories.category_router import router as categories_router
 import app.models  # noqa: F401
 from app.core.database import engine
 from app.core.exceptions import AppException
@@ -42,7 +44,7 @@ async def app_exception_handler(
             "status": exception.status_code,
             "code": exception.code,
             "message": exception.message,
-            "details": exception.details,
+            "data": None,
         },
     )
 
@@ -50,6 +52,8 @@ async def app_exception_handler(
 app.include_router(auth_router)
 app.include_router(auction_sessions_router)
 app.include_router(auction_items_router)
+app.include_router(categories_router)
+app.include_router(admin_router)
 
 
 @app.get("/health")

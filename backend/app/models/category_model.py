@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, text
+from sqlalchemy import Index, String, UniqueConstraint, text
 from sqlalchemy.dialects.mysql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,6 +17,11 @@ class Category(
     Base,
 ):
     __tablename__ = "categories"
+
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_categories_name"),
+        Index("ix_categories_status", "status"),
+    )
 
     name: Mapped[str] = mapped_column(
         String(150),

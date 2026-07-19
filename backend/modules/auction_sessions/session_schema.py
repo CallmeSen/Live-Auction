@@ -63,3 +63,31 @@ class CreateAuctionSessionResponse(BaseModel):
     code: int
     message: str
     data: CreateAuctionSessionData
+
+
+class AuctionSessionListItem(BaseModel):
+    id: uuid.UUID
+    title: str
+    description: str | None
+    start_time: datetime = Field(serialization_alias="startTime")
+    end_time: datetime = Field(serialization_alias="endTime")
+    status: AuctionSessionStatus
+    seller_name: str = Field(serialization_alias="sellerName")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class AuctionSessionListData(BaseModel):
+    items: list[AuctionSessionListItem]
+    page: int
+    size: int
+    total: int
+
+
+class ListAuctionSessionsResponse(BaseModel):
+    status: int
+    code: int
+    message: str
+    data: AuctionSessionListData

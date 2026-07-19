@@ -64,21 +64,21 @@ def decode_access_token(token: str) -> dict[str, Any]:
     except jwt.ExpiredSignatureError as exception:
         raise AppException(
             status_code=401,
-            code="TOKEN_EXPIRED",
-            message="Access token has expired",
+            code="INVALID_ACCESS_TOKEN",
+            message="Access token is invalid or expired",
         ) from exception
     except jwt.InvalidTokenError as exception:
         raise AppException(
             status_code=401,
-            code="INVALID_TOKEN",
-            message="Invalid access token",
+            code="INVALID_ACCESS_TOKEN",
+            message="Access token is invalid or expired",
         ) from exception
 
     if payload.get("type") != "access":
         raise AppException(
             status_code=401,
-            code="INVALID_TOKEN",
-            message="Invalid access token",
+            code="INVALID_ACCESS_TOKEN",
+            message="Access token is invalid or expired",
         )
 
     return payload

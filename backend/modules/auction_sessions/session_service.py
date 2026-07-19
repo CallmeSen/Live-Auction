@@ -9,8 +9,11 @@ from app.models.auction_session_rule_model import AuctionSessionRule
 from app.models.session_model import AuctionSession
 from modules.auction_sessions.session_repository import (
     AuctionSessionRepository,
+    SessionListFilters,
 )
 from modules.auction_sessions.session_schema import (
+    AuctionSessionListData,
+    AuctionSessionListItem,
     CreateAuctionSessionRequest,
 )
 
@@ -21,6 +24,36 @@ class AuctionSessionService:
         session_repository: AuctionSessionRepository,
     ) -> None:
         self.session_repository = session_repository
+
+    async def list_sessions(
+        self,
+        db: AsyncSession,
+        filters: SessionListFilters,
+    ) -> AuctionSessionListData:
+        sessions, total = await self.session_repository.list_sessions(
+            db=db,
+            filters=filters,
+        )
+
+        items = [
+            AuctionSessionListItem(
+                id=session.id,
+                title=session.title,
+                description=session.description,
+                start_time=session.start_time,
+                end_time=session.end_time,
+                status=session.status,
+                seller_name=session.seller.full_name,
+            )
+            for session in sessions
+        ]
+
+        return AuctionSessionListData(
+            items=items,
+            page=filters.page,
+            size=filters.size,
+            total=total,
+        )
 
     async def create_session(
         self,
