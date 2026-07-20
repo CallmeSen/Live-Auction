@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { AuthUser } from '../features/auth/types';
-import { AUTH_CHANGED_EVENT, getCurrentUser, logoutDemo, updateCurrentUserProfile, } from '../store/authStore';
+import { AUTH_CHANGED_EVENT, getCurrentUser, logoutSession, updateCurrentUserProfile, } from '../store/authStore';
 
 export default function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(() => getCurrentUser());
@@ -15,7 +15,7 @@ export default function useAuth() {
     };
   }, []);
   const logout = () => {
-    logoutDemo();
+    logoutSession();
     setUser(null);
   };
   return {

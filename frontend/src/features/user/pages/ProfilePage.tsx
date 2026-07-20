@@ -18,7 +18,6 @@ export default function ProfilePage() {
   const [form, setForm] = useState(() => ({
     fullName: user?.fullName ?? '',
     phone: user?.phone ?? '',
-    address: user?.address ?? '',
   }));
 
   const [pendingDestination, setPendingDestination] = useState<string | null>(
@@ -28,19 +27,17 @@ export default function ProfilePage() {
 
   const isDirty =
     form.fullName !== (user?.fullName ?? '') ||
-    form.phone !== (user?.phone ?? '') ||
-    form.address !== (user?.address ?? '');
+    form.phone !== (user?.phone ?? '');
 
   const resetForm = () => {
     setForm({
       fullName: user?.fullName ?? '',
       phone: user?.phone ?? '',
-      address: user?.address ?? '',
     });
   };
 
   const updateField = (
-    field: 'fullName' | 'phone' | 'address',
+    field: 'fullName' | 'phone',
     value: string,
   ) => {
     setForm((current) => ({
@@ -61,7 +58,6 @@ export default function ProfilePage() {
     setForm({
       fullName: updatedUser.fullName,
       phone: updatedUser.phone,
-      address: updatedUser.address ?? '',
     });
 
     setIsEditing(false);
@@ -324,17 +320,6 @@ export default function ProfilePage() {
               type="email"
               value={user?.email ?? ''}
               disabled
-            />
-          </div>
-
-          <div className="mt-5">
-            <Input
-              label="Địa chỉ"
-              value={form.address}
-              onChange={(event) =>
-                updateField('address', event.target.value)
-              }
-              disabled={!isEditing}
             />
           </div>
 

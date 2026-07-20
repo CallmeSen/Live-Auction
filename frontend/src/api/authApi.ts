@@ -1,31 +1,15 @@
 import axiosClient from './axiosClient';
-import type { LoginForm, RegisterForm } from '../features/auth/types';
-
-export interface ApiEnvelope<T> {
-  status: number;
-  code: number | string;
-  message: string;
-  data: T;
-}
-
-export interface LoginData {
-  accessToken: string;
-  tokenType: string;
-  user: {
-    id: string;
-    email: string;
-    fullName: string;
-    role: string;
-    status: string;
-  };
-}
+import type { ApiEnvelope } from './types';
+import type {
+  LoginRequest,
+  LoginResponseData,
+  RegisterRequest,
+  RegisterResponseData,
+} from '../features/auth/types';
 
 export const authApi = {
-  register: (payload: RegisterForm) =>
-    axiosClient.post<ApiEnvelope<unknown>>('/auth/register', payload),
-  login: (payload: LoginForm) =>
-    axiosClient.post<ApiEnvelope<LoginData>>('/auth/login', payload),
-  refresh: () =>
-    axiosClient.post<ApiEnvelope<{ accessToken: string }>>('/auth/refresh-token'),
-  logout: () => axiosClient.post('/auth/logout'),
+  register: (payload: RegisterRequest) =>
+    axiosClient.post<ApiEnvelope<RegisterResponseData>>('/auth/register', payload),
+  login: (payload: LoginRequest) =>
+    axiosClient.post<ApiEnvelope<LoginResponseData>>('/auth/login', payload),
 };
