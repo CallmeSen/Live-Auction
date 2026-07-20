@@ -1,6 +1,5 @@
 import type { Auction, BidHistory } from '../features/auction/types';
 import type { MyBid } from '../features/bid/types';
-import type { WalletTransaction } from '../features/wallet/types';
 
 const imageParams = 'auto=format&fit=crop&q=85&w=1200';
 const watchImage = `https://images.unsplash.com/photo-1639160740064-44d85d5be1ad?${imageParams}`;
@@ -79,8 +78,4 @@ export const mockMyBids: MyBid[] = [
   { id: 3, auctionId: 5, auctionTitle: mockAuctions[4].title, image: mockAuctions[4].image, myBid: 42_000_000, currentPrice: 42_000_000, bidTime: '2026-07-08T20:59:00+07:00', status: 'WON', auctionStatus: 'ENDED', auctionEndTime: mockAuctions[4].endTime },
 ];
 
-export const mockTransactions: WalletTransaction[] = [
-  { id: 1, title: 'Nạp tiền qua ngân hàng', type: 'DEPOSIT', amount: 50_000_000, date: '2026-07-09T14:20:00+07:00', status: 'COMPLETED' },
-  { id: 2, title: 'Giữ chỗ — Đồng hồ Thụy Sĩ', type: 'HOLD', amount: -13_000_000, date: '2026-07-10T07:35:00+07:00', status: 'COMPLETED' },
-  { id: 3, title: 'Hoàn tiền giữ chỗ', type: 'RELEASE', amount: 2_000_000, date: '2026-07-08T18:10:00+07:00', status: 'COMPLETED' },
-];
+

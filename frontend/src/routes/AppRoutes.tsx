@@ -12,9 +12,6 @@ import CreateAuctionPage from '../features/auction/pages/CreateAuctionPage';
 import MyAuctionsPage from '../features/auction/pages/MyAuctionsPage';
 import EditAuctionPage from '../features/auction/pages/EditAuctionPage';
 import MyBidsPage from '../features/bid/pages/MyBidsPage';
-import WalletPage from '../features/wallet/pages/WalletPage';
-import DepositPage from '../features/wallet/pages/DepositPage';
-import WithdrawPage from '../features/wallet/pages/WithdrawPage';
 import ProfilePage from '../features/user/pages/ProfilePage';
 import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
 import AdminUsersPage from '../features/admin/pages/AdminUsersPage';
@@ -43,9 +40,6 @@ export default function AppRoutes() {
           <Route path="/forbidden" element={<AccessDeniedPage />} />
 
           <Route element={<RoleRoute allowedRoles={['USER']} />}>
-            <Route path="/wallet" element={<WalletPage />} />
-            <Route path="/wallet/deposit" element={<DepositPage />} />
-            <Route path="/wallet/withdraw" element={<WithdrawPage />} />
             <Route path="/my-bids" element={<MyBidsPage />} />
             <Route path="/auctions/create" element={<CreateAuctionPage />} />
             <Route path="/my-auctions" element={<MyAuctionsPage />} />
