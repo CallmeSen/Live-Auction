@@ -1,3 +1,4 @@
+import math
 import uuid
 
 from fastapi import status
@@ -7,11 +8,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import AppException
 from common.enum import AuctionItemStatus, AuctionSessionStatus
 from app.models.item_model import AuctionItem
-from modules.auction_items.item_repository import AuctionItemRepository
+from modules.auction_items.item_repository import (
+    AuctionItemRepository,
+    ItemListFilters,
+)
 from modules.auction_items.item_schema import (
     AuctionItemBidData,
     AuctionItemDetailData,
     AuctionItemImageData,
+    AuctionItemListCategoryData,
+    AuctionItemListData,
+    AuctionItemListItem,
+    AuctionItemListSessionData,
     AuctionItemSellerData,
     AuctionItemSessionData,
     CreateAuctionItemRequest,
@@ -32,6 +40,87 @@ class AuctionItemService:
         self.item_repository = item_repository
         self.session_repository = session_repository
         self.category_repository = category_repository
+
+    async def list_items(
+        self,
+        db: AsyncSession,
+        filters: ItemListFilters,
+    ) -> AuctionItemListData:
+        rows, total = await self.item_repository.list_items(
+            db=db,
+            filters=filters,
+        )
+
+        items = [
+            self._map_list_item(
+                auction_item,
+                bid_count,
+                primary_image_url,
+            )
+            for auction_item, bid_count, primary_image_url in rows
+        ]
+
+        total_pages = (
+            math.ceil(total / filters.page_size) if total > 0 else 0
+        )
+
+        return AuctionItemListData(
+            items=items,
+            page=filters.page,
+            page_size=filters.page_size,
+            total=total,
+            total_pages=total_pages,
+        )
+
+    def _map_list_item(
+        self,
+        item: AuctionItem,
+        bid_count: int,
+        primary_image_url: str | None,
+    ) -> AuctionItemListItem:
+        if item.session.rules is None:
+            raise AppException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                code="SESSION_RULE_NOT_FOUND",
+                message="Auction session rule not found",
+            )
+
+        category = None
+
+        if item.category is not None:
+            category = AuctionItemListCategoryData(
+                id=item.category.id,
+                name=item.category.name,
+                slug=item.category.slug,
+            )
+
+        return AuctionItemListItem(
+            id=item.id,
+            title=item.title,
+            description=item.description,
+            starting_price=item.starting_price,
+            current_price=item.current_price,
+            final_price=item.final_price,
+            status=item.status,
+            opened_at=item.opened_at,
+            closed_at=item.closed_at,
+            created_at=item.created_at,
+            primary_image_url=primary_image_url,
+            bid_count=bid_count,
+            seller=AuctionItemSellerData(
+                id=item.seller.id,
+                full_name=item.seller.full_name,
+            ),
+            category=category,
+            session=AuctionItemListSessionData(
+                id=item.session.id,
+                title=item.session.title,
+                status=item.session.status,
+                start_time=item.session.start_time,
+                end_time=item.session.end_time,
+                min_increment=item.session.rules.min_increment,
+            ),
+        )
 
     async def get_item_detail(
         self,

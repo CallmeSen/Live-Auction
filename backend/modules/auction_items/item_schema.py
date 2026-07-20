@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 
 from pydantic import (
     BaseModel,
@@ -9,6 +10,20 @@ from pydantic import (
 )
 
 from common.enum import AuctionItemStatus, AuctionSessionStatus, BidStatus
+
+
+class AuctionItemSortBy(str, Enum):
+    CREATED_AT = "createdAt"
+    CURRENT_PRICE = "currentPrice"
+    STARTING_PRICE = "startingPrice"
+    TITLE = "title"
+    OPENED_AT = "openedAt"
+    CLOSED_AT = "closedAt"
+
+
+class SortOrder(str, Enum):
+    ASC = "asc"
+    DESC = "desc"
 
 
 class CreateAuctionItemRequest(BaseModel):
@@ -112,3 +127,63 @@ class GetAuctionItemDetailResponse(BaseModel):
     code: int
     message: str
     data: AuctionItemDetailData
+
+
+class AuctionItemListCategoryData(BaseModel):
+    id: uuid.UUID
+    name: str
+    slug: str
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class AuctionItemListSessionData(BaseModel):
+    id: uuid.UUID
+    title: str
+    status: AuctionSessionStatus
+    start_time: datetime = Field(serialization_alias="startTime")
+    end_time: datetime = Field(serialization_alias="endTime")
+    min_increment: Decimal = Field(serialization_alias="minIncrement")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class AuctionItemListItem(BaseModel):
+    id: uuid.UUID
+    title: str
+    description: str | None
+    starting_price: Decimal = Field(serialization_alias="startingPrice")
+    current_price: Decimal = Field(serialization_alias="currentPrice")
+    final_price: Decimal | None = Field(serialization_alias="finalPrice")
+    status: AuctionItemStatus
+    opened_at: datetime | None = Field(serialization_alias="openedAt")
+    closed_at: datetime | None = Field(serialization_alias="closedAt")
+    created_at: datetime = Field(serialization_alias="createdAt")
+    primary_image_url: str | None = Field(serialization_alias="primaryImageUrl")
+    bid_count: int = Field(serialization_alias="bidCount")
+    seller: AuctionItemSellerData
+    category: AuctionItemListCategoryData | None
+    session: AuctionItemListSessionData
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class AuctionItemListData(BaseModel):
+    items: list[AuctionItemListItem]
+    page: int
+    page_size: int = Field(serialization_alias="pageSize")
+    total: int
+    total_pages: int = Field(serialization_alias="totalPages")
+
+
+class ListAuctionItemsResponse(BaseModel):
+    status: int
+    code: int
+    message: str
+    data: AuctionItemListData

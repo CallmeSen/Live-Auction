@@ -1,17 +1,24 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, status
+from fastapi import APIRouter, Depends, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user_id, security
-from modules.auction_items.item_repository import AuctionItemRepository
+from common.enum import AuctionItemStatus
+from modules.auction_items.item_repository import (
+    AuctionItemRepository,
+    ItemListFilters,
+)
 from modules.auction_items.item_schema import (
+    AuctionItemSortBy,
     CreateAuctionItemData,
     CreateAuctionItemRequest,
     CreateAuctionItemResponse,
     GetAuctionItemDetailResponse,
+    ListAuctionItemsResponse,
+    SortOrder,
 )
 from modules.auction_items.item_service import AuctionItemService
 from modules.auction_sessions.session_repository import (
@@ -54,6 +61,68 @@ CurrentUserId = Annotated[
     uuid.UUID,
     Depends(get_current_user_id),
 ]
+
+
+@public_router.get(
+    "",
+    status_code=status.HTTP_200_OK,
+    response_model=ListAuctionItemsResponse,
+)
+async def list_auction_items(
+    db: DatabaseSession,
+    item_service: AuctionItemServiceDependency,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[
+        int,
+        Query(alias="pageSize", ge=1, le=100),
+    ] = 20,
+    status_filter: Annotated[
+        AuctionItemStatus | None,
+        Query(alias="status"),
+    ] = None,
+    session_id: Annotated[
+        uuid.UUID | None,
+        Query(alias="sessionId"),
+    ] = None,
+    category_id: Annotated[
+        uuid.UUID | None,
+        Query(alias="categoryId"),
+    ] = None,
+    keyword: Annotated[str | None, Query(max_length=255)] = None,
+    sort_by: Annotated[
+        AuctionItemSortBy,
+        Query(alias="sortBy"),
+    ] = AuctionItemSortBy.CREATED_AT,
+    sort_order: Annotated[
+        SortOrder,
+        Query(alias="sortOrder"),
+    ] = SortOrder.DESC,
+) -> ListAuctionItemsResponse:
+    normalized_keyword = keyword.strip() if keyword else None
+
+    if normalized_keyword == "":
+        normalized_keyword = None
+
+    data = await item_service.list_items(
+        db=db,
+        filters=ItemListFilters(
+            page=page,
+            page_size=page_size,
+            status=status_filter,
+            session_id=session_id,
+            category_id=category_id,
+            keyword=normalized_keyword,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        ),
+    )
+
+    return ListAuctionItemsResponse(
+        status=status.HTTP_200_OK,
+        code=1000,
+        message="Get auction item list successfully",
+        data=data,
+    )
 
 
 @public_router.get(
