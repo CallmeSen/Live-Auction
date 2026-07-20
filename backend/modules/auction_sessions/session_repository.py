@@ -5,6 +5,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.item_model import AuctionItem
 from app.models.session_model import AuctionSession
 from common.enum import AuctionSessionStatus
 
@@ -25,6 +26,46 @@ class AuctionSessionRepository:
     ) -> AuctionSession | None:
         statement = select(AuctionSession).where(
             AuctionSession.id == session_id,
+        )
+
+        result = await db.execute(statement)
+
+        return result.scalar_one_or_none()
+
+    async def find_detail_by_id(
+        self,
+        db: AsyncSession,
+        session_id: uuid.UUID,
+    ) -> AuctionSession | None:
+        statement = (
+            select(AuctionSession)
+            .options(
+                selectinload(AuctionSession.seller),
+                selectinload(AuctionSession.rules),
+                selectinload(AuctionSession.items).selectinload(
+                    AuctionItem.images,
+                ),
+            )
+            .where(AuctionSession.id == session_id)
+        )
+
+        result = await db.execute(statement)
+
+        return result.scalar_one_or_none()
+
+    async def find_by_id_for_update(
+        self,
+        db: AsyncSession,
+        session_id: uuid.UUID,
+    ) -> AuctionSession | None:
+        statement = (
+            select(AuctionSession)
+            .options(
+                selectinload(AuctionSession.rules),
+                selectinload(AuctionSession.items),
+            )
+            .where(AuctionSession.id == session_id)
+            .with_for_update()
         )
 
         result = await db.execute(statement)

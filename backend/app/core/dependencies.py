@@ -85,3 +85,36 @@ async def get_current_admin_user(
         )
 
     return user
+
+
+async def get_current_active_user(
+    user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    user = await UserRepository().find_by_id(
+        db=db,
+        user_id=user_id,
+    )
+
+    if user is None:
+        raise AppException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            code="USER_NOT_FOUND",
+            message="Authenticated user was not found",
+        )
+
+    if user.status == UserStatus.BANNED:
+        raise AppException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="USER_BANNED",
+            message="Your account has been banned",
+        )
+
+    if user.status != UserStatus.ACTIVE:
+        raise AppException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="USER_NOT_ACTIVE",
+            message="Your account is not active",
+        )
+
+    return user

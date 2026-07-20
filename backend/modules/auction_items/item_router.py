@@ -11,6 +11,7 @@ from modules.auction_items.item_schema import (
     CreateAuctionItemData,
     CreateAuctionItemRequest,
     CreateAuctionItemResponse,
+    GetAuctionItemDetailResponse,
 )
 from modules.auction_items.item_service import AuctionItemService
 from modules.auction_sessions.session_repository import (
@@ -23,6 +24,11 @@ router = APIRouter(
     prefix="/api/v1/auction-sessions",
     tags=["Auction Items"],
     dependencies=[Depends(security)],
+)
+
+public_router = APIRouter(
+    prefix="/api/v1/auction-items",
+    tags=["Auction Items"],
 )
 
 
@@ -48,6 +54,29 @@ CurrentUserId = Annotated[
     uuid.UUID,
     Depends(get_current_user_id),
 ]
+
+
+@public_router.get(
+    "/{item_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=GetAuctionItemDetailResponse,
+)
+async def get_auction_item_detail(
+    item_id: uuid.UUID,
+    db: DatabaseSession,
+    item_service: AuctionItemServiceDependency,
+) -> GetAuctionItemDetailResponse:
+    data = await item_service.get_item_detail(
+        db=db,
+        item_id=item_id,
+    )
+
+    return GetAuctionItemDetailResponse(
+        status=status.HTTP_200_OK,
+        code=1000,
+        message="Get auction item detail successfully",
+        data=data,
+    )
 
 
 @router.post(

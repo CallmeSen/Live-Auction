@@ -10,7 +10,7 @@ from pydantic import (
     model_validator,
 )
 
-from common.enum import AuctionSessionStatus
+from common.enum import AuctionItemStatus, AuctionSessionStatus
 
 
 class CreateAuctionSessionRequest(BaseModel):
@@ -91,3 +91,67 @@ class ListAuctionSessionsResponse(BaseModel):
     code: int
     message: str
     data: AuctionSessionListData
+
+
+class AuctionSessionSellerData(BaseModel):
+    id: uuid.UUID
+    full_name: str = Field(serialization_alias="fullName")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class AuctionSessionItemSummary(BaseModel):
+    id: uuid.UUID
+    title: str
+    starting_price: Decimal = Field(serialization_alias="startingPrice")
+    current_price: Decimal = Field(serialization_alias="currentPrice")
+    status: AuctionItemStatus
+    primary_image_url: str | None = Field(
+        serialization_alias="primaryImageUrl",
+    )
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class AuctionSessionDetailData(BaseModel):
+    id: uuid.UUID
+    title: str
+    description: str | None
+    start_time: datetime = Field(serialization_alias="startTime")
+    end_time: datetime = Field(serialization_alias="endTime")
+    status: AuctionSessionStatus
+    seller: AuctionSessionSellerData
+    rule: AuctionSessionRuleData
+    items: list[AuctionSessionItemSummary]
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class GetAuctionSessionDetailResponse(BaseModel):
+    status: int
+    code: int
+    message: str
+    data: AuctionSessionDetailData
+
+
+class StartAuctionSessionData(BaseModel):
+    id: uuid.UUID
+    status: AuctionSessionStatus
+    started_at: datetime = Field(serialization_alias="startedAt")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class StartAuctionSessionResponse(BaseModel):
+    status: int
+    code: int
+    message: str
+    data: StartAuctionSessionData

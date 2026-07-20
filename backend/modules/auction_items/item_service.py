@@ -8,7 +8,14 @@ from app.core.exceptions import AppException
 from common.enum import AuctionItemStatus, AuctionSessionStatus
 from app.models.item_model import AuctionItem
 from modules.auction_items.item_repository import AuctionItemRepository
-from modules.auction_items.item_schema import CreateAuctionItemRequest
+from modules.auction_items.item_schema import (
+    AuctionItemBidData,
+    AuctionItemDetailData,
+    AuctionItemImageData,
+    AuctionItemSellerData,
+    AuctionItemSessionData,
+    CreateAuctionItemRequest,
+)
 from modules.auction_sessions.session_repository import (
     AuctionSessionRepository,
 )
@@ -25,6 +32,74 @@ class AuctionItemService:
         self.item_repository = item_repository
         self.session_repository = session_repository
         self.category_repository = category_repository
+
+    async def get_item_detail(
+        self,
+        db: AsyncSession,
+        item_id: uuid.UUID,
+    ) -> AuctionItemDetailData:
+        item = await self.item_repository.find_detail_by_id(
+            db=db,
+            item_id=item_id,
+        )
+
+        if item is None:
+            raise AppException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                code="ITEM_NOT_FOUND",
+                message="Auction item not found",
+            )
+
+        if item.session.rules is None:
+            raise AppException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                code="SESSION_RULE_NOT_FOUND",
+                message="Auction session rule not found",
+            )
+
+        sorted_bids = sorted(
+            item.bids,
+            key=lambda bid: bid.created_at,
+            reverse=True,
+        )
+
+        return AuctionItemDetailData(
+            id=item.id,
+            session_id=item.session_id,
+            title=item.title,
+            description=item.description,
+            starting_price=item.starting_price,
+            current_price=item.current_price,
+            status=item.status,
+            seller=AuctionItemSellerData(
+                id=item.seller.id,
+                full_name=item.seller.full_name,
+            ),
+            session=AuctionItemSessionData(
+                id=item.session.id,
+                title=item.session.title,
+                status=item.session.status,
+                end_time=item.session.end_time,
+                min_increment=item.session.rules.min_increment,
+            ),
+            images=[
+                AuctionItemImageData(
+                    image_url=image.image_url,
+                    is_primary=image.is_primary,
+                )
+                for image in item.images
+            ],
+            bids=[
+                AuctionItemBidData(
+                    id=bid.id,
+                    bidder_name=bid.bidder.full_name,
+                    amount=bid.amount,
+                    status=bid.status,
+                    created_at=bid.created_at,
+                )
+                for bid in sorted_bids
+            ],
+        )
 
     async def create_item(
         self,

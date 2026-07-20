@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user_id, security
+from app.core.dependencies import get_current_active_user, get_current_user_id, security
+from app.models.user_model import User
 from common.enum import AuctionSessionStatus
 from modules.auction_sessions.session_repository import (
     AuctionSessionRepository,
@@ -16,7 +17,9 @@ from modules.auction_sessions.session_schema import (
     CreateAuctionSessionData,
     CreateAuctionSessionRequest,
     CreateAuctionSessionResponse,
+    GetAuctionSessionDetailResponse,
     ListAuctionSessionsResponse,
+    StartAuctionSessionResponse,
 )
 from modules.auction_sessions.session_service import AuctionSessionService
 
@@ -46,6 +49,11 @@ AuctionSessionServiceDependency = Annotated[
 CurrentUserId = Annotated[
     uuid.UUID,
     Depends(get_current_user_id),
+]
+
+CurrentActiveUser = Annotated[
+    User,
+    Depends(get_current_active_user),
 ]
 
 
@@ -88,6 +96,29 @@ async def list_auction_sessions(
     )
 
 
+@router.get(
+    "/{session_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=GetAuctionSessionDetailResponse,
+)
+async def get_auction_session_detail(
+    session_id: uuid.UUID,
+    db: DatabaseSession,
+    session_service: AuctionSessionServiceDependency,
+) -> GetAuctionSessionDetailResponse:
+    data = await session_service.get_session_detail(
+        db=db,
+        session_id=session_id,
+    )
+
+    return GetAuctionSessionDetailResponse(
+        status=status.HTTP_200_OK,
+        code=1000,
+        message="Get auction session detail successfully",
+        data=data,
+    )
+
+
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
@@ -120,4 +151,30 @@ async def create_auction_session(
             status=session.status,
             rule=AuctionSessionRuleData.model_validate(session.rules),
         ),
+    )
+
+
+@router.patch(
+    "/{session_id}/start",
+    status_code=status.HTTP_200_OK,
+    response_model=StartAuctionSessionResponse,
+    dependencies=[Depends(security)],
+)
+async def start_auction_session(
+    session_id: uuid.UUID,
+    db: DatabaseSession,
+    current_user: CurrentActiveUser,
+    session_service: AuctionSessionServiceDependency,
+) -> StartAuctionSessionResponse:
+    data = await session_service.start_session(
+        db=db,
+        session_id=session_id,
+        current_user=current_user,
+    )
+
+    return StartAuctionSessionResponse(
+        status=status.HTTP_200_OK,
+        code=1000,
+        message="Auction session started successfully",
+        data=data,
     )
