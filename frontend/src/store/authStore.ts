@@ -89,6 +89,32 @@ const getRegisteredAccounts = (): DemoAccount[] => {
   }
 };
 
+export const persistAuthSession = (
+  accessToken: string,
+  user: {
+    id: string;
+    email: string;
+    fullName: string;
+    role: string;
+    status?: string;
+  },
+): AuthUser => {
+  const authUser: AuthUser = {
+    id: user.id,
+    email: user.email,
+    fullName: user.fullName,
+    role: normalizeRole(user.role),
+    phone: '',
+    status: user.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
+  };
+
+  localStorage.setItem(TOKEN_KEY, accessToken);
+  localStorage.setItem(USER_KEY, JSON.stringify(authUser));
+  emitAuthChanged();
+
+  return authUser;
+};
+
 export const loginDemo = (email: string, password: string): AuthUser | null => {
   const normalizedEmail = email.trim().toLowerCase();
   const account = [...demoAccounts, ...getRegisteredAccounts()].find(

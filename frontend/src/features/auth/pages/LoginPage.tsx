@@ -1,8 +1,10 @@
+import axios from 'axios';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { authApi } from '../../../api/authApi';
 import Input from '../../../components/common/Input';
 import Button from '../../../components/common/Button';
-import { demoAccounts, getRoleHome, loginDemo } from '../../../store/authStore';
+import { demoAccounts, getRoleHome, persistAuthSession } from '../../../store/authStore';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -17,20 +19,39 @@ export default function LoginPage() {
     setError('');
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
     setLoading(true);
 
-    window.setTimeout(() => {
-      const user = loginDemo(form.email, form.password);
-      setLoading(false);
-      if (!user) {
-        setError('Email hoặc mật khẩu không đúng. Vui lòng chọn một tài khoản demo bên dưới.');
+    try {
+      const response = await authApi.login({
+        email: form.email.trim(),
+        password: form.password,
+      });
+
+      const user = persistAuthSession(
+        response.data.data.accessToken,
+        response.data.data.user,
+      );
+
+      navigate(from || getRoleHome(user.role), { replace: true });
+    } catch (loginError) {
+      if (axios.isAxiosError(loginError)) {
+        if (!loginError.response) {
+          setError('Không thể kết nối tới máy chủ. Hãy kiểm tra backend đang chạy trên cổng 8000.');
+          return;
+        }
+
+        const apiMessage = (loginError.response?.data as { message?: string } | undefined)?.message;
+        setError(apiMessage ?? 'Email hoặc mật khẩu không đúng.');
         return;
       }
-      navigate(from || getRoleHome(user.role), { replace: true });
-    }, 350);
+
+      setError('Không thể đăng nhập. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
