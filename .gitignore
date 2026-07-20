@@ -24,4 +24,16 @@ hs_err_pid*
 replay_pid*
 
 
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment variables
 .env
+
+.cursor
