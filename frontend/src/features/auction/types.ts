@@ -2,7 +2,11 @@ export type AuctionStatus = 'ACTIVE' | 'UPCOMING' | 'ENDED' | 'CANCELLED';
 export type AuctionApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export interface Auction {
+<<<<<<< HEAD
   id: number;
+=======
+  id: string | number;
+>>>>>>> 3d6cdde (temp: preserve auction frontend and backend changes)
   title: string;
   category: string;
   categoryId: string;

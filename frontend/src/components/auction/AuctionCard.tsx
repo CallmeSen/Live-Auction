@@ -8,7 +8,11 @@ export default function AuctionCard({ auction }: { auction: Auction }) {
   const shownPrice = auction.status === 'ENDED' ? auction.finalPrice ?? auction.currentPrice : auction.currentPrice;
   return (
     <article className="group overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] transition duration-300 hover:-translate-y-1 hover:border-[var(--color-border-strong)] hover:shadow-[0_24px_50px_rgba(0,0,0,0.28)]">
+<<<<<<< HEAD
       <Link to={`/auctions/${auction.id}`} className="block">
+=======
+      <Link to={`/auction-items/${auction.id}`} className="block">
+>>>>>>> 3d6cdde (temp: preserve auction frontend and backend changes)
         <div className="relative aspect-[4/3] overflow-hidden bg-[var(--color-surface-raised)]">
           <img src={auction.image} alt={auction.title} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
           <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg)]/85 via-transparent to-transparent" />

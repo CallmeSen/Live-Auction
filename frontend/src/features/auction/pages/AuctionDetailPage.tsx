@@ -19,7 +19,13 @@ export default function AuctionDetailPage() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState(auction?.approvalStatus ?? 'PENDING');
 
+<<<<<<< HEAD
   if (!auction) return <div className="mx-auto max-w-7xl px-6 py-24 text-center"><h1 className="font-display text-3xl">Không tìm thấy phiên đấu giá</h1><Link to="/auctions" className="mt-4 inline-block text-[var(--color-primary)]">Quay về danh sách</Link></div>;
+=======
+  if (!auction) return <div className="mx-auto max-w-7xl px-6 py-24 text-center"><h1 className="font-display text-3xl">Không tìm thấy phiên đấu giá</h1>
+  <Link to="/auction-items" className="mt-4 inline-block text-[var(--color-primary)]">Quay về danh sách</Link>
+  </div>;
+>>>>>>> 3d6cdde (temp: preserve auction frontend and backend changes)
 
   const related = getPublicDemoAuctions().filter((item) => item.id !== auction.id).slice(0, 3);
   const isOwner = user?.email === auction.sellerEmail;
@@ -27,11 +33,20 @@ export default function AuctionDetailPage() {
   const canBid = user?.role === 'USER' && approvalStatus === 'APPROVED' && auction.status === 'ACTIVE' && !isOwner;
   const statusMessage = auction.status === 'UPCOMING' ? 'Phiên đấu giá chưa bắt đầu.' : auction.status === 'ENDED' ? 'Phiên đấu giá đã kết thúc.' : auction.status === 'CANCELLED' ? 'Phiên đấu giá đã bị hủy.' : '';
 
+<<<<<<< HEAD
   if (!canView) return <div className="mx-auto max-w-7xl px-6 py-24 text-center"><h1 className="font-display text-3xl">Phiên đấu giá chưa được công khai</h1><p className="mt-3 text-sm text-[var(--color-text-muted)]">Phiên này đang chờ kiểm duyệt hoặc đã bị từ chối.</p><Link to="/auctions" className="mt-4 inline-block text-[var(--color-primary)]">Quay về danh sách</Link></div>;
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8 sm:py-12">
       <Link to="/auctions" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">← Quay lại danh sách</Link>
+=======
+  if (!canView) return <div className="mx-auto max-w-7xl px-6 py-24 text-center"><h1 className="font-display text-3xl">Phiên đấu giá chưa được công khai</h1><p className="mt-3 text-sm text-[var(--color-text-muted)]">Phiên này đang chờ kiểm duyệt hoặc đã bị từ chối.
+  </p><Link to="/auction-items" className="mt-4 inline-block text-[var(--color-primary)]">Quay về danh sách</Link>
+  </div>;
+
+  return (
+    <div className="mx-auto max-w-7xl px-6 py-8 sm:py-12">
+>>>>>>> 3d6cdde (temp: preserve auction frontend and backend changes)
       <div className="mt-7 grid gap-10 lg:grid-cols-[1.15fr_0.85fr]">
         <div>
           <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]"><img src={auction.image} alt={auction.title} className="aspect-[4/3] w-full object-cover" /></div>
@@ -82,7 +97,15 @@ export default function AuctionDetailPage() {
             />
             {canBid && <BidForm currentPrice={currentPrice} minimumBidIncrement={auction.minimumBidIncrement} walletBalance={37_000_000} onPlaceBid={setCurrentPrice} />}
             {user && !canBid && user.role === 'USER' && !isOwner && statusMessage && <div className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-alt)] p-5 text-sm text-[var(--color-primary-hover)]">{statusMessage}</div>}
+<<<<<<< HEAD
             {isOwner && user?.role === 'USER' && <div className="rounded-xl border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 p-5"><p className="text-sm text-[var(--color-primary-hover)]">Đây là phiên do bạn đăng. Bạn không thể tự tham gia trả giá món hàng của mình.</p><p className="mt-2 text-xs text-[var(--color-text-soft)]">Trạng thái kiểm duyệt: {approvalStatusLabel[approvalStatus]}.</p><Link to={`/my-auctions/${auction.id}/edit`} className="mt-4 inline-block text-sm font-semibold text-[var(--color-text)]">Chỉnh sửa phiên →</Link></div>}
+=======
+            {isOwner && user?.role === 'USER' && <div className="rounded-xl border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 p-5"><p className="text-sm text-[var(--color-primary-hover)]">Đây là phiên do bạn đăng. Bạn không thể tự tham gia trả giá món hàng của mình.</p><p className="mt-2 text-xs text-[var(--color-text-soft)]">Trạng thái kiểm duyệt: {approvalStatusLabel[approvalStatus]}.
+              </p>
+              <Link to={`/auction-sessions/my/${auction.id}/edit`} className="mt-4 inline-block text-sm font-semibold text-[var(--color-text)]">
+              Chỉnh sửa phiên →</Link>
+              </div>}
+>>>>>>> 3d6cdde (temp: preserve auction frontend and backend changes)
             {user?.role === 'ADMIN' && <div className="rounded-xl border border-[var(--color-primary)] bg-[var(--color-surface-raised)] p-5"><p className="text-xs uppercase tracking-wider text-[var(--color-primary)]">Công cụ kiểm duyệt</p><div className="mt-4 flex gap-3"><button onClick={() => { updateDemoAuctionApproval(auction.id, 'APPROVED'); setApprovalStatus('APPROVED'); setModerationMessage('Đã duyệt phiên. Phiên có thể xuất hiện công khai.'); }} className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-bg)]">Duyệt phiên</button><button onClick={() => { updateDemoAuctionApproval(auction.id, 'REJECTED'); setApprovalStatus('REJECTED'); setModerationMessage('Đã từ chối phiên đấu giá.'); }} className="rounded-md border border-[var(--color-danger-solid)]/60 px-4 py-2 text-xs text-[var(--color-danger)]">Từ chối</button></div>{moderationMessage && <p className="mt-3 text-xs text-[var(--color-success)]">{moderationMessage}</p>}</div>}
           </div>
         </div>

@@ -31,8 +31,13 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<MainLayout />}>
+<<<<<<< HEAD
         <Route path="/auctions" element={<AuctionListPage />} />
         <Route path="/auctions/:id" element={<AuctionDetailPage />} />
+=======
+        <Route path="/auction-items" element={<AuctionListPage />} />
+        <Route path="/auction-items/:id" element={<AuctionDetailPage />} />
+>>>>>>> 3d6cdde (temp: preserve auction frontend and backend changes)
 
         <Route element={<ProtectedRoute />}>
           <Route path="/profile" element={<ProfilePage />} />
@@ -41,7 +46,11 @@ export default function AppRoutes() {
 
           <Route element={<RoleRoute allowedRoles={['USER']} />}>
             <Route path="/my-bids" element={<MyBidsPage />} />
+<<<<<<< HEAD
             <Route path="/auctions/create" element={<CreateAuctionPage />} />
+=======
+            <Route path="/auction-items/create" element={<CreateAuctionPage />} />
+>>>>>>> 3d6cdde (temp: preserve auction frontend and backend changes)
             <Route path="/my-auctions" element={<MyAuctionsPage />} />
             <Route path="/my-auctions/:id/edit" element={<EditAuctionPage />} />
           </Route>

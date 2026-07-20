@@ -57,7 +57,13 @@ export default function CreateAuctionPage() {
           {previews.length > 0 && <div className="grid grid-cols-3 gap-2">{previews.map((image, index) => <div key={image} className="relative overflow-hidden rounded-lg border border-[var(--color-border)]"><img src={image} alt={`Xem trước ${index + 1}`} className="aspect-square w-full object-cover" />{index === 0 && <span className="absolute bottom-1 left-1 rounded bg-[var(--color-primary)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--color-bg)]">Ảnh chính</span>}</div>)}</div>}
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-5"><h3 className="font-display text-lg">Quy tắc trạng thái</h3><ul className="mt-3 space-y-2 text-xs leading-5 text-[var(--color-text-muted)]"><li>• Gửi thành công → Chờ Admin duyệt.</li><li>• Chỉ phiên đã duyệt mới xuất hiện công khai.</li><li>• Không cho phép thời gian kết thúc trong quá khứ.</li></ul></div>
           {error && <p className="rounded-md border border-[var(--color-danger-solid)]/40 bg-[var(--color-danger-solid)]/10 px-4 py-3 text-xs text-[var(--color-danger)]">{error}</p>}
+<<<<<<< HEAD
           <div className="grid grid-cols-2 gap-3"><Link to="/my-auctions" className="rounded-md border border-[var(--color-border-strong)] px-5 py-2.5 text-center text-sm font-semibold text-[var(--color-text)]">Hủy</Link><Button type="submit" disabled={loading}>{loading ? 'Đang gửi...' : 'Gửi Admin duyệt'}</Button></div>
+=======
+          <div className="grid grid-cols-2 gap-3">
+            <Link to="/my-auctions" className="rounded-md border border-[var(--color-border-strong)] px-5 py-2.5 text-center text-sm font-semibold text-[var(--color-text)]">Hủy</Link>
+            <Button type="submit" disabled={loading}>{loading ? 'Đang gửi...' : 'Gửi Admin duyệt'}</Button></div>
+>>>>>>> 3d6cdde (temp: preserve auction frontend and backend changes)
         </div>
       </form>
     </div>
