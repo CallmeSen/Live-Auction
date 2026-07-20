@@ -95,7 +95,46 @@ async def list_auction_sessions(
         data=data,
     )
 
+@router.get(
+    "/mine",
+    status_code=status.HTTP_200_OK,
+    response_model=ListAuctionSessionsResponse,
+    dependencies=[Depends(security)],
+)
+async def get_mine_auction_sessions(
+    db: DatabaseSession,
+    seller_id: CurrentUserId,
+    session_service: AuctionSessionServiceDependency,
+    page: Annotated[int, Query(ge=1)] = 1,
+    size: Annotated[int, Query(ge=1, le=100)] = 10,
+    status_filter: Annotated[
+        AuctionSessionStatus | None,
+        Query(alias="status"),
+    ] = None,
+    keyword: Annotated[str | None, Query(max_length=255)] = None,
+) -> ListAuctionSessionsResponse:
+    normalized_keyword = keyword.strip() if keyword else None
 
+    if normalized_keyword == "":
+        normalized_keyword = None
+
+    data = await session_service.list_sessions(
+        db=db,
+        filters=SessionListFilters(
+            page=page,
+            size=size,
+            status=status_filter,
+            keyword=normalized_keyword,
+            seller_id=seller_id,
+        ),
+    )
+
+    return ListAuctionSessionsResponse(
+        status=status.HTTP_200_OK,
+        code=1000,
+        message="Get my auction sessions successfully",
+        data=data,
+    )
 @router.get(
     "/{session_id}",
     status_code=status.HTTP_200_OK,

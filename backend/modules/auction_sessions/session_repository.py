@@ -16,7 +16,7 @@ class SessionListFilters:
     size: int
     status: AuctionSessionStatus | None
     keyword: str | None
-
+    seller_id: uuid.UUID | None = None
 
 class AuctionSessionRepository:
     async def find_by_id(
@@ -80,6 +80,9 @@ class AuctionSessionRepository:
 
         if filters.status is not None:
             conditions.append(AuctionSession.status == filters.status)
+
+        if filters.seller_id is not None:
+            conditions.append(AuctionSession.seller_id == filters.seller_id)
 
         if filters.keyword:
             keyword_pattern = f"%{filters.keyword.lower()}%"
