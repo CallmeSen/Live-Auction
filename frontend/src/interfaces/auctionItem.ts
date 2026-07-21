@@ -76,3 +76,18 @@ export interface AuctionItemDetailResponse {
   images: AuctionItemImageResponse[];
   bids: AuctionItemBidResponse[];
 }
+
+export interface UploadAuctionItemImageRequest {
+  file: File;
+  isPrimary?: boolean;
+  sortOrder?: number;
+}
+
+export interface UploadAuctionItemImageResponse {
+  id: string;
+  itemId: string;
+  imageUrl: string;
+  isPrimary: boolean;
+  sortOrder: number;
+  createdAt: string;
+}

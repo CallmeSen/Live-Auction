@@ -75,3 +75,20 @@ export interface StartAuctionSessionResponse {
   status: AuctionSessionStatus;
   startedAt: string;
 }
+
+export type AuctionSessionReviewStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED';
+
+export interface ReviewAuctionSessionRequest {
+  reason?: string | null;
+}
+
+export interface ReviewAuctionSessionResponse {
+  id: string;
+  reviewStatus: AuctionSessionReviewStatus;
+  reviewedBy: string;
+  reviewedAt: string;
+  rejectionReason: string | null;
+}
