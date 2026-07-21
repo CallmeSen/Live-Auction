@@ -5,6 +5,8 @@ import type {
   AuctionSessionListResponse,
   CreateAuctionSessionRequest,
   CreateAuctionSessionResponse,
+  ReviewAuctionSessionRequest,
+  ReviewAuctionSessionResponse,
   StartAuctionSessionResponse,
 } from '../interfaces/auctionSession';
 import type { ApiResponse } from '../interfaces/common';
@@ -65,6 +67,29 @@ export const auctionSessionService = {
     const response = await axiosClient.patch<
       ApiResponse<StartAuctionSessionResponse>
     >(`/auction-sessions/${sessionId}/start`);
+
+    return response.data.data;
+  },
+
+  // TODO(BACKEND): PATCH /admin/auction-sessions/{sessionId}/approve chua duoc trien khai.
+  async approveSession(
+    sessionId: string,
+  ): Promise<ReviewAuctionSessionResponse> {
+    const response = await axiosClient.patch<
+      ApiResponse<ReviewAuctionSessionResponse>
+    >(`/admin/auction-sessions/${sessionId}/approve`);
+
+    return response.data.data;
+  },
+
+  // TODO(BACKEND): PATCH /admin/auction-sessions/{sessionId}/reject chua duoc trien khai.
+  async rejectSession(
+    sessionId: string,
+    payload: ReviewAuctionSessionRequest,
+  ): Promise<ReviewAuctionSessionResponse> {
+    const response = await axiosClient.patch<
+      ApiResponse<ReviewAuctionSessionResponse>
+    >(`/admin/auction-sessions/${sessionId}/reject`, payload);
 
     return response.data.data;
   },
