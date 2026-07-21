@@ -1,11 +1,174 @@
-import { useMemo, useState } from 'react';
-import { mockUsers, type AdminUserRecord } from '../../../mocks/users';
-import { formatDateTime } from '../../../utils/formatDate';
-import { roleLabel } from '../../../store/authStore';
+import { useState } from 'react';
+import Button from '../../../components/common/Button';
+import Input from '../../../components/common/Input';
+import {
+  adminService,
+  type CreateAdminUserResponse,
+} from '../../../services/adminService';
+import { getApiErrorMessage } from '../../../services/apiError';
+
+const initialForm = {
+  fullName: '',
+  email: '',
+  phone: '',
+  password: '',
+};
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<AdminUserRecord[]>(mockUsers); const [search, setSearch] = useState(''); const [role, setRole] = useState('ALL');
-  const filtered = useMemo(() => users.filter((user) => (role === 'ALL' || user.role === role) && `${user.fullName} ${user.email}`.toLowerCase().includes(search.toLowerCase())), [users, search, role]);
-  const toggle = (id: string) => setUsers((items) => items.map((user) => user.id === id && user.role !== 'ADMIN' ? { ...user, status: user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' } : user));
-  return <div className="mx-auto max-w-7xl px-6 py-10 sm:py-14"><span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">Admin · Người dùng</span><h1 className="mt-2 font-display text-4xl">Quản lý tài khoản</h1><div className="mt-7 grid gap-3 sm:grid-cols-[1fr_220px]"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo tên hoặc email..." className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm outline-none focus:border-[var(--color-primary)]" /><select value={role} onChange={(event) => setRole(event.target.value)} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm"><option value="ALL">Tất cả vai trò</option><option value="USER">Thành viên</option><option value="ADMIN">Admin</option></select></div><div className="mt-5 overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]"><table className="w-full min-w-[800px] text-left"><thead className="border-b border-[var(--color-border)] text-[10px] uppercase tracking-wider text-[var(--color-text-dim)]"><tr><th className="p-4">Người dùng</th><th>Vai trò</th><th>Tham gia</th><th>Hoạt động</th><th>Trạng thái</th><th className="pr-4 text-right">Thao tác</th></tr></thead><tbody className="divide-y divide-[var(--color-border)]">{filtered.map((user) => <tr key={user.id}><td className="p-4"><p className="text-sm text-[var(--color-text)]">{user.fullName}</p><p className="mt-1 text-xs text-[var(--color-text-dim)]">{user.email}</p></td><td><span className="rounded-full border border-[var(--color-primary)]/30 px-2.5 py-1 text-[10px] text-[var(--color-primary)]">{roleLabel[user.role]}</span></td><td className="text-xs text-[var(--color-text-muted)]">{formatDateTime(user.joinedAt)}</td><td className="text-xs text-[var(--color-text-muted)]">{user.auctions} phiên · {user.bids} lượt bid</td><td><span className={`text-xs ${user.status === 'ACTIVE' ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>{user.status}</span></td><td className="pr-4 text-right"><button disabled={user.role === 'ADMIN'} onClick={() => toggle(user.id)} className="rounded-md border border-[var(--color-border-strong)] px-3 py-1.5 text-xs text-[var(--color-text)] disabled:opacity-30">{user.status === 'ACTIVE' ? 'Khóa' : 'Mở khóa'}</button></td></tr>)}</tbody></table></div></div>;
+  const [form, setForm] = useState(initialForm);
+  const [createdAdmin, setCreatedAdmin] =
+    useState<CreateAdminUserResponse | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const update = (
+    field: keyof typeof form,
+    value: string,
+  ) => {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError('');
+    setCreatedAdmin(null);
+
+    if (!/^\d{9,15}$/.test(form.phone)) {
+      setError(
+        'Số điện thoại phải có từ 9 đến 15 chữ số.',
+      );
+      return;
+    }
+
+    if (form.password.length < 6) {
+      setError('Mật khẩu phải có ít nhất 6 ký tự.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const result = await adminService.createAdminUser({
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        phone: form.phone,
+        password: form.password,
+      });
+
+      setCreatedAdmin(result);
+      setForm(initialForm);
+    } catch (requestError) {
+      setError(
+        getApiErrorMessage(
+          requestError,
+          'Không thể tạo tài khoản Admin.',
+        ),
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-5xl px-6 py-10 sm:py-14">
+      <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">
+        Admin · Người dùng
+      </span>
+
+      <h1 className="mt-2 font-display text-4xl">
+        Quản lý tài khoản
+      </h1>
+
+      <div className="mt-7 rounded-xl border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 px-5 py-4 text-sm leading-6 text-[var(--color-primary-hover)]">
+        Backend hiện chưa có API xem danh sách, khóa hoặc mở
+        khóa người dùng. Hiện tại Admin chỉ có thể tạo thêm
+        tài khoản Admin mới.
+      </div>
+
+      <form
+        onSubmit={submit}
+        className="mt-7 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 sm:p-8"
+      >
+        <h2 className="font-display text-2xl">
+          Tạo tài khoản Admin
+        </h2>
+
+        <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <Input
+            label="Họ và tên"
+            value={form.fullName}
+            onChange={(event) =>
+              update('fullName', event.target.value)
+            }
+            placeholder="Nguyễn Văn Admin"
+            required
+          />
+
+          <Input
+            label="Số điện thoại"
+            type="tel"
+            value={form.phone}
+            onChange={(event) =>
+              update('phone', event.target.value)
+            }
+            placeholder="0901234567"
+            required
+          />
+
+          <Input
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={(event) =>
+              update('email', event.target.value)
+            }
+            placeholder="admin@example.com"
+            required
+          />
+
+          <Input
+            label="Mật khẩu"
+            type="password"
+            value={form.password}
+            onChange={(event) =>
+              update('password', event.target.value)
+            }
+            placeholder="Tối thiểu 6 ký tự"
+            required
+          />
+        </div>
+
+        {error && (
+          <p className="mt-5 rounded-md border border-[var(--color-danger-solid)]/40 bg-[var(--color-danger-solid)]/10 px-4 py-3 text-xs text-[var(--color-danger)]">
+            {error}
+          </p>
+        )}
+
+        {createdAdmin && (
+          <div className="mt-5 rounded-md border border-[var(--color-success-border)] bg-[var(--color-success-bg)]/15 px-4 py-3 text-sm text-[var(--color-success)]">
+            <p>
+              Đã tạo Admin{' '}
+              <strong>{createdAdmin.fullName}</strong> thành
+              công.
+            </p>
+
+            <p className="mt-1 text-xs">
+              Email: {createdAdmin.email}
+            </p>
+          </div>
+        )}
+
+        <div className="mt-6 flex justify-end">
+          <Button type="submit" disabled={loading}>
+            {loading
+              ? 'Đang tạo tài khoản...'
+              : 'Tạo Admin'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
 }

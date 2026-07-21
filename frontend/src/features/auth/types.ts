@@ -1,4 +1,5 @@
 export type UserRole = 'USER' | 'ADMIN';
+export type UserStatus = 'ACTIVE' | 'BANNED';
 
 export interface AuthUser {
   id: string;
@@ -6,21 +7,45 @@ export interface AuthUser {
   fullName: string;
   role: UserRole;
   phone: string;
-  address?: string;
-  status: 'ACTIVE' | 'INACTIVE';
+  status: UserStatus;
 }
 
-export interface DemoAccount extends AuthUser {
-  password: string;
-  label: string;
-  description: string;
-}
-
-export interface LoginForm {
+export interface LoginRequest {
   email: string;
   password: string;
 }
 
-export interface RegisterForm extends LoginForm {
+export interface RegisterRequest extends LoginRequest {
   fullName: string;
+  phone: string;
+}
+
+export interface LoginUserData {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  status: UserStatus;
+  phone?: string;
+}
+
+export interface LoginResponseData {
+  accessToken: string;
+  tokenType: string;
+  user: LoginUserData;
+}
+
+export interface RegisterResponseData {
+  id: string;
+  email: string;
+  fullName: string;
+  phone: string;
+  role: UserRole;
+  status: UserStatus;
+}
+
+export type LoginForm = LoginRequest;
+
+export type RegisterForm = RegisterRequest & {
+  confirmPassword: string;
 }

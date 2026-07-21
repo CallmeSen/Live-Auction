@@ -10,7 +10,6 @@ import AuctionListPage from '../features/auction/pages/AuctionListPage';
 import AuctionDetailPage from '../features/auction/pages/AuctionDetailPage';
 import CreateAuctionPage from '../features/auction/pages/CreateAuctionPage';
 import MyAuctionsPage from '../features/auction/pages/MyAuctionsPage';
-import EditAuctionPage from '../features/auction/pages/EditAuctionPage';
 import MyBidsPage from '../features/bid/pages/MyBidsPage';
 import ProfilePage from '../features/user/pages/ProfilePage';
 import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
@@ -18,6 +17,7 @@ import AdminUsersPage from '../features/admin/pages/AdminUsersPage';
 import AdminAuctionsPage from '../features/admin/pages/AdminAuctionsPage';
 import AdminCategoriesPage from '../features/admin/pages/AdminCategoriesPage';
 import NotificationsPage from '../features/notifications/pages/NotificationsPage';
+import AuctionSessionDetailPage from '../features/auction/pages/AuctionSessionDetailPage';
 
 export default function AppRoutes() {
   return (
@@ -31,13 +31,9 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<MainLayout />}>
-<<<<<<< HEAD
         <Route path="/auctions" element={<AuctionListPage />} />
-        <Route path="/auctions/:id" element={<AuctionDetailPage />} />
-=======
-        <Route path="/auction-items" element={<AuctionListPage />} />
+        <Route path="/auction-sessions/:id" element={<AuctionSessionDetailPage />} />
         <Route path="/auction-items/:id" element={<AuctionDetailPage />} />
->>>>>>> 3d6cdde (temp: preserve auction frontend and backend changes)
 
         <Route element={<ProtectedRoute />}>
           <Route path="/profile" element={<ProfilePage />} />
@@ -46,13 +42,8 @@ export default function AppRoutes() {
 
           <Route element={<RoleRoute allowedRoles={['USER']} />}>
             <Route path="/my-bids" element={<MyBidsPage />} />
-<<<<<<< HEAD
             <Route path="/auctions/create" element={<CreateAuctionPage />} />
-=======
-            <Route path="/auction-items/create" element={<CreateAuctionPage />} />
->>>>>>> 3d6cdde (temp: preserve auction frontend and backend changes)
             <Route path="/my-auctions" element={<MyAuctionsPage />} />
-            <Route path="/my-auctions/:id/edit" element={<EditAuctionPage />} />
           </Route>
 
           <Route element={<RoleRoute allowedRoles={['ADMIN']} />}>

@@ -4,7 +4,6 @@ import {
   Bell,
   Gavel,
   Info,
-  Wallet,
 } from 'lucide-react';
 
 import { useNavigate } from 'react-router-dom';
@@ -35,9 +34,6 @@ const getNotificationIcon = (
   switch (type) {
     case 'BID':
       return <Gavel size={21} strokeWidth={1.8} />;
-
-    case 'WALLET':
-      return <Wallet size={21} strokeWidth={1.8} />;
 
     case 'AUCTION':
       return <Bell size={21} strokeWidth={1.8} />;

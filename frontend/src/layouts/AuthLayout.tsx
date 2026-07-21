@@ -8,7 +8,7 @@ export default function AuthLayout() {
       <div className="hidden lg:flex flex-col justify-between p-12 bg-[var(--color-surface-alt)] relative overflow-hidden border-r border-[var(--color-border)]">
         <div className="absolute inset-0 opacity-[0.05] bg-[radial-gradient(circle_at_20%_20%,var(--color-primary),transparent_45%)]" />
 
-        <Link to="/login" className="relative z-10">
+        <Link to="/auctions" className="relative z-10" aria-label="Về trang chủ">
           <Logo />
         </Link>
 
@@ -33,7 +33,7 @@ export default function AuthLayout() {
       {/* Form panel */}
       <div className="flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-sm">
-          <Link to="/login" className="lg:hidden mb-8 inline-flex">
+          <Link to="/auctions" className="lg:hidden mb-8 inline-flex" aria-label="Về trang chủ">
             <Logo />
           </Link>
           <Outlet />
