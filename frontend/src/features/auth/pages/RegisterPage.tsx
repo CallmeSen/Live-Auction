@@ -1,10 +1,10 @@
-import axios from 'axios';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { authApi } from '../../../api/authApi';
 import Input from '../../../components/common/Input';
 import Button from '../../../components/common/Button';
 import type { RegisterForm } from '../types';
+import { authService } from '../../../services/authService';
+import { getApiErrorMessage } from '../../../services/apiError';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -36,31 +36,29 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await authApi.register({
+      await authService.register({
         fullName: form.fullName.trim(),
         email: form.email.trim().toLowerCase(),
         phone: normalizedPhone,
         password: form.password,
       });
 
-      setSuccess(response.data.message || 'Đăng ký thành công.');
+      setSuccess('Đăng ký thành công.');
+
       window.setTimeout(
-        () => navigate('/login', { replace: true, state: { from } }),
+        () => navigate('/login', {
+          replace: true,
+          state: { from },
+        }),
         900,
       );
     } catch (registerError) {
-      if (axios.isAxiosError(registerError)) {
-        if (!registerError.response) {
-          setError('Không thể kết nối tới máy chủ. Hãy kiểm tra backend đang chạy trên cổng 8000.');
-          return;
-        }
-
-        const apiMessage = (registerError.response.data as { message?: string } | undefined)?.message;
-        setError(apiMessage ?? 'Thông tin đăng ký chưa hợp lệ.');
-        return;
-      }
-
-      setError('Không thể đăng ký. Vui lòng thử lại.');
+      setError(
+        getApiErrorMessage(
+          registerError,
+          'Thông tin đăng ký chưa hợp lệ.',
+        ),
+      );
     } finally {
       setLoading(false);
     }

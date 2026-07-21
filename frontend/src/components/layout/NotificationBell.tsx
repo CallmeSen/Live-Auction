@@ -19,7 +19,6 @@ type NotificationFilter = 'ALL' | 'UNREAD';
 const notificationIcons: Record<NotificationType, string> = {
     BID: '↗',
     AUCTION: '⚖',
-    WALLET: '₫',
     SYSTEM: '●',
 };
 
@@ -174,8 +173,8 @@ export default function NotificationBell() {
                             type="button"
                             onClick={() => setFilter('ALL')}
                             className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${filter === 'ALL'
-                                    ? 'bg-[var(--color-primary)] text-[var(--color-bg)]'
-                                    : 'bg-[var(--color-surface-alt)] text-[var(--color-text-soft)] hover:text-[var(--color-text)]'
+                                ? 'bg-[var(--color-primary)] text-[var(--color-bg)]'
+                                : 'bg-[var(--color-surface-alt)] text-[var(--color-text-soft)] hover:text-[var(--color-text)]'
                                 }`}
                         >
                             Tất cả
@@ -185,8 +184,8 @@ export default function NotificationBell() {
                             type="button"
                             onClick={() => setFilter('UNREAD')}
                             className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${filter === 'UNREAD'
-                                    ? 'bg-[var(--color-primary)] text-[var(--color-bg)]'
-                                    : 'bg-[var(--color-surface-alt)] text-[var(--color-text-soft)] hover:text-[var(--color-text)]'
+                                ? 'bg-[var(--color-primary)] text-[var(--color-bg)]'
+                                : 'bg-[var(--color-surface-alt)] text-[var(--color-text-soft)] hover:text-[var(--color-text)]'
                                 }`}
                         >
                             Chưa đọc
@@ -203,8 +202,8 @@ export default function NotificationBell() {
                                         handleNotificationClick(notification)
                                     }
                                     className={`relative flex w-full gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-[var(--color-surface-raised)] ${notification.isRead
-                                            ? ''
-                                            : 'bg-[var(--color-primary)]/10'
+                                        ? ''
+                                        : 'bg-[var(--color-primary)]/10'
                                         }`}
                                 >
                                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-alt)] text-base font-semibold text-[var(--color-primary)]">

@@ -32,7 +32,9 @@ export default function useNotifications(
   }, [user]);
 
   useEffect(() => {
-    refreshNotifications();
+    const refreshFrame = window.requestAnimationFrame(
+      refreshNotifications,
+    );
 
     window.addEventListener(
       NOTIFICATION_CHANGED_EVENT,
@@ -45,6 +47,8 @@ export default function useNotifications(
     );
 
     return () => {
+      window.cancelAnimationFrame(refreshFrame);
+
       window.removeEventListener(
         NOTIFICATION_CHANGED_EVENT,
         refreshNotifications,

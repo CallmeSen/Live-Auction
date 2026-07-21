@@ -53,6 +53,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// The hook is colocated with its provider so consumers share one context instance.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTheme() {
   const context = useContext(ThemeContext);
 

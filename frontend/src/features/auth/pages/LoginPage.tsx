@@ -1,10 +1,10 @@
-import axios from 'axios';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { authApi } from '../../../api/authApi';
 import Input from '../../../components/common/Input';
 import Button from '../../../components/common/Button';
 import { getRoleHome, persistAuthSession } from '../../../store/authStore';
+import { authService } from '../../../services/authService';
+import { getApiErrorMessage } from '../../../services/apiError';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -18,37 +18,27 @@ export default function LoginPage() {
     event.preventDefault();
     setError('');
     setLoading(true);
-
     try {
-      const response = await authApi.login({
+      const loginData = await authService.login({
         email: form.email.trim(),
         password: form.password,
       });
-
       const user = persistAuthSession(
-        response.data.data.accessToken,
-        response.data.data.user,
+        loginData.accessToken,
+        loginData.user,
       );
-
       navigate(from || getRoleHome(user.role), { replace: true });
     } catch (loginError) {
-      if (axios.isAxiosError(loginError)) {
-        if (!loginError.response) {
-          setError('Không thể kết nối tới máy chủ. Hãy kiểm tra backend đang chạy trên cổng 8000.');
-          return;
-        }
-
-        const apiMessage = (loginError.response?.data as { message?: string } | undefined)?.message;
-        setError(apiMessage ?? 'Email hoặc mật khẩu không đúng.');
-        return;
-      }
-
-      setError('Không thể đăng nhập. Vui lòng thử lại.');
+      setError(
+        getApiErrorMessage(
+          loginError,
+          'Email hoặc mật khẩu không đúng.',
+        ),
+      );
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <div>
       <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">Đăng nhập</span>
