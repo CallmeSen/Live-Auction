@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import {
-    auctionService,
-} from '../../../services/auctionService';
+import { auctionSessionService } from '../../../services/auctionSessionService';
 import type {
     AuctionSessionDetailResponse,
-} from '../../../services/auctionService.types';
+} from '../../../interfaces/auctionSession';
 import { getApiErrorMessage } from '../../../services/apiError';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { formatDateTime } from '../../../utils/formatDate';
@@ -29,7 +27,7 @@ export default function AuctionSessionDetailPage() {
 
             try {
                 const data =
-                    await auctionService.getSessionById(id);
+                    await auctionSessionService.getSessionById(id);
 
                 if (!cancelled) {
                     setSession(data);

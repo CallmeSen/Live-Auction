@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import Button from '../../../components/common/Button';
 import Input from '../../../components/common/Input';
-import {
-  adminService,
-  type CreateAdminUserResponse,
-} from '../../../services/adminService';
+import { adminService } from '../../../services/adminService';
+import type { CreateAdminUserResponse } from '../../../interfaces/admin';
 import { getApiErrorMessage } from '../../../services/apiError';
 
 const initialForm = {

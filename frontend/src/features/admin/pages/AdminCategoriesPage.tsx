@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
-import {
-  categoryService,
-  type CategoryResponse,
-  type CategoryStatus,
-} from '../../../services/categoryService';
+import { categoryService } from '../../../services/categoryService';
+import type { CategoryResponse, CategoryStatus } from '../../../interfaces/category';
 import { getApiErrorMessage } from '../../../services/apiError';
 
 const toSlug = (text: string) =>

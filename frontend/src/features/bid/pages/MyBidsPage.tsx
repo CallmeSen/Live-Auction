@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  bidService,
-  type MyBidListItemResponse,
-} from '../../../services/bidService';
-import type { BidStatus } from '../../../services/auctionService.types';
+import { bidService } from '../../../services/bidService';
+import type { BidStatus, MyBidListItemResponse } from '../../../interfaces/bid';
 import { getApiErrorMessage } from '../../../services/apiError';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { formatDateTime } from '../../../utils/formatDate';

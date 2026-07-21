@@ -1,50 +1,27 @@
+import { createDefaultCategoryList } from '../defaults/categoryDefaults';
+import type {
+    CategoryListRequest,
+    CategoryListResponse,
+    CategoryResponse,
+    CreateCategoryRequest,
+    UpdateCategoryRequest,
+} from '../interfaces/category';
+import type { ApiResponse } from '../interfaces/common';
 import axiosClient from './axiosClient';
-import type { ApiResponse } from './types';
-
-export type CategoryStatus = 'ACTIVE' | 'INACTIVE';
-
-export interface CategoryListRequest {
-    page?: number;
-    size?: number;
-    status?: CategoryStatus;
-    keyword?: string;
-}
-
-export interface CategoryResponse {
-    id: string;
-    name: string;
-    slug: string;
-    status: CategoryStatus;
-    createdAt: string;
-}
-
-export interface CategoryListResponse {
-    items: CategoryResponse[];
-    page: number;
-    size: number;
-    total: number;
-}
-
-export interface CreateCategoryRequest {
-    name: string;
-    slug?: string | null;
-}
-
-export interface UpdateCategoryRequest {
-    name?: string;
-    slug?: string;
-    status?: CategoryStatus;
-}
 
 export const categoryService = {
     async getCategories(
         params: CategoryListRequest = {},
     ): Promise<CategoryListResponse> {
-        const response = await axiosClient.get<
-            ApiResponse<CategoryListResponse>
-        >('/categories', { params });
+        try {
+            const response = await axiosClient.get<
+                ApiResponse<CategoryListResponse>
+            >('/categories', { params });
 
-        return response.data.data;
+            return response.data.data;
+        } catch {
+            return createDefaultCategoryList(params);
+        }
     },
 
     async getCategoryById(

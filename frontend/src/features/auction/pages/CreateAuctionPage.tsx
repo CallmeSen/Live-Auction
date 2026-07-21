@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Button from '../../../components/common/Button';
 import Input from '../../../components/common/Input';
-import { auctionService } from '../../../services/auctionService';
-import {
-  categoryService,
-  type CategoryResponse,
-} from '../../../services/categoryService';
+import { auctionSessionService } from '../../../services/auctionSessionService';
+import { auctionItemService } from '../../../services/auctionItemService';
+import { categoryService } from '../../../services/categoryService';
+import type { CategoryResponse } from '../../../interfaces/category';
 import { getApiErrorMessage } from '../../../services/apiError';
 
 const initialForm = {
@@ -120,7 +119,7 @@ export default function CreateAuctionPage() {
     try {
       setLoading(true);
 
-      const session = await auctionService.createSession({
+      const session = await auctionSessionService.createSession({
         title: form.sessionTitle.trim(),
         description:
           form.sessionDescription.trim() || null,
@@ -131,7 +130,7 @@ export default function CreateAuctionPage() {
 
       createdSessionId = session.id;
 
-      await auctionService.createItem(session.id, {
+      await auctionItemService.createItem(session.id, {
         categoryId: form.categoryId,
         title: form.itemTitle.trim(),
         description: form.itemDescription.trim() || null,

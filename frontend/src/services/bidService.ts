@@ -1,51 +1,12 @@
-import axiosClient from './axiosClient';
-import type { ApiResponse } from './types';
+import { createDefaultMyBidList } from '../defaults/bidDefaults';
 import type {
-    AuctionItemStatus,
-    AuctionSessionStatus,
-    BidStatus,
-} from './auctionService.types';
-
-export interface PlaceBidRequest {
-    amount: number;
-}
-
-export interface PlaceBidResponse {
-    id: string;
-    itemId: string;
-    sessionId: string;
-    bidderId: string;
-    amount: string;
-    status: BidStatus;
-    createdAt: string;
-}
-
-export interface MyBidListRequest {
-    page?: number;
-    pageSize?: number;
-    status?: BidStatus;
-}
-
-export interface MyBidListItemResponse {
-    id: string;
-    amount: string;
-    status: BidStatus;
-    createdAt: string;
-    itemId: string;
-    itemTitle: string;
-    itemStatus: AuctionItemStatus;
-    itemCurrentPrice: string;
-    sessionId: string;
-    sessionTitle: string;
-    sessionStatus: AuctionSessionStatus;
-}
-
-export interface MyBidListResponse {
-    items: MyBidListItemResponse[];
-    page: number;
-    pageSize: number;
-    total: number;
-}
+    MyBidListRequest,
+    MyBidListResponse,
+    PlaceBidRequest,
+    PlaceBidResponse,
+} from '../interfaces/bid';
+import type { ApiResponse } from '../interfaces/common';
+import axiosClient from './axiosClient';
 
 export const bidService = {
     async placeBid(
@@ -62,10 +23,14 @@ export const bidService = {
     async getMyBids(
         params: MyBidListRequest = {},
     ): Promise<MyBidListResponse> {
-        const response = await axiosClient.get<
-            ApiResponse<MyBidListResponse>
-        >('/bids/my', { params });
+        try {
+            const response = await axiosClient.get<
+                ApiResponse<MyBidListResponse>
+            >('/bids/my', { params });
 
-        return response.data.data;
+            return response.data.data;
+        } catch {
+            return createDefaultMyBidList(params);
+        }
     },
 };

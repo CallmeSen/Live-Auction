@@ -1,26 +1,9 @@
-import axiosClient from './axiosClient';
-import type { ApiResponse } from './types';
 import type {
-    AuthUserRole,
-    AuthUserStatus,
-} from './authService';
-
-export interface CreateAdminUserRequest {
-    email: string;
-    password: string;
-    fullName: string;
-    phone: string;
-}
-
-export interface CreateAdminUserResponse {
-    id: string;
-    email: string;
-    fullName: string;
-    phone: string;
-    role: AuthUserRole;
-    status: AuthUserStatus;
-    createdAt: string;
-}
+  CreateAdminUserRequest,
+  CreateAdminUserResponse,
+} from '../interfaces/admin';
+import type { ApiResponse } from '../interfaces/common';
+import axiosClient from './axiosClient';
 
 export const adminService = {
     async createAdminUser(
