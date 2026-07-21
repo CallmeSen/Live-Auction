@@ -80,7 +80,7 @@ async def get_current_admin_user(
     if user.role != UserRole.ADMIN:
         raise AppException(
             status_code=status.HTTP_403_FORBIDDEN,
-            code="ADMIN_REQUIRED",
+            code="ADMIN_ACCESS_REQUIRED",
             message="Administrator permission is required",
         )
 

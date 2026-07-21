@@ -73,6 +73,8 @@ services:
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL}
       VITE_DEV_API_PROXY: http://backend:8000
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
 
     volumes:
       - ./frontend:/app

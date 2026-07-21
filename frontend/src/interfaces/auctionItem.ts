@@ -51,7 +51,7 @@ export interface AuctionItemSessionResponse {
 }
 
 export interface AuctionItemImageResponse {
-  imageUrl: string;
+  imageUrl: string | null;
   isPrimary: boolean;
 }
 

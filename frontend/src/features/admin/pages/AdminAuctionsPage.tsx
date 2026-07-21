@@ -71,15 +71,7 @@ export default function AdminAuctionsPage() {
         Quản lý phiên đấu giá
       </h1>
 
-      <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-        Danh sách được lấy trực tiếp từ backend.
-      </p>
 
-      <div className="mt-7 rounded-xl border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 px-5 py-4 text-sm text-[var(--color-primary-hover)]">
-        Backend hiện chưa có API duyệt hoặc từ chối phiên.
-        Chức năng kiểm duyệt sẽ được bổ sung sau khi backend
-        cung cấp endpoint và trạng thái phê duyệt.
-      </div>
 
       {loading && (
         <div className="mt-7 rounded-xl border border-[var(--color-border)] py-16 text-center">

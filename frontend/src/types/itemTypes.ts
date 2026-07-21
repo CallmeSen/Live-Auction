@@ -67,7 +67,7 @@ import {
   }
   
   export interface AuctionItemImageData {
-    imageUrl: string;
+    imageUrl: string | null;
     isPrimary: boolean;
   }
   

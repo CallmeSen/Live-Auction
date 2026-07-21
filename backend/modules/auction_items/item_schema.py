@@ -84,7 +84,7 @@ class AuctionItemSessionData(BaseModel):
 
 
 class AuctionItemImageData(BaseModel):
-    image_url: str = Field(serialization_alias="imageUrl")
+    image_url: str | None = Field(serialization_alias="imageUrl")
     is_primary: bool = Field(serialization_alias="isPrimary")
 
     model_config = ConfigDict(

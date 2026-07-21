@@ -42,7 +42,7 @@ export default function LoginPage() {
   return (
     <div>
       <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">Đăng nhập</span>
-      <h2 className="mt-2 font-display text-3xl text-[var(--color-text)]">Chào mừng trở lại</h2>
+      <h2 className="mt-2 font-display text-3xl text-[var(--color-text)]">Chào mừng trở lạhgjjifdsafdsafdsa</h2>
       <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">Nhập tài khoản của bạn để tiếp tục tham gia các phiên đấu giá.</p>
 
       <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-4">
