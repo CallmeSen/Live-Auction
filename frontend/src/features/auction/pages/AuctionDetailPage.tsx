@@ -18,7 +18,7 @@ import {
 
 const itemStatusLabel: Record<AuctionItemStatus, string> = {
   SOLD: 'Đã bán',
-  UNSOLD: 'Không bán được',
+  UNSOLD: 'Chưa được bán',
   CANCELLED: 'Đã hủy',
 };
 
@@ -317,14 +317,6 @@ export default function AuctionDetailPage() {
               </div>
             )}
 
-            {user &&
-              !canBid &&
-              !isOwner &&
-              !auctionIsOpen && (
-                <div className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-alt)] p-5 text-sm text-[var(--color-primary-hover)]">
-                  Vật phẩm hiện không mở nhận trả giá.
-                </div>
-              )}
           </div>
         </div>
       </div>

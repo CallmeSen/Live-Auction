@@ -14,7 +14,7 @@ VALUES
     '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
     'Nguyễn Minh Quân',
     '0981234567',
-    'USER',
+    'ADMIN',
     'ACTIVE'
 ),
 (
