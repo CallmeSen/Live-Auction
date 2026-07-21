@@ -22,6 +22,13 @@ const itemStatusLabel: Record<AuctionItemStatus, string> = {
   CANCELLED: 'Đã hủy',
 };
 
+function getItemStatusLabel(status: string): string {
+  if (status === 'SOLD' || status === 'CANCELLED') {
+    return itemStatusLabel[status];
+  }
+  return itemStatusLabel.UNSOLD;
+}
+
 export default function AuctionDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -149,17 +156,19 @@ export default function AuctionDetailPage() {
 
   const canBid =
     user?.role === 'USER' &&
-    item.status === 'ACTIVE' &&
+    item.status !== 'SOLD' &&
+    item.status !== 'CANCELLED' &&
     item.session.status === 'ACTIVE' &&
     !isOwner;
 
   const auctionIsOpen =
-    item.status === 'ACTIVE' &&
+    item.status !== 'SOLD' &&
+    item.status !== 'CANCELLED' &&
     item.session.status === 'ACTIVE';
 
   const displayableImages = item.images.filter(
     (image): image is typeof image & { imageUrl: string } =>
-      Boolean(image.imageUrl),
+      Boolean(image.imageUrl), 
   );
 
   return (
@@ -218,7 +227,7 @@ export default function AuctionDetailPage() {
             </span>
 
             <span className="rounded-full border border-[var(--color-border-strong)] px-3 py-1 text-xs text-[var(--color-primary)]">
-              {itemStatusLabel[item.status]}
+              {getItemStatusLabel(item.status)}
             </span>
           </div>
 

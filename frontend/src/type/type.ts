@@ -25,9 +25,6 @@ export enum AuctionSessionStatus {
 }
 
 export enum AuctionItemStatus {
-  DRAFT = 'DRAFT',
-  READY = 'READY',
-  OPEN = 'OPEN',
   SOLD = 'SOLD',
   UNSOLD = 'UNSOLD',
   CANCELLED = 'CANCELLED',
