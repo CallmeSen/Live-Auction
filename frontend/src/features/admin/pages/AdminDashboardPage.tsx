@@ -1,14 +1,35 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockCategories, mockUsers } from '../../../mocks/users';
+import categoryService from '../../../service/categoryService';
+import { mockUsers } from '../../../mocks/users';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { getDemoAuctions } from '../../../store/auctionStore';
 
 export default function AdminDashboardPage() {
+  const [categoryCount, setCategoryCount] = useState(0);
+  const [categoryCountLoading, setCategoryCountLoading] = useState(false);
+
+  useEffect(() => {
+    const loadCategoryCount = async () => {
+      setCategoryCountLoading(true);
+      try {
+        const response = await categoryService.getAll({ page: 1, size: 1, status: 'ACTIVE' });
+        setCategoryCount(response.data.data.total);
+      } catch {
+        setCategoryCount(0);
+      } finally {
+        setCategoryCountLoading(false);
+      }
+    };
+
+    void loadCategoryCount();
+  }, []);
+
   const mockAuctions = getDemoAuctions();
   const cards = [
     { label: 'Người dùng', value: mockUsers.length, detail: `${mockUsers.filter((user) => user.status === 'ACTIVE').length} đang hoạt động`, to: '/admin/users' },
     { label: 'Phiên đấu giá', value: mockAuctions.length, detail: `${mockAuctions.filter((item) => item.approvalStatus === 'PENDING').length} chờ duyệt`, to: '/admin/auctions' },
-    { label: 'Danh mục', value: mockCategories.length, detail: 'Tất cả đang hoạt động', to: '/admin/categories' },
+    { label: 'Danh mục', value: categoryCountLoading ? '...' : categoryCount, detail: 'Tất cả đang hoạt động', to: '/admin/categories' },
     { label: 'Tổng giá giao dịch', value: formatCurrency(128_500_000), detail: 'Dữ liệu demo tháng 07', to: '/admin/auctions' },
   ];
   return <div className="mx-auto max-w-7xl px-6 py-10 sm:py-14"><span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">Admin console</span><h1 className="mt-2 font-display text-4xl">Tổng quan hệ thống</h1><p className="mt-2 text-sm text-[var(--color-text-muted)]">Theo dõi người dùng, kiểm duyệt phiên và quản lý danh mục trong dữ liệu demo.</p><div className="mt-9 grid gap-4 md:grid-cols-2 xl:grid-cols-4">{cards.map((card) => <Link key={card.label} to={card.to} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition hover:border-[var(--color-primary)]"><p className="text-xs uppercase tracking-wider text-[var(--color-text-dim)]">{card.label}</p><p className="mt-3 font-display text-3xl text-[var(--color-text)]">{card.value}</p><p className="mt-2 text-xs text-[var(--color-text-muted)]">{card.detail}</p></Link>)}</div><div className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]"><section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6"><div className="flex items-center justify-between"><h2 className="font-display text-2xl">Phiên cần chú ý</h2><Link to="/admin/auctions" className="text-xs text-[var(--color-primary)]">Xem tất cả →</Link></div><div className="mt-5 space-y-3">{mockAuctions.slice(0, 4).map((auction) => <div key={auction.id} className="flex items-center gap-4 rounded-lg border border-[var(--color-border)] p-3"><img src={auction.image} alt="" className="h-12 w-14 rounded object-cover" /><div className="min-w-0 flex-1"><p className="truncate text-sm">{auction.title}</p><p className="mt-1 text-xs text-[var(--color-text-dim)]">{auction.status} · {auction.bidCount} lượt bid</p></div><Link to={`/auctions/${auction.id}`} className="text-xs text-[var(--color-primary)]">Kiểm tra</Link></div>)}</div></section><section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6"><h2 className="font-display text-2xl">Tác vụ nhanh</h2><div className="mt-5 grid gap-3">{[['Quản lý người dùng', '/admin/users'], ['Kiểm duyệt phiên', '/admin/auctions'], ['Quản lý danh mục', '/admin/categories'], ['Xem hồ sơ admin', '/profile']].map(([label, to]) => <Link key={to} to={to} className="flex items-center justify-between rounded-lg border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text-soft)] hover:border-[var(--color-primary)] hover:text-[var(--color-text)]"><span>{label}</span><span>→</span></Link>)}</div></section></div></div>;
