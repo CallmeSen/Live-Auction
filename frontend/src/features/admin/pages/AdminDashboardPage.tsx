@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { auctionService } from '../../../services/auctionService';
-import type { AuctionSessionListItemResponse } from '../../../services/auctionService.types';
+import { auctionSessionService } from '../../../services/auctionSessionService';
+import type { AuctionSessionListItemResponse } from '../../../interfaces/auctionSession';
 import { categoryService } from '../../../services/categoryService';
 import { getApiErrorMessage } from '../../../services/apiError';
 import { formatDateTime } from '../../../utils/formatDate';
@@ -25,7 +25,7 @@ export default function AdminDashboardPage() {
 
         const [sessionResult, categoryResult] =
           await Promise.all([
-            auctionService.getSessions({
+            auctionSessionService.getSessions({
               page: 1,
               size: 100,
             }),

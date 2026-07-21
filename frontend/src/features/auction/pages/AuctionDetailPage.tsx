@@ -3,11 +3,11 @@ import { Link, useParams } from 'react-router-dom';
 import BidForm from '../../../components/auction/BidForm';
 import AuthRequiredModal from '../../../components/common/AuthRequiredModal';
 import useAuth from '../../../hooks/useAuth';
-import { auctionService } from '../../../services/auctionService';
+import { auctionItemService } from '../../../services/auctionItemService';
 import type {
   AuctionItemDetailResponse,
   AuctionItemStatus,
-} from '../../../services/auctionService.types';
+} from '../../../interfaces/auctionItem';
 import { bidService } from '../../../services/bidService';
 import { getApiErrorMessage } from '../../../services/apiError';
 import { formatCurrency } from '../../../utils/formatCurrency';
@@ -54,7 +54,7 @@ export default function AuctionDetailPage() {
         setLoading(true);
         setError('');
 
-        const result = await auctionService.getItemById(id);
+        const result = await auctionItemService.getItemById(id);
 
         if (cancelled) return;
 
@@ -103,7 +103,7 @@ export default function AuctionDetailPage() {
       await bidService.placeBid(id, { amount });
 
       const refreshedItem =
-        await auctionService.getItemById(id);
+        await auctionItemService.getItemById(id);
 
       setItem(refreshedItem);
     } catch (requestError) {

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../../../hooks/useAuth';
-import { auctionService } from '../../../services/auctionService';
+import { auctionSessionService } from '../../../services/auctionSessionService';
 import type {
   AuctionSessionListItemResponse,
   AuctionSessionStatus,
-} from '../../../services/auctionService.types';
+} from '../../../interfaces/auctionSession';
 import { getApiErrorMessage } from '../../../services/apiError';
 import {
   formatDateTime,
@@ -56,7 +56,7 @@ export default function AuctionListPage() {
         setLoading(true);
         setError('');
 
-        const result = await auctionService.getSessions({
+        const result = await auctionSessionService.getSessions({
           page,
           size: PAGE_SIZE,
           status: status === 'ALL' ? undefined : status,

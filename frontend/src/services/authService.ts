@@ -1,42 +1,11 @@
 import axiosClient from './axiosClient';
-import type { ApiResponse } from './types';
-
-export type AuthUserRole = 'USER' | 'ADMIN';
-export type AuthUserStatus = 'ACTIVE' | 'BANNED';
-
-export interface LoginRequest {
-    email: string;
-    password: string;
-}
-
-export interface RegisterRequest {
-    email: string;
-    password: string;
-    fullName: string;
-    phone: string;
-}
-
-export interface LoginResponse {
-    accessToken: string;
-    tokenType: string;
-    user: {
-        id: string;
-        email: string;
-        fullName: string;
-        phone?: string;
-        role: AuthUserRole;
-        status: AuthUserStatus;
-    };
-}
-
-export interface RegisterResponse {
-    id: string;
-    email: string;
-    fullName: string;
-    phone: string;
-    role: AuthUserRole;
-    status: AuthUserStatus;
-}
+import type { ApiResponse } from '../interfaces/common';
+import type {
+    LoginRequest,
+    LoginResponse,
+    RegisterRequest,
+    RegisterResponse,
+} from '../interfaces/auth';
 
 export const authService = {
     async login(

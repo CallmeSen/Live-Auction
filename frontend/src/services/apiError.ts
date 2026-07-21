@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ApiErrorResponse } from './types';
+import type { ApiErrorResponse } from '../interfaces/error';
 
 const CONNECTION_ERROR =
     'Không thể kết nối tới máy chủ. Hãy kiểm tra backend đang chạy trên cổng 8000.';
