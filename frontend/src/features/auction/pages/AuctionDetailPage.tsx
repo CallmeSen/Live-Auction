@@ -17,9 +17,6 @@ import {
 } from '../../../utils/formatDate';
 
 const itemStatusLabel: Record<AuctionItemStatus, string> = {
-  DRAFT: 'Bản nháp',
-  READY: 'Sẵn sàng',
-  OPEN: 'Đang đấu giá',
   SOLD: 'Đã bán',
   UNSOLD: 'Không bán được',
   CANCELLED: 'Đã hủy',
@@ -56,9 +53,14 @@ export default function AuctionDetailPage() {
 
         setItem(result);
 
+        const displayableImages = result.images.filter(
+          (image): image is typeof image & { imageUrl: string } =>
+            Boolean(image.imageUrl),
+        );
+
         const primaryImage =
-          result.images.find((image) => image.isPrimary)?.imageUrl ??
-          result.images[0]?.imageUrl ??
+          displayableImages.find((image) => image.isPrimary)?.imageUrl ??
+          displayableImages[0]?.imageUrl ??
           '';
 
         setSelectedImage(primaryImage);
@@ -147,13 +149,18 @@ export default function AuctionDetailPage() {
 
   const canBid =
     user?.role === 'USER' &&
-    item.status === 'OPEN' &&
+    item.status === 'ACTIVE' &&
     item.session.status === 'ACTIVE' &&
     !isOwner;
 
   const auctionIsOpen =
-    item.status === 'OPEN' &&
+    item.status === 'ACTIVE' &&
     item.session.status === 'ACTIVE';
+
+  const displayableImages = item.images.filter(
+    (image): image is typeof image & { imageUrl: string } =>
+      Boolean(image.imageUrl),
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8 sm:py-12">
@@ -180,15 +187,13 @@ export default function AuctionDetailPage() {
             )}
           </div>
 
-          {item.images.length > 0 && (
+          {displayableImages.length > 0 && (
             <div className="mt-4 grid grid-cols-3 gap-3">
-              {item.images.map((image, index) => (
+              {displayableImages.map((image, index) => (
                 <button
                   type="button"
                   key={`${image.imageUrl}-${index}`}
-                  onClick={() =>
-                    setSelectedImage(image.imageUrl)
-                  }
+                  onClick={() => setSelectedImage(image.imageUrl)}
                   className={`overflow-hidden rounded-lg border ${
                     selectedImage === image.imageUrl
                       ? 'border-[var(--color-primary)]'
@@ -290,7 +295,6 @@ export default function AuctionDetailPage() {
 
             {canBid && (
               <BidForm
-                key={`${item.id}-${currentPrice}`}
                 currentPrice={currentPrice}
                 minimumBidIncrement={minimumBidIncrement}
                 onPlaceBid={handlePlaceBid}

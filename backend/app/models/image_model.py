@@ -37,9 +37,9 @@ class ItemImage(
         index=True,
     )
 
-    image_url: Mapped[str] = mapped_column(
+    image_url: Mapped[str | None] = mapped_column(
         String(500),
-        nullable=False,
+        nullable=True,
     )
 
     is_primary: Mapped[bool] = mapped_column(

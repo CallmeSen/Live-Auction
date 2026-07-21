@@ -5,9 +5,6 @@ export type AuctionSessionStatus =
     | 'CANCELLED';
 
 export type AuctionItemStatus =
-    | 'DRAFT'
-    | 'READY'
-    | 'OPEN'
     | 'SOLD'
     | 'UNSOLD'
     | 'CANCELLED';
@@ -129,7 +126,7 @@ export interface AuctionItemSessionResponse {
 }
 
 export interface AuctionItemImageResponse {
-    imageUrl: string;
+    imageUrl: string | null;
     isPrimary: boolean;
 }
 

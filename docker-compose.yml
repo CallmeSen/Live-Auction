@@ -43,6 +43,7 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
     volumes:
       - ./backend:/app
+    entrypoint: ["sh", "/app/docker-entrypoint.sh"]
     command:
       [
         "python",

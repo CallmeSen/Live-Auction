@@ -1,0 +1,2374 @@
+INSERT INTO users (
+    id,
+    email,
+    password_hash,
+    full_name,
+    phone,
+    role,
+    status
+)
+VALUES
+-- Nam
+(
+    '4c597d1a-84d3-11f1-816d-b2b95b009a84',
+    'nguyenminhquan@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Nguyễn Minh Quân',
+    '0981234567',
+    'USER',
+    'ACTIVE'
+),
+(
+    '4e0067a6-84d3-11f1-816d-b2b95b009a84',
+    'tranhoangbach@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Trần Hoàng Bách',
+    '0972345678',
+    'USER',
+    'ACTIVE'
+),
+(
+    '68699718-84d3-11f1-816d-b2b95b009a84',
+    'legiahuy@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Lê Gia Huy',
+    '0963456789',
+    'USER',
+    'ACTIVE'
+),
+(
+    '70e2efba-84d3-11f1-816d-b2b95b009a84',
+    'phamhaidang@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Phạm Hải Đăng',
+    '0864567890',
+    'USER',
+    'ACTIVE'
+),
+(
+    '77ee1f9b-84d3-11f1-816d-b2b95b009a84',
+    'hoangducduy@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Hoàng Đức Duy',
+    '0325678901',
+    'USER',
+    'ACTIVE'
+),
+(
+    '81811d96-84d3-11f1-816d-b2b95b009a84',
+    'huynhnamkhanh@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Huỳnh Nam Khánh',
+    '0336789012',
+    'USER',
+    'ACTIVE'
+),
+(
+    '88055399-84d3-11f1-816d-b2b95b009a84',
+    'phanquocbao@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Phan Quốc Bảo',
+    '0347890123',
+    'USER',
+    'ACTIVE'
+),
+(
+    '8f2a6d2e-84d3-11f1-816d-b2b95b009a84',
+    'vuthienan@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Vũ Thiên Ân',
+    '0358901234',
+    'USER',
+    'ACTIVE'
+),
+(
+    '96be75f4-84d3-11f1-816d-b2b95b009a84',
+    'dangchikien@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Đặng Chí Kiên',
+    '0369012345',
+    'USER',
+    'ACTIVE'
+),
+(
+    '9df54dfe-84d3-11f1-816d-b2b95b009a84',
+    'buiminhtriet@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Bùi Minh Triết',
+    '0371123456',
+    'USER',
+    'ACTIVE'
+),
+(
+    'a4d90dc8-84d3-11f1-816d-b2b95b009a84',
+    'ngotuankiet@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Ngô Tuấn Kiệt',
+    '0912234567',
+    'USER',
+    'ACTIVE'
+),
+(
+    'ac694475-84d3-11f1-816d-b2b95b009a84',
+    'dogiabao@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Đỗ Gia Bảo',
+    '0943345678',
+    'USER',
+    'ACTIVE'
+),
+(
+    'b3c2c544-84d3-11f1-816d-b2b95b009a84',
+    'hohuuphuoc@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Hồ Hữu Phước',
+    '0884456789',
+    'USER',
+    'ACTIVE'
+),
+(
+    'ba50a1b1-84d3-11f1-816d-b2b95b009a84',
+    'duongquangvinh@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Dương Quang Vinh',
+    '0815567890',
+    'USER',
+    'ACTIVE'
+),
+(
+    'c22148e9-84d3-11f1-816d-b2b95b009a84',
+    'lyxuantruong@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Lý Xuân Trường',
+    '0826678901',
+    'USER',
+    'ACTIVE'
+),
+-- Nữ
+(
+    'cb157bda-84d3-11f1-816d-b2b95b009a84',
+    'nguyenthuylinh@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Nguyễn Thùy Linh',
+    '0837789012',
+    'USER',
+    'ACTIVE'
+),
+(
+    'd763adda-84d3-11f1-816d-b2b95b009a84',
+    'tranmaichi@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Trần Mai Chi',
+    '0848890123',
+    'USER',
+    'ACTIVE'
+),
+(
+    'df806cbe-84d3-11f1-816d-b2b95b009a84',
+    'lephuongthao@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Lê Phương Thảo',
+    '0859901234',
+    'USER',
+    'ACTIVE'
+),
+(
+    'e6ff1927-84d3-11f1-816d-b2b95b009a84',
+    'phamngocdiep@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Phạm Ngọc Diệp',
+    '0911012345',
+    'USER',
+    'ACTIVE'
+),
+(
+    'f03d1293-84d3-11f1-816d-b2b95b009a84',
+    'hoangkhanhan@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Hoàng Khánh An',
+    '0941123456',
+    'USER',
+    'ACTIVE'
+),
+(
+    'f8101274-84d3-11f1-816d-b2b95b009a84',
+    'huynhtueman@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Huỳnh Tuệ Mẫn',
+    '0903234567',
+    'USER',
+    'ACTIVE'
+),
+(
+    '04163cb4-84d4-11f1-816d-b2b95b009a84',
+    'phanbaongoc@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Phan Bảo Ngọc',
+    '0934345678',
+    'USER',
+    'ACTIVE'
+),
+(
+    '0ef02b85-84d4-11f1-816d-b2b95b009a84',
+    'vuhavy@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Vũ Hạ Vy',
+    '0705456789',
+    'USER',
+    'ACTIVE'
+),
+(
+    '16b3d6ff-84d4-11f1-816d-b2b95b009a84',
+    'danglinhdan@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Đặng Linh Đan',
+    '0766567890',
+    'USER',
+    'ACTIVE'
+),
+(
+    '1f16991a-84d4-11f1-816d-b2b95b009a84',
+    'buitrucanh@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Bùi Trúc Anh',
+    '0777678901',
+    'USER',
+    'ACTIVE'
+),
+(
+    '254bdcba-84d4-11f1-816d-b2b95b009a84',
+    'ngonhaphuong@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Ngô Nhã Phương',
+    '0788789012',
+    'USER',
+    'ACTIVE'
+),
+(
+    '30a35952-84d4-11f1-816d-b2b95b009a84',
+    'dominhtue@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Đỗ Minh Tuệ',
+    '0799890123',
+    'USER',
+    'ACTIVE'
+),
+(
+    '383e4a66-84d4-11f1-816d-b2b95b009a84',
+    'hophuongtrinh@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Hồ Phương Trinh',
+    '0901901234',
+    'USER',
+    'ACTIVE'
+),
+(
+    '3f99e9af-84d4-11f1-816d-b2b95b009a84',
+    'duongquynhhuong@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Dương Quỳnh Hương',
+    '0931012345',
+    'USER',
+    'ACTIVE'
+),
+(
+    '474953c4-84d4-11f1-816d-b2b95b009a84',
+    'trinhthaonguyen@gmail.com',
+    '$2b$12$wB0IWCW1vwSOlcwRaBU9F.vGGe6I23XRMjjBQMOuO/crmk6m3BZ86',
+    'Trịnh Thảo Nguyên',
+    '0701123456',
+    'USER',
+    'ACTIVE'
+);
+
+
+
+
+
+INSERT INTO auction_sessions (
+    id,
+    seller_id,
+    title,
+    description,
+    start_time,
+    end_time,
+    status,
+    created_at,
+    updated_at
+)
+VALUES
+(
+    '9eb5b31d-b6fa-4927-90fb-295f569b91c4',
+    '4c597d1a-84d3-11f1-816d-b2b95b009a84',
+    'Luxury Watch Auction July 2026',
+    'Exclusive bidding session for luxury watch auction july 2026. All items certified authentic with original box and papers.',
+    '2026-07-19 14:00:00',
+    '2026-07-23 14:00:00',
+    'ACTIVE',
+    '2026-07-14 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    'c6e5f80b-967c-473d-82fa-eb01bc58c9b2',
+    '4e0067a6-84d3-11f1-816d-b2b95b009a84',
+    'Audemars Piguet Exclusive September 2026 - Vol 5',
+    'Exclusive bidding session for audemars piguet exclusive september 2026 - vol 5. All items certified authentic with original box and papers.',
+    '2026-07-26 14:00:00',
+    '2026-07-31 14:00:00',
+    'SCHEDULED',
+    '2026-07-21 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    'a2d3e14f-2d7c-4029-ba9d-cf812356bb73',
+    '68699718-84d3-11f1-816d-b2b95b009a84',
+    'Grand Seiko Collector Sale August 2026 - Vol 1',
+    'Exclusive bidding session for grand seiko collector sale august 2026 - vol 1. All items certified authentic with original box and papers.',
+    '2026-07-25 14:00:00',
+    '2026-08-01 14:00:00',
+    'SCHEDULED',
+    '2026-07-19 14:00:00',
+    '2026-07-19 14:00:00'
+),
+(
+    '02f54b6c-3e91-4cf1-8bf0-6923c8a14d4e',
+    '68699718-84d3-11f1-816d-b2b95b009a84',
+    'Tissot & Hamilton Entry Luxury October 2026 - Vol 1',
+    'Exclusive bidding session for tissot & hamilton entry luxury october 2026 - vol 1. All items certified authentic with original box and papers.',
+    '2026-07-25 14:00:00',
+    '2026-07-29 14:00:00',
+    'SCHEDULED',
+    '2026-07-19 14:00:00',
+    '2026-07-19 14:00:00'
+),
+(
+    'db56cefe-126c-4824-8df6-43b9e075cd1a',
+    '70e2efba-84d3-11f1-816d-b2b95b009a84',
+    'Rare Patek Philippe Event July 2026 - Vol 4',
+    'Exclusive bidding session for rare patek philippe event july 2026 - vol 4. All items certified authentic with original box and papers.',
+    '2026-07-13 14:00:00',
+    '2026-07-16 14:00:00',
+    'ENDED',
+    '2026-07-06 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    'b01c7df4-39fa-45b6-ae38-34fd712bc9d0',
+    '8f2a6d2e-84d3-11f1-816d-b2b95b009a84',
+    'Luxury Watch Auction September 2026 - Vol 2',
+    'Exclusive bidding session for luxury watch auction september 2026 - vol 2. All items certified authentic with original box and papers.',
+    '2026-07-14 14:00:00',
+    '2026-07-17 14:00:00',
+    'ENDED',
+    '2026-07-09 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    'f4d23cb5-8d1e-4509-bc3f-7bf61a8ef01e',
+    'b3c2c544-84d3-11f1-816d-b2b95b009a84',
+    'Zenith & Longines Vintage July 2026 - Vol 2',
+    'Exclusive bidding session for zenith & longines vintage july 2026 - vol 2. All items certified authentic with original box and papers.',
+    '2026-07-26 14:00:00',
+    '2026-08-01 14:00:00',
+    'SCHEDULED',
+    '2026-07-18 14:00:00',
+    '2026-07-18 14:00:00'
+),
+(
+    'c3a07b4d-de12-4217-9cfb-81d3fca2cb6b',
+    'df806cbe-84d3-11f1-816d-b2b95b009a84',
+    'Grand Seiko Collector Sale July 2026 - Vol 3',
+    'Exclusive bidding session for grand seiko collector sale july 2026 - vol 3. All items certified authentic with original box and papers.',
+    '2026-07-24 14:00:00',
+    '2026-07-28 14:00:00',
+    'SCHEDULED',
+    '2026-07-18 14:00:00',
+    '2026-07-18 14:00:00'
+),
+(
+    '4b5e2fdc-01ef-4bc5-8df6-32ef4cb11aef',
+    '04163cb4-84d4-11f1-816d-b2b95b009a84',
+    'Tag Heuer Sports Edition July 2026 - Vol 2',
+    'Exclusive bidding session for tag heuer sports edition july 2026 - vol 2. All items certified authentic with original box and papers.',
+    '2026-07-12 14:00:00',
+    '2026-07-16 14:00:00',
+    'CANCELLED',
+    '2026-07-06 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    'd7f23cb5-f12a-463d-9abc-f81de43bcba2',
+    '30a35952-84d4-11f1-816d-b2b95b009a84',
+    'Chopard & Piaget Jewels October 2026 - Vol 2',
+    'Exclusive bidding session for chopard & piaget jewels october 2026 - vol 2. All items certified authentic with original box and papers.',
+    '2026-07-23 14:00:00',
+    '2026-07-25 14:00:00',
+    'SCHEDULED',
+    '2026-07-13 14:00:00',
+    '2026-07-13 14:00:00'
+),
+(
+    '3f2a1b0c-d4e5-4f6a-9b8c-7d6e5f4a3b2c',
+    '254bdcba-84d4-11f1-816d-b2b95b009a84',
+    'Hublot & Cartier Showcase October 2026 - Vol 4',
+    'Exclusive bidding session for hublot & cartier showcase october 2026 - vol 4. All items certified authentic with original box and papers.',
+    '2026-07-20 14:00:00',
+    '2026-07-23 14:00:00',
+    'ACTIVE',
+    '2026-07-11 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d',
+    '383e4a66-84d4-11f1-816d-b2b95b009a84',
+    'Breitling & Tudor Auction September 2026 - Vol 1',
+    'Exclusive bidding session for breitling & tudor auction september 2026 - vol 1. All items certified authentic with original box and papers.',
+    '2026-07-12 14:00:00',
+    '2026-07-16 14:00:00',
+    'CANCELLED',
+    '2026-07-03 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    'f6e5d4c3-b2a1-40f9-ae8d-7c6b5a4f3e2d',
+    '4c597d1a-84d3-11f1-816d-b2b95b009a84',
+    
+    'Grand Seiko Collector Sale August 2026 - Vol 2',
+    'Exclusive bidding session for grand seiko collector sale august 2026 - vol 2. All items certified authentic with original box and papers.',
+    '2026-07-19 14:00:00',
+    '2026-07-26 14:00:00',
+    'ACTIVE',
+    '2026-07-13 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '0b1a2c3d-4e5f-46a7-b8c9-d0e1f2a3b4c5',
+    '4e0067a6-84d3-11f1-816d-b2b95b009a84',
+    
+    'Jaeger-LeCoultre Elegance September 2026 - Vol 5',
+    'Exclusive bidding session for jaeger-lecoultre elegance september 2026 - vol 5. All items certified authentic with original box and papers.',
+    '2026-07-13 14:00:00',
+    '2026-07-16 14:00:00',
+    'CANCELLED',
+    '2026-07-06 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '9a8b7c6d-5e4f-43a2-b1c0-d9e8f7a6b5c4',
+    '68699718-84d3-11f1-816d-b2b95b009a84',
+    
+    'Vintage Rolex Collection September 2026 - Vol 4',
+    'Exclusive bidding session for vintage rolex collection september 2026 - vol 4. All items certified authentic with original box and papers.',
+    '2026-07-12 14:00:00',
+    '2026-07-15 14:00:00',
+    'CANCELLED',
+    '2026-07-04 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '2c3d4e5f-6a7b-48c9-d0e1-f2a3b4c5d6e7',
+    '70e2efba-84d3-11f1-816d-b2b95b009a84',
+    
+    'Premium Omega Timepieces October 2026 - Vol 1',
+    'Exclusive bidding session for premium omega timepieces october 2026 - vol 1. All items certified authentic with original box and papers.',
+    '2026-07-24 14:00:00',
+    '2026-07-29 14:00:00',
+    'SCHEDULED',
+    '2026-07-19 14:00:00',
+    '2026-07-19 14:00:00'
+),
+(
+    'b5c4d3e2-f1a0-49b8-c7d6-e5f4a3b2c1d0',
+    '77ee1f9b-84d3-11f1-816d-b2b95b009a84',
+    
+    'Zenith & Longines Vintage September 2026 - Vol 5',
+    'Exclusive bidding session for zenith & longines vintage september 2026 - vol 5. All items certified authentic with original box and papers.',
+    '2026-07-24 14:00:00',
+    '2026-07-27 14:00:00',
+    'SCHEDULED',
+    '2026-07-16 14:00:00',
+    '2026-07-16 14:00:00'
+),
+(
+    '7a6b5c4d-3e2f-41a0-b9c8-d7e6f5a4b3c2',
+    '81811d96-84d3-11f1-816d-b2b95b009a84',
+    
+    'Audemars Piguet Exclusive September 2026 - Vol 3',
+    'Exclusive bidding session for audemars piguet exclusive september 2026 - vol 3. All items certified authentic with original box and papers.',
+    '2026-07-19 14:00:00',
+    '2026-07-26 14:00:00',
+    'ACTIVE',
+    '2026-07-13 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    'e1f2a3b4-c5d6-47e8-f9a0-b1c2d3e4f5a6',
+    '88055399-84d3-11f1-816d-b2b95b009a84',
+    
+    'Panerai Luminor Auction July 2026 - Vol 5',
+    'Exclusive bidding session for panerai luminor auction july 2026 - vol 5. All items certified authentic with original box and papers.',
+    '2026-07-11 14:00:00',
+    '2026-07-15 14:00:00',
+    'ENDED',
+    '2026-07-02 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    'd3e4f5a6-b1c2-43d4-e5f6-a7b8c9d0e1f2',
+    '8f2a6d2e-84d3-11f1-816d-b2b95b009a84',
+    
+    'Premium Omega Timepieces September 2026 - Vol 2',
+    'Exclusive bidding session for premium omega timepieces september 2026 - vol 2. All items certified authentic with original box and papers.',
+    '2026-07-20 14:00:00',
+    '2026-07-22 14:00:00',
+    'ACTIVE',
+    '2026-07-10 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '8c9d0e1f-2a3b-44c5-d6e7-f8a9b0c1d2e3',
+    '96be75f4-84d3-11f1-816d-b2b95b009a84',
+    
+    'IWC Schaffhausen Special October 2026 - Vol 3',
+    'Exclusive bidding session for iwc schaffhausen special october 2026 - vol 3. All items certified authentic with original box and papers.',
+    '2026-07-06 14:00:00',
+    '2026-07-10 14:00:00',
+    'ENDED',
+    '2026-06-27 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '5f6a7b8c-9d0e-41f2-a3b4-c5d6e7f8a9b0',
+    '9df54dfe-84d3-11f1-816d-b2b95b009a84',
+    
+    'Grand Seiko Collector Sale September 2026 - Vol 4',
+    'Exclusive bidding session for grand seiko collector sale september 2026 - vol 4. All items certified authentic with original box and papers.',
+    '2026-07-19 14:00:00',
+    '2026-07-23 14:00:00',
+    'ACTIVE',
+    '2026-07-10 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '4c5d6e7f-8a9b-40c1-d2e3-f4a5b6c7d8e9',
+    'a4d90dc8-84d3-11f1-816d-b2b95b009a84',
+    
+    'Jaeger-LeCoultre Elegance July 2026 - Vol 5',
+    'Exclusive bidding session for jaeger-lecoultre elegance july 2026 - vol 5. All items certified authentic with original box and papers.',
+    '2026-07-25 14:00:00',
+    '2026-07-27 14:00:00',
+    'SCHEDULED',
+    '2026-07-19 14:00:00',
+    '2026-07-19 14:00:00'
+),
+(
+    '1f2a3b4c-5d6e-47f8-a9b0-c1d2e3f4a5b6',
+    'ac694475-84d3-11f1-816d-b2b95b009a84',
+    
+    'Tissot & Hamilton Entry Luxury October 2026 - Vol 3',
+    'Exclusive bidding session for tissot & hamilton entry luxury october 2026 - vol 3. All items certified authentic with original box and papers.',
+    '2026-07-11 14:00:00',
+    '2026-07-15 14:00:00',
+    'ENDED',
+    '2026-06-26 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    'a9b0c1d2-e3f4-45a6-b7c8-d9e0f1a2b3c4',
+    'b3c2c544-84d3-11f1-816d-b2b95b009a84',
+    
+    'Panerai Luminor Auction July 2026 - Vol 5',
+    'Exclusive bidding session for panerai luminor auction july 2026 - vol 5. All items certified authentic with original box and papers.',
+    '2026-07-11 14:00:00',
+    '2026-07-14 14:00:00',
+    'ENDED',
+    '2026-07-03 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '7f8a9b0c-1d2e-43f4-a5b6-c7d8e9f0a1b2',
+    'ba50a1b1-84d3-11f1-816d-b2b95b009a84',
+    
+    'IWC Schaffhausen Special July 2026 - Vol 4',
+    'Exclusive bidding session for iwc schaffhausen special july 2026 - vol 4. All items certified authentic with original box and papers.',
+    '2026-07-12 14:00:00',
+    '2026-07-15 14:00:00',
+    'CANCELLED',
+    '2026-07-06 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '3f4a5b6c-7d8e-49f0-a1b2-c3d4e5f6a7b8',
+    'c22148e9-84d3-11f1-816d-b2b95b009a84',
+    
+    'Zenith & Longines Vintage September 2026 - Vol 3',
+    'Exclusive bidding session for zenith & longines vintage september 2026 - vol 3. All items certified authentic with original box and papers.',
+    '2026-07-12 14:00:00',
+    '2026-07-14 14:00:00',
+    'CANCELLED',
+    '2026-07-05 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '0f1a2b3c-4d5e-46f7-a8b9-c0d1e2f3a4b5',
+    'cb157bda-84d3-11f1-816d-b2b95b009a84',
+    
+    'Grand Seiko Collector Sale July 2026 - Vol 2',
+    'Exclusive bidding session for grand seiko collector sale july 2026 - vol 2. All items certified authentic with original box and papers.',
+    '2026-07-07 14:00:00',
+    '2026-07-10 14:00:00',
+    'ENDED',
+    '2026-06-28 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    'c7d8e9f0-a1b2-43c4-d5e6-f7a8b9c0d1e2',
+    'd763adda-84d3-11f1-816d-b2b95b009a84',
+    
+    'Audemars Piguet Exclusive August 2026 - Vol 3',
+    'Exclusive bidding session for audemars piguet exclusive august 2026 - vol 3. All items certified authentic with original box and papers.',
+    '2026-07-19 14:00:00',
+    '2026-07-23 14:00:00',
+    'ACTIVE',
+    '2026-07-12 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '8a9b0c1d-2e3f-44a5-b6c7-d8e9f0a1b2c3',
+    'df806cbe-84d3-11f1-816d-b2b95b009a84',
+    
+    'Jaeger-LeCoultre Elegance August 2026 - Vol 4',
+    'Exclusive bidding session for jaeger-lecoultre elegance august 2026 - vol 4. All items certified authentic with original box and papers.',
+    '2026-07-11 14:00:00',
+    '2026-07-14 14:00:00',
+    'CANCELLED',
+    '2026-07-01 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '5b6c7d8e-9f0a-41b2-c3d4-e5f6a7b8c9d0',
+    'e6ff1927-84d3-11f1-816d-b2b95b009a84',
+    
+    'Tissot & Hamilton Entry Luxury July 2026 - Vol 5',
+    'Exclusive bidding session for tissot & hamilton entry luxury july 2026 - vol 5. All items certified authentic with original box and papers.',
+    '2026-07-23 14:00:00',
+    '2026-07-29 14:00:00',
+    'SCHEDULED',
+    '2026-07-17 14:00:00',
+    '2026-07-17 14:00:00'
+),
+(
+    '2e3f4a5b-6c7d-48e9-f0a1-b2c3d4e5f6a7',
+    'f03d1293-84d3-11f1-816d-b2b95b009a84',
+    
+    'Zenith & Longines Vintage September 2026 - Vol 1',
+    'Exclusive bidding session for zenith & longines vintage september 2026 - vol 1. All items certified authentic with original box and papers.',
+    '2026-07-19 14:00:00',
+    '2026-07-24 14:00:00',
+    'ACTIVE',
+    '2026-07-14 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    'f7a8b9c0-d1e2-43f4-a5b6-c7d8e9f0a1b2',
+    'f8101274-84d3-11f1-816d-b2b95b009a84',
+    
+    'Luxury Watch Auction July 2026 - Vol 4',
+    'Exclusive bidding session for luxury watch auction july 2026 - vol 4. All items certified authentic with original box and papers.',
+    '2026-07-22 14:00:00',
+    '2026-07-24 14:00:00',
+    'SCHEDULED',
+    '2026-07-17 14:00:00',
+    '2026-07-17 14:00:00'
+),
+(
+    'c3d4e5f6-a7b8-49c9-d0e1-f2a3b4c5d6e7',
+    '04163cb4-84d4-11f1-816d-b2b95b009a84',
+    
+    'Grand Seiko Collector Sale August 2026 - Vol 2',
+    'Exclusive bidding session for grand seiko collector sale august 2026 - vol 2. All items certified authentic with original box and papers.',
+    '2026-07-06 14:00:00',
+    '2026-07-10 14:00:00',
+    'ENDED',
+    '2026-06-28 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '9f0a1b2c-3d4e-45f6-a7b8-c9d0e1f2a3b4',
+    '0ef02b85-84d4-11f1-816d-b2b95b009a84',
+    
+    'Panerai Luminor Auction August 2026 - Vol 2',
+    'Exclusive bidding session for panerai luminor auction august 2026 - vol 2. All items certified authentic with original box and papers.',
+    '2026-07-11 14:00:00',
+    '2026-07-15 14:00:00',
+    'CANCELLED',
+    '2026-07-04 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '6c7d8e9f-0a1b-42c3-d4e5-f6a7b8c9d0e1',
+    '16b3d6ff-84d4-11f1-816d-b2b95b009a84',
+    
+    'Tissot & Hamilton Entry Luxury September 2026 - Vol 5',
+    'Exclusive bidding session for tissot & hamilton entry luxury september 2026 - vol 5. All items certified authentic with original box and papers.',
+    '2026-07-11 14:00:00',
+    '2026-07-14 14:00:00',
+    'ENDED',
+    '2026-06-29 14:00:00',
+    '2026-07-21 14:00:00'
+),
+(
+    '3a4b5c6d-7e8f-49a0-b1c2-d3e4f5a6b7c8',
+    '1f16991a-84d4-11f1-816d-b2b95b009a84',
+    
+    'Hublot & Cartier Showcase September 2026 - Vol 3',
+    'Exclusive bidding session for hublot & cartier showcase september 2026 - vol 3. All items certified authentic with original box and papers.',
+    '2026-07-22 14:00:00',
+    '2026-07-25 14:00:00',
+    'SCHEDULED',
+    '2026-07-16 14:00:00',
+    '2026-07-16 14:00:00'
+),
+(
+    '8cbefa39-76a0-46d8-bc75-debc7f28647a',
+    '254bdcba-84d4-11f1-816d-b2b95b009a84',
+    
+    'Premium Omega Timepieces August 2026 - Vol 4',
+    'Exclusive bidding session for premium omega timepieces august 2026 - vol 4. All items certified authentic with original box and papers.',
+    '2026-07-12 14:00:00',
+    '2026-07-14 14:00:00',
+    'CANCELLED',
+    '2026-07-06 14:00:00',
+    '2026-07-21 14:00:00'
+);
+
+
+INSERT INTO auction_session_rules (
+    id,
+    session_id,
+    min_increment
+)
+VALUES
+(
+    'fb2e25d8-46cf-4fb8-becd-ab12c0e8cbf8',
+    '9eb5b31d-b6fa-4927-90fb-295f569b91c4',
+    1000000
+),
+(
+    'e4d284da-29ca-4e47-a342-3efa1dc58b96',
+    'c6e5f80b-967c-473d-82fa-eb01bc58c9b2',
+    100000
+),
+(
+    '75b23d73-a519-47a6-b606-02806f5ef2ad',
+    'a2d3e14f-2d7c-4029-ba9d-cf812356bb73',
+    500000
+),
+(
+    'a9a28f79-2c68-4b8e-8a65-20d2e65acf37',
+    '02f54b6c-3e91-4cf1-8bf0-6923c8a14d4e',
+    2000000
+),
+(
+    'b2c27df3-e64a-43bf-ad94-35e03d75ba81',
+    'db56cefe-126c-4824-8df6-43b9e075cd1a',
+    500000
+),
+(
+    'e5e0a017-3bd4-4c8f-8f94-94cccb2e4507',
+    'b01c7df4-39fa-45b6-ae38-34fd712bc9d0',
+    500000
+),
+(
+    'f49ff5be-6c3b-446b-a93e-5a2f19bd1662',
+    'f4d23cb5-8d1e-4509-bc3f-7bf61a8ef01e',
+    200000
+),
+(
+    'fe2bac8c-a404-4774-b6ce-b3cc089a7d31',
+    'c3a07b4d-de12-4217-9cfb-81d3fca2cb6b',
+    500000
+),
+(
+    '33b47d7d-9f0e-4aa8-abaf-f8f51b9faaf8',
+    '4b5e2fdc-01ef-4bc5-8df6-32ef4cb11aef',
+    50000
+),
+(
+    '57bea86d-e696-4519-9dc9-9fd2db608f07',
+    'd7f23cb5-f12a-463d-9abc-f81de43bcba2',
+    100000
+),
+(
+    '90ab3646-c9c1-4b70-911c-6309a1a5d034',
+    '3f2a1b0c-d4e5-4f6a-9b8c-7d6e5f4a3b2c',
+    2000000
+),
+(
+    '6cbad3b2-120e-4b46-9f41-ebd5dab7800f',
+    'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d',
+    500000
+),
+(
+    'ce87d890-8fe8-4f15-8c11-682c3856ef86',
+    'f6e5d4c3-b2a1-40f9-ae8d-7c6b5a4f3e2d',
+    1000000
+),
+(
+    '0dffe08c-f5b3-4632-8928-b45a4cb2675f',
+    '0b1a2c3d-4e5f-46a7-b8c9-d0e1f2a3b4c5',
+    100000
+),
+(
+    '812dcf9d-7268-4f3d-97e5-c410e0921b36',
+    '9a8b7c6d-5e4f-43a2-b1c0-d9e8f7a6b5c4',
+    2000000
+),
+(
+    'ce386f97-c46a-467a-8add-0731c7142d37',
+    '2c3d4e5f-6a7b-48c9-d0e1-f2a3b4c5d6e7',
+    100000
+),
+(
+    '7147abc6-1d4f-4dc3-ba52-41b622ec850c',
+    'b5c4d3e2-f1a0-49b8-c7d6-e5f4a3b2c1d0',
+    100000
+),
+(
+    'b699e3dc-218a-446d-84ae-4f9042c365bb',
+    '7a6b5c4d-3e2f-41a0-b9c8-d7e6f5a4b3c2',
+    500000
+),
+(
+    '9965623d-cdb4-40cd-9b72-988f3adf30a5',
+    'e1f2a3b4-c5d6-47e8-f9a0-b1c2d3e4f5a6',
+    1000000
+),
+(
+    '596d8241-acea-443a-9cd2-1cb53e0d22a8',
+    'd3e4f5a6-b1c2-43d4-e5f6-a7b8c9d0e1f2',
+    50000
+),
+(
+    '9d61d78e-207c-4816-83f6-9c0c5b30e7ea',
+    '8c9d0e1f-2a3b-44c5-d6e7-f8a9b0c1d2e3',
+    1000000
+),
+(
+    'c6850347-b1f3-4c84-b315-3b84d30b4317',
+    '5f6a7b8c-9d0e-41f2-a3b4-c5d6e7f8a9b0',
+    1000000
+),
+(
+    'b2b9416e-d0f9-41e0-9505-a6140f695620',
+    '4c5d6e7f-8a9b-40c1-d2e3-f4a5b6c7d8e9',
+    200000
+),
+(
+    'd57e6b8a-5e0c-4fb4-bc45-208acf397323',
+    '1f2a3b4c-5d6e-47f8-a9b0-c1d2e3f4a5b6',
+    200000
+),
+(
+    'e0442571-892c-44a2-8da0-6e5b44b3fbb6',
+    'a9b0c1d2-e3f4-45a6-b7c8-d9e0f1a2b3c4',
+    500000
+),
+(
+    '5b09ab36-e026-48de-b95d-57000f6bb683',
+    '7f8a9b0c-1d2e-43f4-a5b6-c7d8e9f0a1b2',
+    50000
+),
+(
+    'c2cccdb4-7719-4a36-a7d3-40c46cb02b96',
+    '3f4a5b6c-7d8e-49f0-a1b2-c3d4e5f6a7b8',
+    1000000
+),
+(
+    'ce25fd9f-4792-4b4a-8d3d-36664b924924',
+    '0f1a2b3c-4d5e-46f7-a8b9-c0d1e2f3a4b5',
+    2000000
+),
+(
+    '2e50a2d3-0dc8-422e-aeea-da6a4ccd63c9',
+    'c7d8e9f0-a1b2-43c4-d5e6-f7a8b9c0d1e2',
+    100000
+),
+(
+    '6453f50a-665d-43cf-8d7e-3940b8bf703d',
+    '8a9b0c1d-2e3f-44a5-b6c7-d8e9f0a1b2c3',
+    1000000
+),
+(
+    'f1f1a490-b203-499b-b919-799ec8bc7790',
+    '5b6c7d8e-9f0a-41b2-c3d4-e5f6a7b8c9d0',
+    200000
+),
+(
+    '531b8b6f-5305-4a58-a22f-d1323733b125',
+    '2e3f4a5b-6c7d-48e9-f0a1-b2c3d4e5f6a7',
+    100000
+),
+(
+    '1f475bea-d8fe-4985-990b-61d766ceb31e',
+    'f7a8b9c0-d1e2-43f4-a5b6-c7d8e9f0a1b2',
+    50000
+),
+(
+    'e4979c11-9dd7-47b7-9bfe-705f4d2b9afb',
+    'c3d4e5f6-a7b8-49c9-d0e1-f2a3b4c5d6e7',
+    100000
+),
+(
+    '74ab9a1d-ff6a-448e-a8f5-5107350ecd36',
+    '9f0a1b2c-3d4e-45f6-a7b8-c9d0e1f2a3b4',
+    500000
+),
+(
+    'c3e7933c-c9ea-45ef-a241-346f883a1c38',
+    '6c7d8e9f-0a1b-42c3-d4e5-f6a7b8c9d0e1',
+    500000
+),
+(
+    '74c99f04-8deb-49c8-8a9d-ed358a9c5efe',
+    '3a4b5c6d-7e8f-49a0-b1c2-d3e4f5a6b7c8',
+    50000
+),
+(
+    '462715d3-93f0-4acc-aa5d-b2eae34a83c9',
+    '8cbefa39-76a0-46d8-bc75-debc7f28647a',
+    1000000
+),
+(
+    'f272e81b-bfd9-43c2-9a19-7c663e3d9813',
+    'd6e7f8a9-b0c1-42d3-e4f5-a6b7c8d9e0f1',
+    100000
+),
+(
+    '6f7db65b-752f-446d-8f28-31f2efd5621f',
+    'a3b4c5d6-e7f8-49a0-b1c2-d3e4f5a6b7c8',
+    1000000
+),
+(
+    '4810e8fe-a934-49d2-81af-69e1389f985d',
+    '7c8d9e0f-1a2b-43c4-d5e6-f7a8b9c0d1e2',
+    200000
+),
+(
+    'f84bda39-38aa-4be2-8a96-ccbcd2c52e82',
+    '4a5b6c7d-8e9f-40a1-b2c3-d4e5f6a7b8c9',
+    1000000
+),
+(
+    '031a6846-2dc7-43f9-9d24-7396c794bf52',
+    '1c2d3e4f-5a6b-47c8-d9e0-f1a2b3c4d5e6',
+    50000
+),
+(
+    '953877e8-c2d6-4bfc-9800-11e06d62101d',
+    'e9f0a1b2-c3d4-45e5-f6a7-b8c9d0e1f2a3',
+    200000
+),
+(
+    '21e0cd1e-e77f-4be5-bcde-80d3f43dbc45',
+    'b6c7d8e9-f0a1-42b3-c4d5-e6f7a8b9c0d1',
+    1000000
+),
+(
+    '7ef54e6b-4e35-43ec-9ff7-f29d1b43042a',
+    '40443dff-8dde-4039-86a9-3239a9bae344',
+    50000
+),
+(
+    'ca310ba1-b642-4957-85ef-84f7ff6265c8',
+    '5c6d7e8f-9a0b-41c2-d3e4-f5a6b7c8d9e0',
+    1000000
+),
+(
+    'c3ba031b-aba4-48c6-9933-187ffc22ae40',
+    '2a3b4c5d-6e7f-48a9-b0c1-d2e3f4a5b6c7',
+    200000
+),
+(
+    'ca05d6f0-13fd-4734-9e7a-af68d137b8b1',
+    'f8a9b0c1-d2e3-44f5-a6b7-c8d9e0f1a2b3',
+    200000
+),
+(
+    '7553c230-c2f8-46ce-80c6-5a9b2d23e12a',
+    'c5d6e7f8-a9b0-41c2-d3e4-f5a6b7c8d9e0',
+    2000000
+),
+(
+    'e142b69f-4264-4a5c-a4a9-4d2dd65279a3',
+    '92b5b31d-b6fa-4927-90fb-295f569b91c4',
+    200000
+),
+(
+    '43294d99-0e50-4787-9d69-1c1604376580',
+    'e1e5f80b-967c-473d-82fa-eb01bc58c9b2',
+    500000
+),
+(
+    'ca85d2a0-e683-4089-ba12-bc2ea3799108',
+    'b8d3e14f-2d7c-4029-ba9d-cf812356bb73',
+    1000000
+),
+(
+    '7937249f-775c-4dbb-bd5d-66bd5626a899',
+    '47f54b6c-3e91-4cf1-8bf0-6923c8a14d4e',
+    500000
+),
+(
+    'ac8137db-12f5-4eaa-bd74-db8ac7360eff',
+    '1656cefe-126c-4824-8df6-43b9e075cd1a',
+    50000
+),
+(
+    '82974d54-f339-4616-aedc-9ac72780dd49',
+    '231c7df4-39fa-45b6-ae38-34fd712bc9d0',
+    100000
+),
+(
+    '786681c1-33a0-4335-aca5-c08352b69bc2',
+    '5fd23cb5-8d1e-4509-bc3f-7bf61a8ef01e',
+    2000000
+),
+(
+    '2813ba17-ffa4-4227-add2-b0613c7bd2dc',
+    '8fa07b4d-de12-4217-9cfb-81d3fca2cb6b',
+    100000
+),
+(
+    '1304ec5a-4376-40c0-8b90-ffe0c61ff779',
+    '9c5e2fdc-01ef-4bc5-8df6-32ef4cb11aef',
+    50000
+);
+
+
+
+INSERT INTO categories (
+    id,
+    name,
+    slug,
+    status,
+    created_at
+)
+VALUES (
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Watches',
+    'watches',
+    'ACTIVE',
+    CURRENT_TIMESTAMP
+);
+
+
+
+INSERT INTO auction_items (
+    id,
+    session_id,
+    seller_id,
+    category_id,
+    title,
+    description,
+    starting_price,
+    current_price,
+    status,
+    winner_user_id,
+    final_price,
+    opened_at,
+    closed_at
+)
+VALUES
+(
+    'e6d26752-47df-4f8b-a6c8-14a1f456a321',
+    '9eb5b31d-b6fa-4927-90fb-295f569b91c4',
+    '4c597d1a-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Luxury Watch Auction July 2026',
+    'Exclusive luxury watch offered in the Luxury Watch Auction July 2026 session. The item is certified authentic and includes the original box and papers.',
+    150000000.00,
+    150000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-19 14:00:00',
+    NULL
+),
+(
+    'd73239ad-a805-4665-8923-e157388c4bbb',
+    'c6e5f80b-967c-473d-82fa-eb01bc58c9b2',
+    '4e0067a6-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Audemars Piguet Exclusive September 2026 - Vol 5',
+    'Exclusive Audemars Piguet watch offered in the Audemars Piguet Exclusive September 2026 - Vol 5 session. The item is certified authentic and includes the original box and papers.',
+    500000000.00,
+    500000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+(
+    '9422a991-a879-48e9-9309-79af20f23161',
+    'a2d3e14f-2d7c-4029-ba9d-cf812356bb73',
+    '68699718-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Grand Seiko Collector Sale August 2026 - Vol 1',
+    'Exclusive Grand Seiko watch offered in the Grand Seiko Collector Sale August 2026 - Vol 1 session. The item is certified authentic and includes the original box and papers.',
+    120000000.00,
+    120000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+(
+    '45a93c7e-cb4b-41ae-96bc-4c6b19465d10',
+    '02f54b6c-3e91-4cf1-8bf0-6923c8a14d4e',
+    '68699718-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Tissot & Hamilton Entry Luxury October 2026 - Vol 1',
+    'Exclusive Tissot and Hamilton entry-level luxury watch offered in the Tissot & Hamilton Entry Luxury October 2026 - Vol 1 auction session. The item is certified authentic and includes the original box and papers.',
+    25000000.00,
+    25000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+(
+    'a8bc337c-c350-42cc-89a8-b7761785ad44',
+    'db56cefe-126c-4824-8df6-43b9e075cd1a',
+    '70e2efba-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Rare Patek Philippe Event July 2026 - Vol 4',
+    'Rare Patek Philippe luxury watch offered in the Rare Patek Philippe Event July 2026 - Vol 4 auction session. The item is certified authentic and includes the original box and papers.',
+    1200000000.00,
+    1200000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-13 14:00:00',
+    '2026-07-16 14:00:00'
+),
+(
+    'b15c5e60-5fac-41e2-b26f-a221677fd741',
+    'b01c7df4-39fa-45b6-ae38-34fd712bc9d0',
+    '8f2a6d2e-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Luxury Watch Auction September 2026 - Vol 2',
+    'Exclusive luxury watch offered in the Luxury Watch Auction September 2026 - Vol 2 auction session. The item is certified authentic and includes the original box and papers.',
+    300000000.00,
+    300000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-14 14:00:00',
+    '2026-07-17 14:00:00'
+),
+(
+    '37c7bed1-e239-4a47-b728-ff608cfaf601',
+    'f4d23cb5-8d1e-4509-bc3f-7bf61a8ef01e',
+    'b3c2c544-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Zenith & Longines Vintage July 2026 - Vol 2',
+    'Vintage Zenith and Longines watch offered in the Zenith & Longines Vintage July 2026 - Vol 2 auction session. The item is certified authentic and includes the original box and papers.',
+    90000000.00,
+    90000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+(
+    'fb81aebb-f66d-4461-bf47-a98f41078d1f',
+    'c3a07b4d-de12-4217-9cfb-81d3fca2cb6b',
+    'df806cbe-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Grand Seiko Collector Sale July 2026 - Vol 3',
+    'Grand Seiko collector watch offered in the Grand Seiko Collector Sale July 2026 - Vol 3 auction session. The item is certified authentic and includes the original box and papers.',
+    130000000.00,
+    130000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+(
+    'baaf7002-c699-447d-9eb8-5044690cad48',
+    '4b5e2fdc-01ef-4bc5-8df6-32ef4cb11aef',
+    '04163cb4-84d4-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Tag Heuer Sports Edition July 2026 - Vol 2',
+    'Tag Heuer sports watch offered in the Tag Heuer Sports Edition July 2026 - Vol 2 auction session. The item is certified authentic and includes the original box and papers.',
+    85000000.00,
+    85000000.00,
+    'CANCELLED',
+    NULL,
+    NULL,
+    NULL,
+    '2026-07-16 14:00:00'
+),
+(
+    'd59ad798-1479-4902-9ca7-2752d29fecea',
+    'd7f23cb5-f12a-463d-9abc-f81de43bcba2',
+    '30a35952-84d4-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Chopard & Piaget Jewels October 2026 - Vol 2',
+    'Luxury Chopard and Piaget jewelry watch offered in the Chopard & Piaget Jewels October 2026 - Vol 2 auction session. The item is certified authentic and includes the original box and papers.',
+    450000000.00,
+    450000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+(
+    '7b4502d0-e8bf-46d7-ad5d-30dfec7e908b',
+    '3f2a1b0c-d4e5-4f6a-9b8c-7d6e5f4a3b2c',
+    '254bdcba-84d4-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Hublot & Cartier Showcase October 2026 - Vol 4',
+    'Luxury Hublot and Cartier watch offered in the Hublot & Cartier Showcase October 2026 - Vol 4 auction session. The item is certified authentic and includes the original box and papers.',
+    600000000.00,
+    600000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-20 14:00:00',
+    NULL
+),
+(
+    '5741aede-6025-47a6-a855-35b5622ec7b9',
+    'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d',
+    '383e4a66-84d4-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Breitling & Tudor Auction September 2026 - Vol 1',
+    'Luxury Breitling and Tudor watch offered in the Breitling & Tudor Auction September 2026 - Vol 1 auction session. The item is certified authentic and includes the original box and papers.',
+    160000000.00,
+    160000000.00,
+    'CANCELLED',
+    NULL,
+    NULL,
+    NULL,
+    '2026-07-16 14:00:00'
+),
+(
+    'ae2d89c1-6298-5b85-aa97-410a13d7e88f',
+    'f6e5d4c3-b2a1-40f9-ae8d-7c6b5a4f3e2d',
+    '4c597d1a-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Grand Seiko Collector Sale August 2026 - Vol 2',
+    'Exclusive bidding session for grand seiko collector sale august 2026 - vol 2. All items certified authentic with original box and papers.',
+    130000000.00,
+    130000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-19 14:00:00',
+    NULL
+),
+(
+    'd1b415e8-c0e2-5d0b-9125-3f497c302cad',
+    '0b1a2c3d-4e5f-46a7-b8c9-d0e1f2a3b4c5',
+    '4e0067a6-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Jaeger-LeCoultre Elegance September 2026 - Vol 5',
+    'Exclusive bidding session for jaeger-lecoultre elegance september 2026 - vol 5. All items certified authentic with original box and papers.',
+    350000000.00,
+    350000000.00,
+    'CANCELLED',
+    NULL,
+    NULL,
+    NULL,
+    '2026-07-16 14:00:00'
+),
+(
+    '76af1f32-6573-5b9e-ae64-84964daae25a',
+    '9a8b7c6d-5e4f-43a2-b1c0-d9e8f7a6b5c4',
+    '68699718-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Vintage Rolex Collection September 2026 - Vol 4',
+    'Exclusive bidding session for vintage rolex collection september 2026 - vol 4. All items certified authentic with original box and papers.',
+    450000000.00,
+    450000000.00,
+    'CANCELLED',
+    NULL,
+    NULL,
+    NULL,
+    '2026-07-15 14:00:00'
+),
+(
+    'aefbab38-6b88-570b-ac24-b915805fb967',
+    '2c3d4e5f-6a7b-48c9-d0e1-f2a3b4c5d6e7',
+    '70e2efba-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Premium Omega Timepieces October 2026 - Vol 1',
+    'Exclusive bidding session for premium omega timepieces october 2026 - vol 1. All items certified authentic with original box and papers.',
+    180000000.00,
+    180000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(
+    'd670ddf0-2b5a-5ec1-93c9-8927649a30ea',
+    'b5c4d3e2-f1a0-49b8-c7d6-e5f4a3b2c1d0',
+    '77ee1f9b-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Zenith & Longines Vintage September 2026 - Vol 5',
+    'Exclusive bidding session for zenith & longines vintage september 2026 - vol 5. All items certified authentic with original box and papers.',
+    100000000.00,
+    100000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+(
+    '21a601c5-8a82-5276-be38-7105928500c3',
+    '7a6b5c4d-3e2f-41a0-b9c8-d7e6f5a4b3c2',
+    '81811d96-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Audemars Piguet Exclusive September 2026 - Vol 3',
+    'Exclusive bidding session for audemars piguet exclusive september 2026 - vol 3. All items certified authentic with original box and papers.',
+    700000000.00,
+    700000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-19 14:00:00',
+    NULL
+),
+(
+    '9fe8d59f-947d-5274-9c5d-0c08eb5e7714',
+    'e1f2a3b4-c5d6-47e8-f9a0-b1c2d3e4f5a6',
+    '88055399-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Panerai Luminor Auction July 2026 - Vol 5',
+    'Exclusive bidding session for panerai luminor auction july 2026 - vol 5. All items certified authentic with original box and papers.',
+    160000000.00,
+    160000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-11 14:00:00',
+    '2026-07-15 14:00:00'
+),
+(
+    '46508092-4eb1-5634-a9d3-3839d9f1a077',
+    'd3e4f5a6-b1c2-43d4-e5f6-a7b8c9d0e1f2',
+    '8f2a6d2e-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Premium Omega Timepieces September 2026 - Vol 2',
+    'Exclusive bidding session for premium omega timepieces september 2026 - vol 2. All items certified authentic with original box and papers.',
+    180000000.00,
+    180000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-20 14:00:00',
+    NULL
+),
+(
+    'b0c14cfd-cc5a-5ec4-8563-ba593773a7ae',
+    '8c9d0e1f-2a3b-44c5-d6e7-f8a9b0c1d2e3',
+    '96be75f4-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'IWC Schaffhausen Special October 2026 - Vol 3',
+    'Exclusive bidding session for iwc schaffhausen special october 2026 - vol 3. All items certified authentic with original box and papers.',
+    220000000.00,
+    220000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-06 14:00:00',
+    '2026-07-10 14:00:00'
+),
+(
+    'fc724120-d3e7-59e5-8a9e-6a546f058324',
+    '5f6a7b8c-9d0e-41f2-a3b4-c5d6e7f8a9b0',
+    '9df54dfe-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Grand Seiko Collector Sale September 2026 - Vol 4',
+    'Exclusive bidding session for grand seiko collector sale september 2026 - vol 4. All items certified authentic with original box and papers.',
+    130000000.00,
+    130000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-19 14:00:00',
+    NULL
+),
+(
+    'be19e1d0-76e2-550a-a138-ed43c833e07f',
+    '4c5d6e7f-8a9b-40c1-d2e3-f4a5b6c7d8e9',
+    'a4d90dc8-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Jaeger-LeCoultre Elegance July 2026 - Vol 5',
+    'Exclusive bidding session for jaeger-lecoultre elegance july 2026 - vol 5. All items certified authentic with original box and papers.',
+    350000000.00,
+    350000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(
+    'e21e2e94-0594-58df-8078-456981952cc0',
+    '1f2a3b4c-5d6e-47f8-a9b0-c1d2e3f4a5b6',
+    'ac694475-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Tissot & Hamilton Entry Luxury October 2026 - Vol 3',
+    'Exclusive bidding session for tissot & hamilton entry luxury october 2026 - vol 3. All items certified authentic with original box and papers.',
+    35000000.00,
+    35000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-11 14:00:00',
+    '2026-07-15 14:00:00'
+),
+(
+    '9890849a-b871-5aa6-8114-6d1cce4f9a18',
+    'a9b0c1d2-e3f4-45a6-b7c8-d9e0f1a2b3c4',
+    'b3c2c544-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Panerai Luminor Auction July 2026 - Vol 5',
+    'Exclusive bidding session for panerai luminor auction july 2026 - vol 5. All items certified authentic with original box and papers.',
+    160000000.00,
+    160000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-11 14:00:00',
+    '2026-07-14 14:00:00'
+),
+(
+    'fc630e28-8582-52af-ac27-3107807ec21e',
+    '7f8a9b0c-1d2e-43f4-a5b6-c7d8e9f0a1b2',
+    'ba50a1b1-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'IWC Schaffhausen Special July 2026 - Vol 4',
+    'Exclusive bidding session for iwc schaffhausen special july 2026 - vol 4. All items certified authentic with original box and papers.',
+    220000000.00,
+    220000000.00,
+    'CANCELLED',
+    NULL,
+    NULL,
+    NULL,
+    '2026-07-15 14:00:00'
+),
+(
+    '330618c3-196c-5c0f-9ed2-9989db9a0555',
+    '3f4a5b6c-7d8e-49f0-a1b2-c3d4e5f6a7b8',
+    'c22148e9-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Zenith & Longines Vintage September 2026 - Vol 3',
+    'Exclusive bidding session for zenith & longines vintage september 2026 - vol 3. All items certified authentic with original box and papers.',
+    100000000.00,
+    100000000.00,
+    'CANCELLED',
+    NULL,
+    NULL,
+    NULL,
+    '2026-07-14 14:00:00'
+),
+(
+    'a73f6493-3a82-55ae-b59c-5a2dfc973cb3',
+    '0f1a2b3c-4d5e-46f7-a8b9-c0d1e2f3a4b5',
+    'cb157bda-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Grand Seiko Collector Sale July 2026 - Vol 2',
+    'Exclusive bidding session for grand seiko collector sale july 2026 - vol 2. All items certified authentic with original box and papers.',
+    130000000.00,
+    130000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-07 14:00:00',
+    '2026-07-10 14:00:00'
+),
+(
+    'a0763749-1cce-52b7-9983-f393558e2286',
+    'c7d8e9f0-a1b2-43c4-d5e6-f7a8b9c0d1e2',
+    'd763adda-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Audemars Piguet Exclusive August 2026 - Vol 3',
+    'Exclusive bidding session for audemars piguet exclusive august 2026 - vol 3. All items certified authentic with original box and papers.',
+    700000000.00,
+    700000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-19 14:00:00',
+    NULL
+),
+(
+    '7f24a8df-79de-56cc-b500-652fe251107c',
+    '8a9b0c1d-2e3f-44a5-b6c7-d8e9f0a1b2c3',
+    'df806cbe-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Jaeger-LeCoultre Elegance August 2026 - Vol 4',
+    'Exclusive bidding session for jaeger-lecoultre elegance august 2026 - vol 4. All items certified authentic with original box and papers.',
+    350000000.00,
+    350000000.00,
+    'CANCELLED',
+    NULL,
+    NULL,
+    NULL,
+    '2026-07-14 14:00:00'
+),
+(
+    '3184fd73-d1da-5c79-bab4-040d376cf710',
+    '5b6c7d8e-9f0a-41b2-c3d4-e5f6a7b8c9d0',
+    'e6ff1927-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Tissot & Hamilton Entry Luxury July 2026 - Vol 5',
+    'Exclusive bidding session for tissot & hamilton entry luxury july 2026 - vol 5. All items certified authentic with original box and papers.',
+    35000000.00,
+    35000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+(
+    'ff29cfd3-9d43-5478-b3c9-8d11934a9e56',
+    '2e3f4a5b-6c7d-48e9-f0a1-b2c3d4e5f6a7',
+    'f03d1293-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Zenith & Longines Vintage September 2026 - Vol 1',
+    'Exclusive bidding session for zenith & longines vintage september 2026 - vol 1. All items certified authentic with original box and papers.',
+    100000000.00,
+    100000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-19 14:00:00',
+    NULL
+),
+(
+    '14b542f8-3a65-5748-8186-7caf4f9031fd',
+    'f7a8b9c0-d1e2-43f4-a5b6-c7d8e9f0a1b2',
+    'f8101274-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Luxury Watch Auction July 2026 - Vol 4',
+    'Exclusive bidding session for luxury watch auction july 2026 - vol 4. All items certified authentic with original box and papers.',
+    250000000.00,
+    250000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+(
+    '9d7fea97-f73b-5bdc-a571-e550ac33c6d0',
+    'c3d4e5f6-a7b8-49c9-d0e1-f2a3b4c5d6e7',
+    '04163cb4-84d4-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Grand Seiko Collector Sale August 2026 - Vol 2',
+    'Exclusive bidding session for grand seiko collector sale august 2026 - vol 2. All items certified authentic with original box and papers.',
+    130000000.00,
+    130000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-06 14:00:00',
+    '2026-07-10 14:00:00'
+),
+(
+    'd75316d5-5a6a-5590-8c2f-a1661fcd5630',
+    '9f0a1b2c-3d4e-45f6-a7b8-c9d0e1f2a3b4',
+    '0ef02b85-84d4-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Panerai Luminor Auction August 2026 - Vol 2',
+    'Exclusive bidding session for panerai luminor auction august 2026 - vol 2. All items certified authentic with original box and papers.',
+    160000000.00,
+    160000000.00,
+    'CANCELLED',
+    NULL,
+    NULL,
+    NULL,
+    '2026-07-15 14:00:00'
+),
+(
+    '8a850119-8293-5400-93ec-0a77d3eb38c0',
+    '6c7d8e9f-0a1b-42c3-d4e5-f6a7b8c9d0e1',
+    '16b3d6ff-84d4-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Tissot & Hamilton Entry Luxury September 2026 - Vol 5',
+    'Exclusive bidding session for tissot & hamilton entry luxury september 2026 - vol 5. All items certified authentic with original box and papers.',
+    35000000.00,
+    35000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-11 14:00:00',
+    '2026-07-14 14:00:00'
+),
+(
+    'd942da89-8184-5b1f-9fe4-6b227b6c35a5',
+    '3a4b5c6d-7e8f-49a0-b1c2-d3e4f5a6b7c8',
+    '1f16991a-84d4-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Hublot & Cartier Showcase September 2026 - Vol 3',
+    'Exclusive bidding session for hublot & cartier showcase september 2026 - vol 3. All items certified authentic with original box and papers.',
+    500000000.00,
+    500000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+( 
+	'4e8fd7a1-2b64-4f17-a9cb-6d3e91c5b842', 
+	'8cbefa39-76a0-46d8-bc75-debc7f28647a',
+	'254bdcba-84d4-11f1-816d-b2b95b009a84',
+	'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+	'Premium Omega Timepieces August 2026 - Vol 4', 
+	'Exclusive bidding session for premium omega timepieces august 2026 - vol 4. All items certified authentic with original box and papers.', 
+	220000000.00, 
+	220000000.00, 
+	'CANCELLED', 
+	NULL, 
+	NULL, 
+	NULL, 
+	'2026-07-14 14:00:00'
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+INSERT INTO auction_items (
+    id,
+    session_id,
+    seller_id,
+    category_id,
+    title,
+    description,
+    starting_price,
+    current_price,
+    status,
+    winner_user_id,
+    final_price,
+    opened_at,
+    closed_at
+)
+VALUES
+(
+    'e21e2e94-0594-58df-8078-456981952cc0',
+    '1f2a3b4c-5d6e-47f8-a9b0-c1d2e3f4a5b6',
+    'ac694475-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Tissot & Hamilton Entry Luxury October 2026 - Vol 3',
+    'Exclusive bidding session for tissot & hamilton entry luxury october 2026 - vol 3. All items certified authentic with original box and papers.',
+    35000000.00,
+    35000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-11 14:00:00',
+    '2026-07-15 14:00:00'
+),
+(
+    '9890849a-b871-5aa6-8114-6d1cce4f9a18',
+    'a9b0c1d2-e3f4-45a6-b7c8-d9e0f1a2b3c4',
+    'b3c2c544-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Panerai Luminor Auction July 2026 - Vol 5',
+    'Exclusive bidding session for panerai luminor auction july 2026 - vol 5. All items certified authentic with original box and papers.',
+    160000000.00,
+    160000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-11 14:00:00',
+    '2026-07-14 14:00:00'
+),
+(
+    'fc630e28-8582-52af-ac27-3107807ec21e',
+    '7f8a9b0c-1d2e-43f4-a5b6-c7d8e9f0a1b2',
+    'ba50a1b1-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'IWC Schaffhausen Special July 2026 - Vol 4',
+    'Exclusive bidding session for iwc schaffhausen special july 2026 - vol 4. All items certified authentic with original box and papers.',
+    220000000.00,
+    220000000.00,
+    'CANCELLED',
+    NULL,
+    NULL,
+    NULL,
+    '2026-07-15 14:00:00'
+),
+(
+    '330618c3-196c-5c0f-9ed2-9989db9a0555',
+    '3f4a5b6c-7d8e-49f0-a1b2-c3d4e5f6a7b8',
+    'c22148e9-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Zenith & Longines Vintage September 2026 - Vol 3',
+    'Exclusive bidding session for zenith & longines vintage september 2026 - vol 3. All items certified authentic with original box and papers.',
+    100000000.00,
+    100000000.00,
+    'CANCELLED',
+    NULL,
+    NULL,
+    NULL,
+    '2026-07-14 14:00:00'
+),
+(
+    'a73f6493-3a82-55ae-b59c-5a2dfc973cb3',
+    '0f1a2b3c-4d5e-46f7-a8b9-c0d1e2f3a4b5',
+    'cb157bda-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Grand Seiko Collector Sale July 2026 - Vol 2',
+    'Exclusive bidding session for grand seiko collector sale july 2026 - vol 2. All items certified authentic with original box and papers.',
+    130000000.00,
+    130000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-07 14:00:00',
+    '2026-07-10 14:00:00'
+),
+(
+    'a0763749-1cce-52b7-9983-f393558e2286',
+    'c7d8e9f0-a1b2-43c4-d5e6-f7a8b9c0d1e2',
+    'd763adda-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Audemars Piguet Exclusive August 2026 - Vol 3',
+    'Exclusive bidding session for audemars piguet exclusive august 2026 - vol 3. All items certified authentic with original box and papers.',
+    700000000.00,
+    700000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-19 14:00:00',
+    NULL
+),
+(
+    '7f24a8df-79de-56cc-b500-652fe251107c',
+    '8a9b0c1d-2e3f-44a5-b6c7-d8e9f0a1b2c3',
+    'df806cbe-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Jaeger-LeCoultre Elegance August 2026 - Vol 4',
+    'Exclusive bidding session for jaeger-lecoultre elegance august 2026 - vol 4. All items certified authentic with original box and papers.',
+    350000000.00,
+    350000000.00,
+    'CANCELLED',
+    NULL,
+    NULL,
+    NULL,
+    '2026-07-14 14:00:00'
+),
+(
+    '3184fd73-d1da-5c79-bab4-040d376cf710',
+    '5b6c7d8e-9f0a-41b2-c3d4-e5f6a7b8c9d0',
+    'e6ff1927-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Tissot & Hamilton Entry Luxury July 2026 - Vol 5',
+    'Exclusive bidding session for tissot & hamilton entry luxury july 2026 - vol 5. All items certified authentic with original box and papers.',
+    35000000.00,
+    35000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+(
+    'ff29cfd3-9d43-5478-b3c9-8d11934a9e56',
+    '2e3f4a5b-6c7d-48e9-f0a1-b2c3d4e5f6a7',
+    'f03d1293-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Zenith & Longines Vintage September 2026 - Vol 1',
+    'Exclusive bidding session for zenith & longines vintage september 2026 - vol 1. All items certified authentic with original box and papers.',
+    100000000.00,
+    100000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-19 14:00:00',
+    NULL
+),
+(
+    '14b542f8-3a65-5748-8186-7caf4f9031fd',
+    'f7a8b9c0-d1e2-43f4-a5b6-c7d8e9f0a1b2',
+    'f8101274-84d3-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Luxury Watch Auction July 2026 - Vol 4',
+    'Exclusive bidding session for luxury watch auction july 2026 - vol 4. All items certified authentic with original box and papers.',
+    250000000.00,
+    250000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+(
+    '9d7fea97-f73b-5bdc-a571-e550ac33c6d0',
+    'c3d4e5f6-a7b8-49c9-d0e1-f2a3b4c5d6e7',
+    '04163cb4-84d4-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Grand Seiko Collector Sale August 2026 - Vol 2',
+    'Exclusive bidding session for grand seiko collector sale august 2026 - vol 2. All items certified authentic with original box and papers.',
+    130000000.00,
+    130000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-06 14:00:00',
+    '2026-07-10 14:00:00'
+),
+(
+    'd75316d5-5a6a-5590-8c2f-a1661fcd5630',
+    '9f0a1b2c-3d4e-45f6-a7b8-c9d0e1f2a3b4',
+    '0ef02b85-84d4-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Panerai Luminor Auction August 2026 - Vol 2',
+    'Exclusive bidding session for panerai luminor auction august 2026 - vol 2. All items certified authentic with original box and papers.',
+    160000000.00,
+    160000000.00,
+    'CANCELLED',
+    NULL,
+    NULL,
+    NULL,
+    '2026-07-15 14:00:00'
+),
+(
+    '8a850119-8293-5400-93ec-0a77d3eb38c0',
+    '6c7d8e9f-0a1b-42c3-d4e5-f6a7b8c9d0e1',
+    '16b3d6ff-84d4-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Tissot & Hamilton Entry Luxury September 2026 - Vol 5',
+    'Exclusive bidding session for tissot & hamilton entry luxury september 2026 - vol 5. All items certified authentic with original box and papers.',
+    35000000.00,
+    35000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    '2026-07-11 14:00:00',
+    '2026-07-14 14:00:00'
+),
+(
+    'd942da89-8184-5b1f-9fe4-6b227b6c35a5',
+    '3a4b5c6d-7e8f-49a0-b1c2-d3e4f5a6b7c8',
+    '1f16991a-84d4-11f1-816d-b2b95b009a84',
+    'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+    'Hublot & Cartier Showcase September 2026 - Vol 3',
+    'Exclusive bidding session for hublot & cartier showcase september 2026 - vol 3. All items certified authentic with original box and papers.',
+    500000000.00,
+    500000000.00,
+    'UNSOLD',
+    NULL,
+    NULL,
+    NULL,
+    NULL
+),
+( 
+	'4e8fd7a1-2b64-4f17-a9cb-6d3e91c5b842', 
+	'8cbefa39-76a0-46d8-bc75-debc7f28647a',
+	'254bdcba-84d4-11f1-816d-b2b95b009a84',
+	'b5ffde82-84e0-11f1-816d-b2b95b009a84',
+	'Premium Omega Timepieces August 2026 - Vol 4', 
+	'Exclusive bidding session for premium omega timepieces august 2026 - vol 4. All items certified authentic with original box and papers.', 
+	220000000.00, 
+	220000000.00, 
+	'CANCELLED', 
+	NULL, 
+	NULL, 
+	NULL, 
+	'2026-07-14 14:00:00'
+);
+
+
+
+
+
+
+
+
+INSERT INTO item_images (
+    id,
+    item_id,
+    image_url,
+    is_primary,
+    sort_order,
+    created_at
+)
+VALUES
+-- Item 1: Luxury Watch Auction July 2026
+(
+    '10000001-0000-4000-8000-000000000001',
+    'e6d26752-47df-4f8b-a6c8-14a1f456a321',
+    NULL,
+    TRUE,
+    1,
+    CURRENT_TIMESTAMP
+),
+(
+    '10000001-0000-4000-8000-000000000002',
+    'e6d26752-47df-4f8b-a6c8-14a1f456a321',
+    NULL,
+    FALSE,
+    2,
+    CURRENT_TIMESTAMP
+),
+(
+    '10000001-0000-4000-8000-000000000003',
+    'e6d26752-47df-4f8b-a6c8-14a1f456a321',
+    NULL,
+    FALSE,
+    3,
+    CURRENT_TIMESTAMP
+),
+(
+    '10000001-0000-4000-8000-000000000004',
+    'e6d26752-47df-4f8b-a6c8-14a1f456a321',
+    NULL,
+    FALSE,
+    4,
+    CURRENT_TIMESTAMP
+),
+(
+    '10000001-0000-4000-8000-000000000005',
+    'e6d26752-47df-4f8b-a6c8-14a1f456a321',
+    NULL,
+    FALSE,
+    5,
+    CURRENT_TIMESTAMP
+),
+
+-- Item 2: Audemars Piguet Exclusive
+(
+    '20000002-0000-4000-8000-000000000001',
+    'd73239ad-a805-4665-8923-e157388c4bbb',
+    NULL,
+    TRUE,
+    1,
+    CURRENT_TIMESTAMP
+),
+(
+    '20000002-0000-4000-8000-000000000002',
+    'd73239ad-a805-4665-8923-e157388c4bbb',
+    NULL,
+    FALSE,
+    2,
+    CURRENT_TIMESTAMP
+),
+(
+    '20000002-0000-4000-8000-000000000003',
+    'd73239ad-a805-4665-8923-e157388c4bbb',
+    NULL,
+    FALSE,
+    3,
+    CURRENT_TIMESTAMP
+),
+(
+    '20000002-0000-4000-8000-000000000004',
+    'd73239ad-a805-4665-8923-e157388c4bbb',
+    NULL,
+    FALSE,
+    4,
+    CURRENT_TIMESTAMP
+),
+(
+    '20000002-0000-4000-8000-000000000005',
+    'd73239ad-a805-4665-8923-e157388c4bbb',
+    NULL,
+    FALSE,
+    5,
+    CURRENT_TIMESTAMP
+),
+
+-- Item 3: Grand Seiko Collector Sale
+(
+    '30000003-0000-4000-8000-000000000001',
+    '9422a991-a879-48e9-9309-79af20f23161',
+    NULL,
+    TRUE,
+    1,
+    CURRENT_TIMESTAMP
+),
+(
+    '30000003-0000-4000-8000-000000000002',
+    '9422a991-a879-48e9-9309-79af20f23161',
+    NULL,
+    FALSE,
+    2,
+    CURRENT_TIMESTAMP
+),
+(
+    '30000003-0000-4000-8000-000000000003',
+    '9422a991-a879-48e9-9309-79af20f23161',
+    NULL,
+    FALSE,
+    3,
+    CURRENT_TIMESTAMP
+),
+(
+    '30000003-0000-4000-8000-000000000004',
+    '9422a991-a879-48e9-9309-79af20f23161',
+    NULL,
+    FALSE,
+    4,
+    CURRENT_TIMESTAMP
+),
+(
+    '30000003-0000-4000-8000-000000000005',
+    '9422a991-a879-48e9-9309-79af20f23161',
+    NULL,
+    FALSE,
+    5,
+    CURRENT_TIMESTAMP
+),
+
+-- Item 4: Tissot & Hamilton Entry Luxury
+(
+    '40000004-0000-4000-8000-000000000001',
+    '45a93c7e-cb4b-41ae-96bc-4c6b19465d10',
+    NULL,
+    TRUE,
+    1,
+    CURRENT_TIMESTAMP
+),
+(
+    '40000004-0000-4000-8000-000000000002',
+    '45a93c7e-cb4b-41ae-96bc-4c6b19465d10',
+    NULL,
+    FALSE,
+    2,
+    CURRENT_TIMESTAMP
+),
+(
+    '40000004-0000-4000-8000-000000000003',
+    '45a93c7e-cb4b-41ae-96bc-4c6b19465d10',
+    NULL,
+    FALSE,
+    3,
+    CURRENT_TIMESTAMP
+),
+(
+    '40000004-0000-4000-8000-000000000004',
+    '45a93c7e-cb4b-41ae-96bc-4c6b19465d10',
+    NULL,
+    FALSE,
+    4,
+    CURRENT_TIMESTAMP
+),
+(
+    '40000004-0000-4000-8000-000000000005',
+    '45a93c7e-cb4b-41ae-96bc-4c6b19465d10',
+    NULL,
+    FALSE,
+    5,
+    CURRENT_TIMESTAMP
+),
+
+-- Item 5: Rare Patek Philippe Event
+(
+    '50000005-0000-4000-8000-000000000001',
+    'a8bc337c-c350-42cc-89a8-b7761785ad44',
+    NULL,
+    TRUE,
+    1,
+    CURRENT_TIMESTAMP
+),
+(
+    '50000005-0000-4000-8000-000000000002',
+    'a8bc337c-c350-42cc-89a8-b7761785ad44',
+    NULL,
+    FALSE,
+    2,
+    CURRENT_TIMESTAMP
+),
+(
+    '50000005-0000-4000-8000-000000000003',
+    'a8bc337c-c350-42cc-89a8-b7761785ad44',
+    NULL,
+    FALSE,
+    3,
+    CURRENT_TIMESTAMP
+),
+(
+    '50000005-0000-4000-8000-000000000004',
+    'a8bc337c-c350-42cc-89a8-b7761785ad44',
+    NULL,
+    FALSE,
+    4,
+    CURRENT_TIMESTAMP
+),
+(
+    '50000005-0000-4000-8000-000000000005',
+    'a8bc337c-c350-42cc-89a8-b7761785ad44',
+    NULL,
+    FALSE,
+    5,
+    CURRENT_TIMESTAMP
+),
+-- Item 6: Luxury Watch Auction September 2026 - Vol 2
+('60000006-0000-4000-8000-000000000001', 'b15c5e60-5fac-41e2-b26f-a221677fd741', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('60000006-0000-4000-8000-000000000002', 'b15c5e60-5fac-41e2-b26f-a221677fd741', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('60000006-0000-4000-8000-000000000003', 'b15c5e60-5fac-41e2-b26f-a221677fd741', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('60000006-0000-4000-8000-000000000004', 'b15c5e60-5fac-41e2-b26f-a221677fd741', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('60000006-0000-4000-8000-000000000005', 'b15c5e60-5fac-41e2-b26f-a221677fd741', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 7: Zenith & Longines Vintage July 2026 - Vol 2
+('70000007-0000-4000-8000-000000000001', '37c7bed1-e239-4a47-b728-ff608cfaf601', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('70000007-0000-4000-8000-000000000002', '37c7bed1-e239-4a47-b728-ff608cfaf601', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('70000007-0000-4000-8000-000000000003', '37c7bed1-e239-4a47-b728-ff608cfaf601', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('70000007-0000-4000-8000-000000000004', '37c7bed1-e239-4a47-b728-ff608cfaf601', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('70000007-0000-4000-8000-000000000005', '37c7bed1-e239-4a47-b728-ff608cfaf601', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 8: Grand Seiko Collector Sale July 2026 - Vol 3
+('80000008-0000-4000-8000-000000000001', 'fb81aebb-f66d-4461-bf47-a98f41078d1f', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('80000008-0000-4000-8000-000000000002', 'fb81aebb-f66d-4461-bf47-a98f41078d1f', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('80000008-0000-4000-8000-000000000003', 'fb81aebb-f66d-4461-bf47-a98f41078d1f', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('80000008-0000-4000-8000-000000000004', 'fb81aebb-f66d-4461-bf47-a98f41078d1f', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('80000008-0000-4000-8000-000000000005', 'fb81aebb-f66d-4461-bf47-a98f41078d1f', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 9: Tag Heuer Sports Edition July 2026 - Vol 2
+('90000009-0000-4000-8000-000000000001', 'baaf7002-c699-447d-9eb8-5044690cad48', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('90000009-0000-4000-8000-000000000002', 'baaf7002-c699-447d-9eb8-5044690cad48', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('90000009-0000-4000-8000-000000000003', 'baaf7002-c699-447d-9eb8-5044690cad48', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('90000009-0000-4000-8000-000000000004', 'baaf7002-c699-447d-9eb8-5044690cad48', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('90000009-0000-4000-8000-000000000005', 'baaf7002-c699-447d-9eb8-5044690cad48', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 10: Chopard & Piaget Jewels October 2026 - Vol 2
+('a0000010-0000-4000-8000-000000000001', 'd59ad798-1479-4902-9ca7-2752d29fecea', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('a0000010-0000-4000-8000-000000000002', 'd59ad798-1479-4902-9ca7-2752d29fecea', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('a0000010-0000-4000-8000-000000000003', 'd59ad798-1479-4902-9ca7-2752d29fecea', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('a0000010-0000-4000-8000-000000000004', 'd59ad798-1479-4902-9ca7-2752d29fecea', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('a0000010-0000-4000-8000-000000000005', 'd59ad798-1479-4902-9ca7-2752d29fecea', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 11: Hublot & Cartier Showcase October 2026 - Vol 4
+('b0000011-0000-4000-8000-000000000001', '7b4502d0-e8bf-46d7-ad5d-30dfec7e908b', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('b0000011-0000-4000-8000-000000000002', '7b4502d0-e8bf-46d7-ad5d-30dfec7e908b', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('b0000011-0000-4000-8000-000000000003', '7b4502d0-e8bf-46d7-ad5d-30dfec7e908b', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('b0000011-0000-4000-8000-000000000004', '7b4502d0-e8bf-46d7-ad5d-30dfec7e908b', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('b0000011-0000-4000-8000-000000000005', '7b4502d0-e8bf-46d7-ad5d-30dfec7e908b', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 12: Breitling & Tudor Auction September 2026 - Vol 1
+('c0000012-0000-4000-8000-000000000001', '5741aede-6025-47a6-a855-35b5622ec7b9', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('c0000012-0000-4000-8000-000000000002', '5741aede-6025-47a6-a855-35b5622ec7b9', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('c0000012-0000-4000-8000-000000000003', '5741aede-6025-47a6-a855-35b5622ec7b9', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('c0000012-0000-4000-8000-000000000004', '5741aede-6025-47a6-a855-35b5622ec7b9', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('c0000012-0000-4000-8000-000000000005', '5741aede-6025-47a6-a855-35b5622ec7b9', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 13: Grand Seiko Collector Sale August 2026 - Vol 2
+('d0000013-0000-4000-8000-000000000001', 'ae2d89c1-6298-5b85-aa97-410a13d7e88f', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('d0000013-0000-4000-8000-000000000002', 'ae2d89c1-6298-5b85-aa97-410a13d7e88f', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('d0000013-0000-4000-8000-000000000003', 'ae2d89c1-6298-5b85-aa97-410a13d7e88f', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('d0000013-0000-4000-8000-000000000004', 'ae2d89c1-6298-5b85-aa97-410a13d7e88f', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('d0000013-0000-4000-8000-000000000005', 'ae2d89c1-6298-5b85-aa97-410a13d7e88f', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 14: Jaeger-LeCoultre Elegance September 2026 - Vol 5
+('e0000014-0000-4000-8000-000000000001', 'd1b415e8-c0e2-5d0b-9125-3f497c302cad', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('e0000014-0000-4000-8000-000000000002', 'd1b415e8-c0e2-5d0b-9125-3f497c302cad', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('e0000014-0000-4000-8000-000000000003', 'd1b415e8-c0e2-5d0b-9125-3f497c302cad', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('e0000014-0000-4000-8000-000000000004', 'd1b415e8-c0e2-5d0b-9125-3f497c302cad', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('e0000014-0000-4000-8000-000000000005', 'd1b415e8-c0e2-5d0b-9125-3f497c302cad', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 15: Vintage Rolex Collection September 2026 - Vol 4
+('f0000015-0000-4000-8000-000000000001', '76af1f32-6573-5b9e-ae64-84964daae25a', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('f0000015-0000-4000-8000-000000000002', '76af1f32-6573-5b9e-ae64-84964daae25a', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('f0000015-0000-4000-8000-000000000003', '76af1f32-6573-5b9e-ae64-84964daae25a', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('f0000015-0000-4000-8000-000000000004', '76af1f32-6573-5b9e-ae64-84964daae25a', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('f0000015-0000-4000-8000-000000000005', '76af1f32-6573-5b9e-ae64-84964daae25a', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 16: Premium Omega Timepieces October 2026 - Vol 1
+('16000016-0000-4000-8000-000000000001', 'aefbab38-6b88-570b-ac24-b915805fb967', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('16000016-0000-4000-8000-000000000002', 'aefbab38-6b88-570b-ac24-b915805fb967', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('16000016-0000-4000-8000-000000000003', 'aefbab38-6b88-570b-ac24-b915805fb967', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('16000016-0000-4000-8000-000000000004', 'aefbab38-6b88-570b-ac24-b915805fb967', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('16000016-0000-4000-8000-000000000005', 'aefbab38-6b88-570b-ac24-b915805fb967', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 17: Zenith & Longines Vintage September 2026 - Vol 5
+('17000017-0000-4000-8000-000000000001', 'd670ddf0-2b5a-5ec1-93c9-8927649a30ea', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('17000017-0000-4000-8000-000000000002', 'd670ddf0-2b5a-5ec1-93c9-8927649a30ea', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('17000017-0000-4000-8000-000000000003', 'd670ddf0-2b5a-5ec1-93c9-8927649a30ea', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('17000017-0000-4000-8000-000000000004', 'd670ddf0-2b5a-5ec1-93c9-8927649a30ea', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('17000017-0000-4000-8000-000000000005', 'd670ddf0-2b5a-5ec1-93c9-8927649a30ea', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 18: Audemars Piguet Exclusive September 2026 - Vol 3
+('18000018-0000-4000-8000-000000000001', '21a601c5-8a82-5276-be38-7105928500c3', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('18000018-0000-4000-8000-000000000002', '21a601c5-8a82-5276-be38-7105928500c3', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('18000018-0000-4000-8000-000000000003', '21a601c5-8a82-5276-be38-7105928500c3', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('18000018-0000-4000-8000-000000000004', '21a601c5-8a82-5276-be38-7105928500c3', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('18000018-0000-4000-8000-000000000005', '21a601c5-8a82-5276-be38-7105928500c3', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 19: Panerai Luminor Auction July 2026 - Vol 5
+('19000019-0000-4000-8000-000000000001', '9fe8d59f-947d-5274-9c5d-0c08eb5e7714', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('19000019-0000-4000-8000-000000000002', '9fe8d59f-947d-5274-9c5d-0c08eb5e7714', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('19000019-0000-4000-8000-000000000003', '9fe8d59f-947d-5274-9c5d-0c08eb5e7714', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('19000019-0000-4000-8000-000000000004', '9fe8d59f-947d-5274-9c5d-0c08eb5e7714', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('19000019-0000-4000-8000-000000000005', '9fe8d59f-947d-5274-9c5d-0c08eb5e7714', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 20: Premium Omega Timepieces September 2026 - Vol 2
+('20000020-0000-4000-8000-000000000001', '46508092-4eb1-5634-a9d3-3839d9f1a077', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('20000020-0000-4000-8000-000000000002', '46508092-4eb1-5634-a9d3-3839d9f1a077', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('20000020-0000-4000-8000-000000000003', '46508092-4eb1-5634-a9d3-3839d9f1a077', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('20000020-0000-4000-8000-000000000004', '46508092-4eb1-5634-a9d3-3839d9f1a077', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('20000020-0000-4000-8000-000000000005', '46508092-4eb1-5634-a9d3-3839d9f1a077', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 21: IWC Schaffhausen Special October 2026 - Vol 3
+('21000021-0000-4000-8000-000000000001', 'b0c14cfd-cc5a-5ec4-8563-ba593773a7ae', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('21000021-0000-4000-8000-000000000002', 'b0c14cfd-cc5a-5ec4-8563-ba593773a7ae', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('21000021-0000-4000-8000-000000000003', 'b0c14cfd-cc5a-5ec4-8563-ba593773a7ae', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('21000021-0000-4000-8000-000000000004', 'b0c14cfd-cc5a-5ec4-8563-ba593773a7ae', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('21000021-0000-4000-8000-000000000005', 'b0c14cfd-cc5a-5ec4-8563-ba593773a7ae', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 22: Grand Seiko Collector Sale September 2026 - Vol 4
+('22000022-0000-4000-8000-000000000001', 'fc724120-d3e7-59e5-8a9e-6a546f058324', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('22000022-0000-4000-8000-000000000002', 'fc724120-d3e7-59e5-8a9e-6a546f058324', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('22000022-0000-4000-8000-000000000003', 'fc724120-d3e7-59e5-8a9e-6a546f058324', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('22000022-0000-4000-8000-000000000004', 'fc724120-d3e7-59e5-8a9e-6a546f058324', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('22000022-0000-4000-8000-000000000005', 'fc724120-d3e7-59e5-8a9e-6a546f058324', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 23: Jaeger-LeCoultre Elegance July 2026 - Vol 5
+('23000023-0000-4000-8000-000000000001', 'be19e1d0-76e2-550a-a138-ed43c833e07f', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('23000023-0000-4000-8000-000000000002', 'be19e1d0-76e2-550a-a138-ed43c833e07f', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('23000023-0000-4000-8000-000000000003', 'be19e1d0-76e2-550a-a138-ed43c833e07f', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('23000023-0000-4000-8000-000000000004', 'be19e1d0-76e2-550a-a138-ed43c833e07f', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('23000023-0000-4000-8000-000000000005', 'be19e1d0-76e2-550a-a138-ed43c833e07f', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+
+
+
+
+-- Item 24: Tissot & Hamilton Entry Luxury October 2026 - Vol 3
+('24000024-0000-4000-8000-000000000001', 'e21e2e94-0594-58df-8078-456981952cc0', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('24000024-0000-4000-8000-000000000002', 'e21e2e94-0594-58df-8078-456981952cc0', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('24000024-0000-4000-8000-000000000003', 'e21e2e94-0594-58df-8078-456981952cc0', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('24000024-0000-4000-8000-000000000004', 'e21e2e94-0594-58df-8078-456981952cc0', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('24000024-0000-4000-8000-000000000005', 'e21e2e94-0594-58df-8078-456981952cc0', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 25: Panerai Luminor Auction July 2026 - Vol 5
+('25000025-0000-4000-8000-000000000001', '9890849a-b871-5aa6-8114-6d1cce4f9a18', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('25000025-0000-4000-8000-000000000002', '9890849a-b871-5aa6-8114-6d1cce4f9a18', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('25000025-0000-4000-8000-000000000003', '9890849a-b871-5aa6-8114-6d1cce4f9a18', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('25000025-0000-4000-8000-000000000004', '9890849a-b871-5aa6-8114-6d1cce4f9a18', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('25000025-0000-4000-8000-000000000005', '9890849a-b871-5aa6-8114-6d1cce4f9a18', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 26: IWC Schaffhausen Special July 2026 - Vol 4
+('26000026-0000-4000-8000-000000000001', 'fc630e28-8582-52af-ac27-3107807ec21e', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('26000026-0000-4000-8000-000000000002', 'fc630e28-8582-52af-ac27-3107807ec21e', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('26000026-0000-4000-8000-000000000003', 'fc630e28-8582-52af-ac27-3107807ec21e', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('26000026-0000-4000-8000-000000000004', 'fc630e28-8582-52af-ac27-3107807ec21e', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('26000026-0000-4000-8000-000000000005', 'fc630e28-8582-52af-ac27-3107807ec21e', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 27: Zenith & Longines Vintage September 2026 - Vol 3
+('27000027-0000-4000-8000-000000000001', '330618c3-196c-5c0f-9ed2-9989db9a0555', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('27000027-0000-4000-8000-000000000002', '330618c3-196c-5c0f-9ed2-9989db9a0555', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('27000027-0000-4000-8000-000000000003', '330618c3-196c-5c0f-9ed2-9989db9a0555', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('27000027-0000-4000-8000-000000000004', '330618c3-196c-5c0f-9ed2-9989db9a0555', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('27000027-0000-4000-8000-000000000005', '330618c3-196c-5c0f-9ed2-9989db9a0555', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 28: Grand Seiko Collector Sale July 2026 - Vol 2
+('28000028-0000-4000-8000-000000000001', 'a73f6493-3a82-55ae-b59c-5a2dfc973cb3', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('28000028-0000-4000-8000-000000000002', 'a73f6493-3a82-55ae-b59c-5a2dfc973cb3', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('28000028-0000-4000-8000-000000000003', 'a73f6493-3a82-55ae-b59c-5a2dfc973cb3', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('28000028-0000-4000-8000-000000000004', 'a73f6493-3a82-55ae-b59c-5a2dfc973cb3', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('28000028-0000-4000-8000-000000000005', 'a73f6493-3a82-55ae-b59c-5a2dfc973cb3', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 29: Audemars Piguet Exclusive August 2026 - Vol 3
+('29000029-0000-4000-8000-000000000001', 'a0763749-1cce-52b7-9983-f393558e2286', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('29000029-0000-4000-8000-000000000002', 'a0763749-1cce-52b7-9983-f393558e2286', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('29000029-0000-4000-8000-000000000003', 'a0763749-1cce-52b7-9983-f393558e2286', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('29000029-0000-4000-8000-000000000004', 'a0763749-1cce-52b7-9983-f393558e2286', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('29000029-0000-4000-8000-000000000005', 'a0763749-1cce-52b7-9983-f393558e2286', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 30: Jaeger-LeCoultre Elegance August 2026 - Vol 4
+('30000030-0000-4000-8000-000000000001', '7f24a8df-79de-56cc-b500-652fe251107c', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('30000030-0000-4000-8000-000000000002', '7f24a8df-79de-56cc-b500-652fe251107c', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('30000030-0000-4000-8000-000000000003', '7f24a8df-79de-56cc-b500-652fe251107c', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('30000030-0000-4000-8000-000000000004', '7f24a8df-79de-56cc-b500-652fe251107c', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('30000030-0000-4000-8000-000000000005', '7f24a8df-79de-56cc-b500-652fe251107c', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 31: Tissot & Hamilton Entry Luxury July 2026 - Vol 5
+('31000031-0000-4000-8000-000000000001', '3184fd73-d1da-5c79-bab4-040d376cf710', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('31000031-0000-4000-8000-000000000002', '3184fd73-d1da-5c79-bab4-040d376cf710', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('31000031-0000-4000-8000-000000000003', '3184fd73-d1da-5c79-bab4-040d376cf710', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('31000031-0000-4000-8000-000000000004', '3184fd73-d1da-5c79-bab4-040d376cf710', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('31000031-0000-4000-8000-000000000005', '3184fd73-d1da-5c79-bab4-040d376cf710', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 32: Zenith & Longines Vintage September 2026 - Vol 1
+('32000032-0000-4000-8000-000000000001', 'ff29cfd3-9d43-5478-b3c9-8d11934a9e56', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('32000032-0000-4000-8000-000000000002', 'ff29cfd3-9d43-5478-b3c9-8d11934a9e56', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('32000032-0000-4000-8000-000000000003', 'ff29cfd3-9d43-5478-b3c9-8d11934a9e56', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('32000032-0000-4000-8000-000000000004', 'ff29cfd3-9d43-5478-b3c9-8d11934a9e56', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('32000032-0000-4000-8000-000000000005', 'ff29cfd3-9d43-5478-b3c9-8d11934a9e56', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 33: Luxury Watch Auction July 2026 - Vol 4
+('33000033-0000-4000-8000-000000000001', '14b542f8-3a65-5748-8186-7caf4f9031fd', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('33000033-0000-4000-8000-000000000002', '14b542f8-3a65-5748-8186-7caf4f9031fd', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('33000033-0000-4000-8000-000000000003', '14b542f8-3a65-5748-8186-7caf4f9031fd', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('33000033-0000-4000-8000-000000000004', '14b542f8-3a65-5748-8186-7caf4f9031fd', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('33000033-0000-4000-8000-000000000005', '14b542f8-3a65-5748-8186-7caf4f9031fd', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 34: Grand Seiko Collector Sale August 2026 - Vol 2
+('34000034-0000-4000-8000-000000000001', '9d7fea97-f73b-5bdc-a571-e550ac33c6d0', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('34000034-0000-4000-8000-000000000002', '9d7fea97-f73b-5bdc-a571-e550ac33c6d0', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('34000034-0000-4000-8000-000000000003', '9d7fea97-f73b-5bdc-a571-e550ac33c6d0', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('34000034-0000-4000-8000-000000000004', '9d7fea97-f73b-5bdc-a571-e550ac33c6d0', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('34000034-0000-4000-8000-000000000005', '9d7fea97-f73b-5bdc-a571-e550ac33c6d0', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 35: Panerai Luminor Auction August 2026 - Vol 2
+('35000035-0000-4000-8000-000000000001', 'd75316d5-5a6a-5590-8c2f-a1661fcd5630', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('35000035-0000-4000-8000-000000000002', 'd75316d5-5a6a-5590-8c2f-a1661fcd5630', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('35000035-0000-4000-8000-000000000003', 'd75316d5-5a6a-5590-8c2f-a1661fcd5630', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('35000035-0000-4000-8000-000000000004', 'd75316d5-5a6a-5590-8c2f-a1661fcd5630', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('35000035-0000-4000-8000-000000000005', 'd75316d5-5a6a-5590-8c2f-a1661fcd5630', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 36: Tissot & Hamilton Entry Luxury September 2026 - Vol 5
+('36000036-0000-4000-8000-000000000001', '8a850119-8293-5400-93ec-0a77d3eb38c0', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('36000036-0000-4000-8000-000000000002', '8a850119-8293-5400-93ec-0a77d3eb38c0', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('36000036-0000-4000-8000-000000000003', '8a850119-8293-5400-93ec-0a77d3eb38c0', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('36000036-0000-4000-8000-000000000004', '8a850119-8293-5400-93ec-0a77d3eb38c0', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('36000036-0000-4000-8000-000000000005', '8a850119-8293-5400-93ec-0a77d3eb38c0', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 37: Hublot & Cartier Showcase September 2026 - Vol 3
+('37000037-0000-4000-8000-000000000001', 'd942da89-8184-5b1f-9fe4-6b227b6c35a5', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('37000037-0000-4000-8000-000000000002', 'd942da89-8184-5b1f-9fe4-6b227b6c35a5', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('37000037-0000-4000-8000-000000000003', 'd942da89-8184-5b1f-9fe4-6b227b6c35a5', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('37000037-0000-4000-8000-000000000004', 'd942da89-8184-5b1f-9fe4-6b227b6c35a5', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('37000037-0000-4000-8000-000000000005', 'd942da89-8184-5b1f-9fe4-6b227b6c35a5', NULL, FALSE, 5, CURRENT_TIMESTAMP),
+-- Item 38: Premium Omega Timepieces August 2026 - Vol 4
+('38000038-0000-4000-8000-000000000001', '4e8fd7a1-2b64-4f17-a9cb-6d3e91c5b842', NULL, TRUE,  1, CURRENT_TIMESTAMP),
+('38000038-0000-4000-8000-000000000002', '4e8fd7a1-2b64-4f17-a9cb-6d3e91c5b842', NULL, FALSE, 2, CURRENT_TIMESTAMP),
+('38000038-0000-4000-8000-000000000003', '4e8fd7a1-2b64-4f17-a9cb-6d3e91c5b842', NULL, FALSE, 3, CURRENT_TIMESTAMP),
+('38000038-0000-4000-8000-000000000004', '4e8fd7a1-2b64-4f17-a9cb-6d3e91c5b842', NULL, FALSE, 4, CURRENT_TIMESTAMP),
+('38000038-0000-4000-8000-000000000005', '4e8fd7a1-2b64-4f17-a9cb-6d3e91c5b842', NULL, FALSE, 5, CURRENT_TIMESTAMP);
