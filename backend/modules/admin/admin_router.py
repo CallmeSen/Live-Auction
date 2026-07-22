@@ -1,3 +1,4 @@
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
@@ -17,6 +18,9 @@ from modules.users.user_repository import UserListFilters, UserRepository
 from modules.users.user_schema import (
     ListAdminUsersResponse,
     SortOrder,
+    UpdateUserStatusData,
+    UpdateUserStatusRequest,
+    UpdateUserStatusResponse,
     UserSortBy,
 )
 from modules.users.user_service import UserService
@@ -128,6 +132,33 @@ async def list_admin_users(
         code=1000,
         message="Get user list successfully",
         data=data,
+    )
+
+
+@router.patch(
+    "/users/{user_id}/status",
+    status_code=status.HTTP_200_OK,
+    response_model=UpdateUserStatusResponse,
+)
+async def update_user_status(
+    user_id: uuid.UUID,
+    request: UpdateUserStatusRequest,
+    db: DatabaseSession,
+    current_admin: CurrentAdminUser,
+    admin_service: AdminServiceDependency,
+) -> UpdateUserStatusResponse:
+    updated_user = await admin_service.update_user_status(
+        db=db,
+        user_id=user_id,
+        new_status=request.status,
+        current_admin=current_admin,
+    )
+
+    return UpdateUserStatusResponse(
+        status=status.HTTP_200_OK,
+        code="USER_STATUS_UPDATED",
+        message=f"User status updated to {updated_user.status.value} successfully",
+        data=UpdateUserStatusData.model_validate(updated_user),
     )
 
 

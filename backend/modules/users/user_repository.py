@@ -129,3 +129,13 @@ class UserRepository:
         await db.refresh(user)
 
         return user
+
+    async def update(
+        self,
+        db: AsyncSession,
+        user: User,
+    ) -> User:
+        await db.flush()
+        await db.refresh(user)
+
+        return user

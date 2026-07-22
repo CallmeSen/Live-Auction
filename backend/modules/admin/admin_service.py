@@ -75,3 +75,60 @@ class AdminService:
                 code="INTERNAL_SERVER_ERROR",
                 message="An unexpected error occurred",
             ) from exception
+
+    async def update_user_status(
+        self,
+        db: AsyncSession,
+        user_id,
+        new_status: UserStatus,
+        current_admin: User,
+    ) -> User:
+        target_user = await self.user_repository.find_by_id(
+            db=db,
+            user_id=user_id,
+        )
+
+        if target_user is None:
+            raise AppException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                code="USER_NOT_FOUND",
+                message="User not found",
+            )
+
+        if target_user.id == current_admin.id:
+            raise AppException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                code="CANNOT_UPDATE_OWN_STATUS",
+                message="You cannot change your own account status",
+            )
+
+        if target_user.status == new_status:
+            raise AppException(
+                status_code=status.HTTP_409_CONFLICT,
+                code="USER_STATUS_UNCHANGED",
+                message=f"User is already {new_status.value}",
+            )
+
+        target_user.status = new_status
+
+        try:
+            updated_user = await self.user_repository.update(
+                db=db,
+                user=target_user,
+            )
+            await db.commit()
+
+            return updated_user
+
+        except AppException:
+            await db.rollback()
+            raise
+
+        except Exception as exception:
+            await db.rollback()
+
+            raise AppException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                code="INTERNAL_SERVER_ERROR",
+                message="An unexpected error occurred",
+            ) from exception
