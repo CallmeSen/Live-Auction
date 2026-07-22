@@ -7,13 +7,14 @@ Frontend chưa gọi các method này cho đến khi backend triển khai xong.
 | --- | --- | --- | --- |
 | Quên mật khẩu | POST | `/auth/forgot-password` | `authService.forgotPassword` |
 | Đặt lại mật khẩu | POST | `/auth/reset-password` | `authService.resetPassword` |
-| Danh sách user | GET | `/admin/users` | `adminService.getUsers` |
-| Khóa/mở user | PATCH | `/admin/users/{userId}/status` | `adminService.updateUserStatus` |
-| Duyệt phiên | PATCH | `/admin/auction-sessions/{sessionId}/active` | `auctionSessionService.activeSession` |
-| Dừng phiên | PATCH | `/admin/auction-sessions/{sessionId}/cancel` | `auctionSessionService.cancelSession` |
+| Danh sách user | GET | `/admin/users` | `adminService.getUsers` |          **** ĐÃ HOÀN THÀNH ****
+| Khóa/mở user | PATCH | `/admin/users/{userId}/status` | `adminService.updateUserStatus` |          **** ĐÃ HOÀN THÀNH ****
+| Duyệt phiên | PATCH | `/admin/auction-sessions/{sessionId}/approve` | `auctionSessionService.approveSession` **** ĐÃ HOÀN THÀNH ****
+| Dừng phiên | PATCH | `/admin/auction-sessions/{sessionId}/reject` | `auctionSessionService.rejectSession` |  **** ĐÃ HOÀN THÀNH ****
+| Danh sách phiên chưa duyệt | PATCH | `/admin/auction-sessions/pending` |
 | Upload ảnh vật phẩm | POST | `/auction-items/{itemId}/images` | `auctionItemService.uploadImage` |
-| Xem hồ sơ | GET | `/users/me` | `userService.getProfile` |
-| Cập nhật hồ sơ | PATCH | `/users/me` | `userService.updateProfile` |
+| Xem hồ sơ | GET | `/users/me` | `userService.getProfile` |          **** ĐÃ HOÀN THÀNH ****
+| Cập nhật hồ sơ | PATCH | `/users/me` | `userService.updateProfile` |          **** ĐÃ HOÀN THÀNH ****
 | Xem tùy chọn thông báo | GET | `/users/me/notification-preferences` | `userService.getNotificationPreferences` |
 | Cập nhật tùy chọn thông báo | PATCH | `/users/me/notification-preferences` | `userService.updateNotificationPreferences` |
 | Danh sách thông báo | GET | `/notifications` | `notificationService.getNotifications` |

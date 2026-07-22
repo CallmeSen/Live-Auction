@@ -155,3 +155,47 @@ class StartAuctionSessionResponse(BaseModel):
     code: int
     message: str
     data: StartAuctionSessionData
+
+
+class ApproveAuctionSessionData(BaseModel):
+    id: uuid.UUID
+    status: AuctionSessionStatus
+    approved_at: datetime = Field(serialization_alias="approvedAt")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ApproveAuctionSessionResponse(BaseModel):
+    status: int
+    code: str
+    message: str
+    data: ApproveAuctionSessionData
+
+
+class RejectAuctionSessionRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=500)
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        str_strip_whitespace=True,
+    )
+
+
+class RejectAuctionSessionData(BaseModel):
+    id: uuid.UUID
+    status: AuctionSessionStatus
+    rejected_at: datetime = Field(serialization_alias="rejectedAt")
+    reason: str | None
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class RejectAuctionSessionResponse(BaseModel):
+    status: int
+    code: str
+    message: str
+    data: RejectAuctionSessionData

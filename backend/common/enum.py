@@ -14,9 +14,11 @@ class CategoryStatus(str, Enum):
     INACTIVE = "INACTIVE"
 
 class AuctionSessionStatus(str, Enum):
+    PENDING_APPROVAL = "PENDING_APPROVAL"
     SCHEDULED = "SCHEDULED"
     ACTIVE = "ACTIVE"
     ENDED = "ENDED"
+    REJECTED = "REJECTED"
     CANCELLED = "CANCELLED"
 
 class AuctionItemStatus(str, Enum):

@@ -7,13 +7,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.dependencies import get_current_admin_user, security
 from app.models.user_model import User
-from common.enum import UserRole, UserStatus
+from common.enum import AuctionSessionStatus, UserRole, UserStatus
 from modules.admin.admin_schema import (
     CreateAdminUserData,
     CreateAdminUserRequest,
     CreateAdminUserResponse,
 )
 from modules.admin.admin_service import AdminService
+from modules.auction_sessions.session_repository import (
+    AuctionSessionRepository,
+    SessionListFilters,
+)
+from modules.auction_sessions.session_schema import (
+    ApproveAuctionSessionResponse,
+    ListAuctionSessionsResponse,
+    RejectAuctionSessionRequest,
+    RejectAuctionSessionResponse,
+)
+from modules.auction_sessions.session_service import AuctionSessionService
 from modules.users.user_repository import UserListFilters, UserRepository
 from modules.users.user_schema import (
     ListAdminUsersResponse,
@@ -59,6 +70,12 @@ def get_user_service(
     )
 
 
+def get_auction_session_service() -> AuctionSessionService:
+    return AuctionSessionService(
+        session_repository=AuctionSessionRepository(),
+    )
+
+
 DatabaseSession = Annotated[
     AsyncSession,
     Depends(get_db),
@@ -72,6 +89,11 @@ AdminServiceDependency = Annotated[
 UserServiceDependency = Annotated[
     UserService,
     Depends(get_user_service),
+]
+
+AuctionSessionServiceDependency = Annotated[
+    AuctionSessionService,
+    Depends(get_auction_session_service),
 ]
 
 CurrentAdminUser = Annotated[
@@ -183,4 +205,90 @@ async def create_admin_user(
         code="ADMIN_USER_CREATED",
         message="Admin user created successfully",
         data=CreateAdminUserData.model_validate(user),
+    )
+
+
+@router.get(
+    "/auction-sessions/pending",
+    status_code=status.HTTP_200_OK,
+    response_model=ListAuctionSessionsResponse,
+)
+async def list_pending_auction_sessions(
+    db: DatabaseSession,
+    _current_admin: CurrentAdminUser,
+    session_service: AuctionSessionServiceDependency,
+    page: Annotated[int, Query(ge=1)] = 1,
+    size: Annotated[int, Query(ge=1, le=100)] = 10,
+    keyword: Annotated[str | None, Query(max_length=255)] = None,
+) -> ListAuctionSessionsResponse:
+    normalized_keyword = keyword.strip() if keyword else None
+
+    if normalized_keyword == "":
+        normalized_keyword = None
+
+    data = await session_service.list_sessions(
+        db=db,
+        filters=SessionListFilters(
+            page=page,
+            size=size,
+            status=AuctionSessionStatus.PENDING_APPROVAL,
+            keyword=normalized_keyword,
+        ),
+    )
+
+    return ListAuctionSessionsResponse(
+        status=status.HTTP_200_OK,
+        code=1000,
+        message="Get pending auction sessions successfully",
+        data=data,
+    )
+
+
+@router.patch(
+    "/auction-sessions/{session_id}/approve",
+    status_code=status.HTTP_200_OK,
+    response_model=ApproveAuctionSessionResponse,
+)
+async def approve_auction_session(
+    session_id: uuid.UUID,
+    db: DatabaseSession,
+    _current_admin: CurrentAdminUser,
+    session_service: AuctionSessionServiceDependency,
+) -> ApproveAuctionSessionResponse:
+    data = await session_service.approve_session(
+        db=db,
+        session_id=session_id,
+    )
+
+    return ApproveAuctionSessionResponse(
+        status=status.HTTP_200_OK,
+        code="SESSION_APPROVED",
+        message="Auction session approved successfully",
+        data=data,
+    )
+
+
+@router.patch(
+    "/auction-sessions/{session_id}/reject",
+    status_code=status.HTTP_200_OK,
+    response_model=RejectAuctionSessionResponse,
+)
+async def reject_auction_session(
+    session_id: uuid.UUID,
+    request: RejectAuctionSessionRequest,
+    db: DatabaseSession,
+    _current_admin: CurrentAdminUser,
+    session_service: AuctionSessionServiceDependency,
+) -> RejectAuctionSessionResponse:
+    data = await session_service.reject_session(
+        db=db,
+        session_id=session_id,
+        reason=request.reason,
+    )
+
+    return RejectAuctionSessionResponse(
+        status=status.HTTP_200_OK,
+        code="SESSION_REJECTED",
+        message="Auction session rejected successfully",
+        data=data,
     )

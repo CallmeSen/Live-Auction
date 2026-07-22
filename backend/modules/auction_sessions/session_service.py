@@ -16,6 +16,7 @@ from modules.auction_sessions.session_repository import (
     SessionListFilters,
 )
 from modules.auction_sessions.session_schema import (
+    ApproveAuctionSessionData,
     AuctionSessionDetailData,
     AuctionSessionItemSummary,
     AuctionSessionListData,
@@ -23,6 +24,7 @@ from modules.auction_sessions.session_schema import (
     AuctionSessionRuleData,
     AuctionSessionSellerData,
     CreateAuctionSessionRequest,
+    RejectAuctionSessionData,
     StartAuctionSessionData,
 )
 
@@ -142,7 +144,7 @@ class AuctionSessionService:
             description=request.description,
             start_time=request.start_time,
             end_time=request.end_time,
-            status=AuctionSessionStatus.INACTIVE,
+            status=AuctionSessionStatus.PENDING_APPROVAL,
             rules=AuctionSessionRule(
                 min_increment=request.min_increment,
             ),
@@ -257,6 +259,96 @@ class AuctionSessionService:
                 code="START_SESSION_FAILED",
                 message="Unable to start auction session",
             ) from exception
+
+        except Exception:
+            await db.rollback()
+            raise
+
+    async def approve_session(
+        self,
+        db: AsyncSession,
+        session_id: uuid.UUID,
+    ) -> ApproveAuctionSessionData:
+        try:
+            session = await self.session_repository.find_by_id_for_update(
+                db=db,
+                session_id=session_id,
+            )
+
+            if session is None:
+                raise AppException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    code="AUCTION_SESSION_NOT_FOUND",
+                    message="Auction session not found",
+                )
+
+            if session.status != AuctionSessionStatus.PENDING_APPROVAL:
+                raise AppException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    code="INVALID_SESSION_STATUS",
+                    message="Auction session is not pending approval",
+                )
+
+            session.status = AuctionSessionStatus.SCHEDULED
+            current_time = datetime.now()
+
+            await db.commit()
+
+            return ApproveAuctionSessionData(
+                id=session.id,
+                status=session.status,
+                approved_at=current_time,
+            )
+
+        except AppException:
+            await db.rollback()
+            raise
+
+        except Exception:
+            await db.rollback()
+            raise
+
+    async def reject_session(
+        self,
+        db: AsyncSession,
+        session_id: uuid.UUID,
+        reason: str | None,
+    ) -> RejectAuctionSessionData:
+        try:
+            session = await self.session_repository.find_by_id_for_update(
+                db=db,
+                session_id=session_id,
+            )
+
+            if session is None:
+                raise AppException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    code="AUCTION_SESSION_NOT_FOUND",
+                    message="Auction session not found",
+                )
+
+            if session.status != AuctionSessionStatus.PENDING_APPROVAL:
+                raise AppException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    code="INVALID_SESSION_STATUS",
+                    message="Auction session is not pending approval",
+                )
+
+            session.status = AuctionSessionStatus.REJECTED
+            current_time = datetime.now()
+
+            await db.commit()
+
+            return RejectAuctionSessionData(
+                id=session.id,
+                status=session.status,
+                rejected_at=current_time,
+                reason=reason,
+            )
+
+        except AppException:
+            await db.rollback()
+            raise
 
         except Exception:
             await db.rollback()
