@@ -2,9 +2,6 @@ import type { AuctionSessionStatus } from './auctionSession';
 import type { BidStatus } from './bid';
 
 export type AuctionItemStatus =
-  | 'DRAFT'
-  | 'READY'
-  | 'OPEN'
   | 'SOLD'
   | 'UNSOLD'
   | 'CANCELLED';

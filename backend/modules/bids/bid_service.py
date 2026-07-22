@@ -80,11 +80,11 @@ class BidService:
                     message="Auction item not found",
                 )
 
-            if item.status != AuctionItemStatus.OPEN:
+            if item.status == AuctionItemStatus.SOLD:
                 raise AppException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    code="ITEM_NOT_OPEN",
-                    message="Auction item is not open for bidding",
+                    code="ITEM_SOLD",
+                    message="Auction item is sold",
                 )
 
             session = item.session

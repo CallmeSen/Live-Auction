@@ -16,7 +16,6 @@ const navItems: NavItem[] = [
   { label: 'Khám phá', to: '/auctions' },
   { label: 'Đã đặt giá', to: '/my-bids', roles: ['USER'] },
   { label: 'Phiên của tôi', to: '/my-auctions', roles: ['USER'] },
-  { label: 'Ví', to: '/wallet', roles: ['USER'] },
   { label: 'Tổng quan', to: '/admin', roles: ['ADMIN'] },
   { label: 'Người dùng', to: '/admin/users', roles: ['ADMIN'] },
   { label: 'Kiểm duyệt', to: '/admin/auctions', roles: ['ADMIN'] },

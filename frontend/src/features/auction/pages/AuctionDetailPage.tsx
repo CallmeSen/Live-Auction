@@ -18,8 +18,8 @@ import {
 
 const itemStatusLabel: Record<AuctionItemStatus, string> = {
   SOLD: 'Đã bán',
-  UNSOLD: 'Chưa được bán',
-  CANCELLED: 'Đã hủy',
+  UNSOLD: 'Sắp bán',
+  CANCELLED: 'Đã huỷ',
 };
 
 function getItemStatusLabel(status: string): string {
