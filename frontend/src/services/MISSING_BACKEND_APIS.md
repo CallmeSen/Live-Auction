@@ -9,7 +9,6 @@ Frontend chưa gọi các method này cho đến khi backend triển khai xong.
 | Đặt lại mật khẩu | POST | `/auth/reset-password` | `authService.resetPassword` |
 | Danh sách user | GET | `/admin/users` | `adminService.getUsers` |
 | Khóa/mở user | PATCH | `/admin/users/{userId}/status` | `adminService.updateUserStatus` |
-
 | Duyệt phiên | PATCH | `/admin/auction-sessions/{sessionId}/active` | `auctionSessionService.activeSession` |
 | Dừng phiên | PATCH | `/admin/auction-sessions/{sessionId}/cancel` | `auctionSessionService.cancelSession` |
 | Upload ảnh vật phẩm | POST | `/auction-items/{itemId}/images` | `auctionItemService.uploadImage` |
