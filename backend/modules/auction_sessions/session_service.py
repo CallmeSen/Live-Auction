@@ -142,7 +142,7 @@ class AuctionSessionService:
             description=request.description,
             start_time=request.start_time,
             end_time=request.end_time,
-            status=AuctionSessionStatus.SCHEDULED,
+            status=AuctionSessionStatus.INACTIVE,
             rules=AuctionSessionRule(
                 min_increment=request.min_increment,
             ),

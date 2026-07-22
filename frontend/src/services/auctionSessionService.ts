@@ -72,24 +72,24 @@ export const auctionSessionService = {
   },
 
   // TODO(BACKEND): PATCH /admin/auction-sessions/{sessionId}/approve chua duoc trien khai.
-  async approveSession(
+  async activeSession(
     sessionId: string,
   ): Promise<ReviewAuctionSessionResponse> {
     const response = await axiosClient.patch<
       ApiResponse<ReviewAuctionSessionResponse>
-    >(`/admin/auction-sessions/${sessionId}/approve`);
+    >(`/admin/auction-sessions/${sessionId}/active`);
 
     return response.data.data;
   },
 
   // TODO(BACKEND): PATCH /admin/auction-sessions/{sessionId}/reject chua duoc trien khai.
-  async rejectSession(
+  async cancelSession(
     sessionId: string,
     payload: ReviewAuctionSessionRequest,
   ): Promise<ReviewAuctionSessionResponse> {
     const response = await axiosClient.patch<
       ApiResponse<ReviewAuctionSessionResponse>
-    >(`/admin/auction-sessions/${sessionId}/reject`, payload);
+    >(`/admin/auction-sessions/${sessionId}/cancel`, payload);
 
     return response.data.data;
   },
