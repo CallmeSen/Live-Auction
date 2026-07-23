@@ -22,6 +22,11 @@ from modules.auction_sessions.session_schema import (
     StartAuctionSessionResponse,
 )
 from modules.auction_sessions.session_service import AuctionSessionService
+from modules.notifications.notification_repository import NotificationRepository
+from modules.notifications.notification_service import NotificationService
+from modules.users.notification_preference_repository import (
+    NotificationPreferenceRepository,
+)
 
 
 router = APIRouter(
@@ -33,6 +38,10 @@ router = APIRouter(
 def get_auction_session_service() -> AuctionSessionService:
     return AuctionSessionService(
         session_repository=AuctionSessionRepository(),
+        notification_service=NotificationService(
+            notification_repository=NotificationRepository(),
+            notification_preference_repository=NotificationPreferenceRepository(),
+        ),
     )
 
 

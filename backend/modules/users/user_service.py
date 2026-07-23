@@ -3,10 +3,12 @@ import uuid
 
 from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.models.notification_preference_model import NotificationPreference
+from modules.users.notification_preference_repository import NotificationPreferenceRepository
 from app.core.exceptions import AppException
 from modules.users.user_repository import UserListFilters, UserRepository
 from modules.users.user_schema import (
+    UpdateNotificationPreferenceRequest,
     AdminUserListData,
     AdminUserListItem,
     AdminUserListPagination,
@@ -18,8 +20,12 @@ class UserService:
     def __init__(
         self,
         user_repository: UserRepository,
+        notification_preference_repository: NotificationPreferenceRepository | None = None,
     ) -> None:
         self.user_repository = user_repository
+        self.notification_preference_repository = (
+            notification_preference_repository or NotificationPreferenceRepository()
+        )
 
     async def list_users(
         self,
@@ -118,3 +124,63 @@ class UserService:
                 code="INTERNAL_SERVER_ERROR",
                 message="An unexpected error occurred",
             ) from exception
+    async def get_notification_preferences(
+        self,
+        db: AsyncSession,
+        user_id: uuid.UUID,
+    ) -> NotificationPreference:
+        preference = await self.notification_preference_repository.find_by_user_id(
+            db=db,
+            user_id=user_id,
+        )
+
+        if preference is not None:
+            return preference
+
+        # Chưa có bản ghi (user chưa từng đổi cài đặt) -> tự tạo với default
+        new_preference = NotificationPreference(user_id=user_id)
+
+        created = await self.notification_preference_repository.create(
+            db=db,
+            preference=new_preference,
+        )
+        await db.commit()
+
+        return created
+
+    async def update_notification_preferences(
+        self,
+        db: AsyncSession,
+        user_id: uuid.UUID,
+        request: UpdateNotificationPreferenceRequest,
+    ) -> NotificationPreference:
+        preference = await self.notification_preference_repository.find_by_user_id(
+            db=db,
+            user_id=user_id,
+        )
+
+        if preference is None:
+            preference = NotificationPreference(user_id=user_id)
+            preference.notify_when_outbid = request.notify_when_outbid
+            preference.remind_before_auction_ends = request.remind_before_auction_ends
+            preference.receive_featured_auction_news = request.receive_featured_auction_news
+
+            created = await self.notification_preference_repository.create(
+                db=db,
+                preference=preference,
+            )
+            await db.commit()
+
+            return created
+
+        preference.notify_when_outbid = request.notify_when_outbid
+        preference.remind_before_auction_ends = request.remind_before_auction_ends
+        preference.receive_featured_auction_news = request.receive_featured_auction_news
+
+        updated = await self.notification_preference_repository.update(
+            db=db,
+            preference=preference,
+        )
+        await db.commit()
+
+        return updated        

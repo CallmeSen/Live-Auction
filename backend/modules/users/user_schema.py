@@ -175,3 +175,36 @@ class UpdateProfileResponse(BaseModel):
     code: str
     message: str
     data: UpdateProfileData
+class NotificationPreferenceData(BaseModel):
+    notify_when_outbid: bool = Field(alias="notifyWhenOutbid")
+    remind_before_auction_ends: bool = Field(alias="remindBeforeAuctionEnds")
+    receive_featured_auction_news: bool = Field(alias="receiveFeaturedAuctionNews")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+    )
+
+
+class GetNotificationPreferenceResponse(BaseModel):
+    status: int
+    code: str
+    message: str
+    data: NotificationPreferenceData
+
+
+class UpdateNotificationPreferenceRequest(BaseModel):
+    notify_when_outbid: bool = Field(alias="notifyWhenOutbid")
+    remind_before_auction_ends: bool = Field(alias="remindBeforeAuctionEnds")
+    receive_featured_auction_news: bool = Field(alias="receiveFeaturedAuctionNews")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class UpdateNotificationPreferenceResponse(BaseModel):
+    status: int
+    code: str
+    message: str
+    data: NotificationPreferenceData

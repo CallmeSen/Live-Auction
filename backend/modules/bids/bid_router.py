@@ -21,6 +21,11 @@ from modules.bids.bid_schema import (
     PlaceBidResponse,
 )
 from modules.bids.bid_service import BidService
+from modules.notifications.notification_repository import NotificationRepository
+from modules.notifications.notification_service import NotificationService
+from modules.users.notification_preference_repository import (
+    NotificationPreferenceRepository,
+)
 
 
 router = APIRouter(
@@ -39,6 +44,10 @@ def get_bid_service() -> BidService:
     return BidService(
         bid_repository=BidRepository(),
         item_repository=AuctionItemRepository(),
+        notification_service=NotificationService(
+            notification_repository=NotificationRepository(),
+            notification_preference_repository=NotificationPreferenceRepository(),
+        ),
     )
 
 

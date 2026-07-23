@@ -27,14 +27,17 @@ from modules.auction_sessions.session_schema import (
     RejectAuctionSessionData,
     StartAuctionSessionData,
 )
+from modules.notifications.notification_service import NotificationService
 
 
 class AuctionSessionService:
     def __init__(
         self,
         session_repository: AuctionSessionRepository,
+        notification_service: NotificationService,
     ) -> None:
         self.session_repository = session_repository
+        self.notification_service = notification_service
 
     @staticmethod
     def _get_primary_image_url(
@@ -292,6 +295,13 @@ class AuctionSessionService:
             session.status = AuctionSessionStatus.SCHEDULED
             current_time = datetime.now()
 
+            await self.notification_service.notify_session_approved(
+                db=db,
+                seller_id=session.seller_id,
+                session_id=session.id,
+                session_title=session.title,
+            )
+
             await db.commit()
 
             return ApproveAuctionSessionData(
@@ -336,6 +346,14 @@ class AuctionSessionService:
 
             session.status = AuctionSessionStatus.REJECTED
             current_time = datetime.now()
+
+            await self.notification_service.notify_session_rejected(
+                db=db,
+                seller_id=session.seller_id,
+                session_id=session.id,
+                session_title=session.title,
+                reason=reason,
+            )
 
             await db.commit()
 

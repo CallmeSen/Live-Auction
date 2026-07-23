@@ -25,6 +25,11 @@ from modules.auction_sessions.session_schema import (
     RejectAuctionSessionResponse,
 )
 from modules.auction_sessions.session_service import AuctionSessionService
+from modules.notifications.notification_repository import NotificationRepository
+from modules.notifications.notification_service import NotificationService
+from modules.users.notification_preference_repository import (
+    NotificationPreferenceRepository,
+)
 from modules.users.user_repository import UserListFilters, UserRepository
 from modules.users.user_schema import (
     ListAdminUsersResponse,
@@ -73,6 +78,10 @@ def get_user_service(
 def get_auction_session_service() -> AuctionSessionService:
     return AuctionSessionService(
         session_repository=AuctionSessionRepository(),
+        notification_service=NotificationService(
+            notification_repository=NotificationRepository(),
+            notification_preference_repository=NotificationPreferenceRepository(),
+        ),
     )
 
 

@@ -15,6 +15,7 @@ from modules.bids.bid_schema import (
     MyBidListItem,
     PlaceBidRequest,
 )
+from modules.notifications.notification_service import NotificationService
 
 
 class BidService:
@@ -22,9 +23,11 @@ class BidService:
         self,
         bid_repository: BidRepository,
         item_repository: AuctionItemRepository,
+        notification_service: NotificationService,
     ) -> None:
         self.bid_repository = bid_repository
         self.item_repository = item_repository
+        self.notification_service = notification_service
 
     async def list_my_bids(
         self,
@@ -150,8 +153,11 @@ class BidService:
                     },
                 )
 
+            previous_bidder_id = None
+
             if winning_bid is not None:
                 winning_bid.status = BidStatus.OUTBID
+                previous_bidder_id = winning_bid.bidder_id
 
             new_bid = Bid(
                 item_id=item.id,
@@ -167,6 +173,19 @@ class BidService:
             )
 
             item.current_price = request.amount
+
+            # Tạo thông báo "bị trả giá cao hơn" cho người vừa mất vị trí
+            # dẫn đầu, chỉ khi họ khác với người vừa đặt giá mới.
+            if (
+                previous_bidder_id is not None
+                and previous_bidder_id != bidder.id
+            ):
+                await self.notification_service.notify_outbid(
+                    db=db,
+                    user_id=previous_bidder_id,
+                    item_id=item.id,
+                    item_title=item.title,
+                )
 
             await db.commit()
             await db.refresh(created_bid)

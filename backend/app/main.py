@@ -23,7 +23,7 @@ import app.models  # noqa: F401
 from app.core.database import engine
 from app.core.exceptions import AppException
 from app.database.base import Base
-
+from modules.notifications.notification_router import router as notification_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -75,6 +75,7 @@ app.include_router(bids_router)
 app.include_router(my_bids_router)
 app.include_router(admin_router)
 app.include_router(user_router)
+app.include_router(notification_router)
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:

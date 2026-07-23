@@ -3,11 +3,20 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from modules.users.notification_preference_repository import NotificationPreferenceRepository
 from app.core.database import get_db
 from app.core.dependencies import get_current_user_id, security
 from modules.users.user_repository import UserRepository
 from modules.users.user_schema import (
+    GetNotificationPreferenceResponse,
+    GetProfileResponse,
+    NotificationPreferenceData,
+    UpdateNotificationPreferenceRequest,
+    UpdateNotificationPreferenceResponse,
+    UpdateProfileData,
+    UpdateProfileRequest,
+    UpdateProfileResponse,
+    UserProfileData,
     GetProfileResponse,
     UpdateProfileData,
     UpdateProfileRequest,
@@ -36,6 +45,7 @@ def get_user_service(
 ) -> UserService:
     return UserService(
         user_repository=user_repository,
+        notification_preference_repository=NotificationPreferenceRepository(),
     )
 
 
@@ -101,3 +111,49 @@ async def update_my_profile(
         message="Update profile successfully",
         data=UpdateProfileData.model_validate(updated_user),
     )
+@router.get(
+    "/me/notification-preferences",
+    status_code=status.HTTP_200_OK,
+    response_model=GetNotificationPreferenceResponse,
+)
+async def get_my_notification_preferences(
+    db: DatabaseSession,
+    current_user_id: CurrentUserId,
+    user_service: UserServiceDependency,
+) -> GetNotificationPreferenceResponse:
+    preference = await user_service.get_notification_preferences(
+        db=db,
+        user_id=current_user_id,
+    )
+
+    return GetNotificationPreferenceResponse(
+        status=status.HTTP_200_OK,
+        code="NOTIFICATION_PREFERENCE_FETCHED",
+        message="Get notification preferences successfully",
+        data=NotificationPreferenceData.model_validate(preference),
+    )
+
+
+@router.patch(
+    "/me/notification-preferences",
+    status_code=status.HTTP_200_OK,
+    response_model=UpdateNotificationPreferenceResponse,
+)
+async def update_my_notification_preferences(
+    request: UpdateNotificationPreferenceRequest,
+    db: DatabaseSession,
+    current_user_id: CurrentUserId,
+    user_service: UserServiceDependency,
+) -> UpdateNotificationPreferenceResponse:
+    preference = await user_service.update_notification_preferences(
+        db=db,
+        user_id=current_user_id,
+        request=request,
+    )
+
+    return UpdateNotificationPreferenceResponse(
+        status=status.HTTP_200_OK,
+        code="NOTIFICATION_PREFERENCE_UPDATED",
+        message="Update notification preferences successfully",
+        data=NotificationPreferenceData.model_validate(preference),
+    )    
