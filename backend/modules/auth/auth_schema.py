@@ -105,3 +105,39 @@ class LoginResponse(BaseModel):
     code: int
     message: str
     data: LoginData
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, email: EmailStr) -> str:
+        return str(email).lower()
+
+
+class ForgotPasswordResponse(BaseModel):
+    status: int
+    code: str
+    message: str
+    data: None = None
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=1)
+    new_password: str = Field(
+        alias="newPassword",
+        min_length=6,
+        max_length=72,
+    )
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class ResetPasswordResponse(BaseModel):
+    status: int
+    code: str
+    message: str
+    data: None = None

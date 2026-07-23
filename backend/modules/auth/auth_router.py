@@ -1,17 +1,22 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from modules.auth.auth_schema import (
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
     LoginRequest,
     LoginResponse,
     RegisterRequest,
     RegisterResponse,
     RegisterUserData,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
 )
 from modules.auth.auth_service import AuthService
+from modules.auth.password_reset_repository import PasswordResetTokenRepository
 from modules.users.user_repository import UserRepository
 
 
@@ -24,6 +29,7 @@ router = APIRouter(
 def get_auth_service() -> AuthService:
     return AuthService(
         user_repository=UserRepository(),
+        password_reset_token_repository=PasswordResetTokenRepository(),
     )
 
 
@@ -81,4 +87,53 @@ async def login(
         code=1000,
         message="Login successfully",
         data=login_data,
+    )
+
+
+@router.post(
+    "/forgot-password",
+    status_code=status.HTTP_200_OK,
+    response_model=ForgotPasswordResponse,
+)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    db: DatabaseSession,
+    background_tasks: BackgroundTasks,
+    auth_service: AuthServiceDependency,
+) -> ForgotPasswordResponse:
+    await auth_service.forgot_password(
+        db=db,
+        email=request.email,
+        background_tasks=background_tasks,
+    )
+
+    return ForgotPasswordResponse(
+        status=status.HTTP_200_OK,
+        code="PASSWORD_RESET_EMAIL_SENT",
+        message="If the email exists, password reset instructions have been sent",
+        data=None,
+    )
+
+
+@router.post(
+    "/reset-password",
+    status_code=status.HTTP_200_OK,
+    response_model=ResetPasswordResponse,
+)
+async def reset_password(
+    request: ResetPasswordRequest,
+    db: DatabaseSession,
+    auth_service: AuthServiceDependency,
+) -> ResetPasswordResponse:
+    await auth_service.reset_password(
+        db=db,
+        token=request.token,
+        new_password=request.new_password,
+    )
+
+    return ResetPasswordResponse(
+        status=status.HTTP_200_OK,
+        code="PASSWORD_RESET_SUCCESS",
+        message="Password has been reset successfully",
+        data=None,
     )
