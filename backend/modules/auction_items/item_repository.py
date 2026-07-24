@@ -1,7 +1,8 @@
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -184,6 +185,24 @@ class AuctionItemRepository:
 
         return result.scalar_one_or_none()
 
+    async def find_by_id_with_session(
+        self,
+        db: AsyncSession,
+        item_id: uuid.UUID,
+    ) -> AuctionItem | None:
+        statement = (
+            select(AuctionItem)
+            .options(
+                selectinload(AuctionItem.session),
+                selectinload(AuctionItem.images),
+            )
+            .where(AuctionItem.id == item_id)
+        )
+
+        result = await db.execute(statement)
+
+        return result.scalar_one_or_none()
+
     async def create(
         self,
         db: AsyncSession,
@@ -195,3 +214,43 @@ class AuctionItemRepository:
         await db.refresh(item)
 
         return item
+
+    async def get_next_sort_order(
+        self,
+        db: AsyncSession,
+        item_id: uuid.UUID,
+    ) -> int:
+        statement = select(func.max(ItemImage.sort_order)).where(
+            ItemImage.item_id == item_id,
+        )
+        result = await db.execute(statement)
+        current_max = result.scalar_one_or_none()
+
+        return 0 if current_max is None else current_max + 1
+
+    async def unset_primary_images(
+        self,
+        db: AsyncSession,
+        item_id: uuid.UUID,
+    ) -> None:
+        statement = (
+            update(ItemImage)
+            .where(
+                ItemImage.item_id == item_id,
+                ItemImage.is_primary.is_(True),
+            )
+            .values(is_primary=False)
+        )
+        await db.execute(statement)
+
+    async def create_image(
+        self,
+        db: AsyncSession,
+        image: ItemImage,
+    ) -> ItemImage:
+        db.add(image)
+
+        await db.flush()
+        await db.refresh(image)
+
+        return image

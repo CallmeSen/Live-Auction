@@ -50,6 +50,7 @@ services:
       PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: ${PASSWORD_RESET_TOKEN_EXPIRE_MINUTES}
     volumes:
       - ./backend:/app
+      - uploads_data:/app/uploads
     entrypoint: ["sh", "/app/docker-entrypoint.sh"]
     command:
       [
@@ -105,3 +106,4 @@ services:
 volumes:
   auction_mysql_data:
   frontend_node_modules:
+  uploads_data:

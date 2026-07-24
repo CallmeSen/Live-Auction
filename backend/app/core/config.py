@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     frontend_reset_password_url: str = "http://localhost:5173/reset-password"
     password_reset_token_expire_minutes: int = 15
 
+    storage_backend: str = "local"
+    upload_dir: str = "uploads"
+    max_upload_size_mb: int = 5
+    s3_bucket_name: str = ""
+    s3_region: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [
@@ -37,6 +43,10 @@ class Settings(BaseSettings):
     @property
     def smtp_sender(self) -> str:
         return self.smtp_from_email or self.smtp_username
+
+    @property
+    def max_upload_size_bytes(self) -> int:
+        return self.max_upload_size_mb * 1024 * 1024
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",

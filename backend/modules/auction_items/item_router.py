@@ -1,11 +1,14 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, File, Form, Path, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user_id, security
+from app.core.exceptions import AppException
+from app.core.storage import StorageService, get_storage_service
+from app.core.config import settings
 from common.enum import AuctionItemStatus
 from modules.auction_items.item_repository import (
     AuctionItemRepository,
@@ -19,6 +22,8 @@ from modules.auction_items.item_schema import (
     GetAuctionItemDetailResponse,
     ListAuctionItemsResponse,
     SortOrder,
+    UploadAuctionItemImageData,
+    UploadAuctionItemImageResponse,
 )
 from modules.auction_items.item_service import AuctionItemService
 from modules.auction_sessions.session_repository import (
@@ -39,11 +44,17 @@ public_router = APIRouter(
 )
 
 
-def get_auction_item_service() -> AuctionItemService:
+def get_auction_item_service(
+    storage_service: Annotated[
+        StorageService,
+        Depends(get_storage_service),
+    ],
+) -> AuctionItemService:
     return AuctionItemService(
         item_repository=AuctionItemRepository(),
         session_repository=AuctionSessionRepository(),
         category_repository=CategoryRepository(),
+        storage_service=storage_service,
     )
 
 
@@ -145,6 +156,57 @@ async def get_auction_item_detail(
         code=1000,
         message="Get auction item detail successfully",
         data=data,
+    )
+
+
+@public_router.post(
+    "/{item_id}/images",
+    status_code=status.HTTP_201_CREATED,
+    response_model=UploadAuctionItemImageResponse,
+    dependencies=[Depends(security)],
+)
+async def upload_auction_item_image(
+    item_id: uuid.UUID,
+    db: DatabaseSession,
+    seller_id: CurrentUserId,
+    item_service: AuctionItemServiceDependency,
+    file: Annotated[UploadFile, File()],
+    is_primary: Annotated[bool, Form(alias="isPrimary")] = False,
+) -> UploadAuctionItemImageResponse:
+    if file.content_type is None:
+        raise AppException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="INVALID_FILE_TYPE",
+            message="Unable to determine file type",
+        )
+
+    file_content = await file.read()
+
+    if len(file_content) > settings.max_upload_size_bytes:
+        raise AppException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="FILE_TOO_LARGE",
+            message=(
+                f"File size must not exceed "
+                f"{settings.max_upload_size_mb}MB"
+            ),
+        )
+
+    image = await item_service.upload_image(
+        db=db,
+        item_id=item_id,
+        seller_id=seller_id,
+        file_content=file_content,
+        original_filename=file.filename or "upload",
+        content_type=file.content_type,
+        is_primary=is_primary,
+    )
+
+    return UploadAuctionItemImageResponse(
+        status=status.HTTP_201_CREATED,
+        code="IMAGE_UPLOADED",
+        message="Upload image successfully",
+        data=UploadAuctionItemImageData.model_validate(image),
     )
 
 

@@ -6,7 +6,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
+from app.core.storage import StorageService
 from common.enum import AuctionItemStatus, AuctionSessionStatus
+from app.models.image_model import ItemImage
 from app.models.item_model import AuctionItem
 from modules.auction_items.item_repository import (
     AuctionItemRepository,
@@ -30,16 +32,25 @@ from modules.auction_sessions.session_repository import (
 from modules.categories.category_repository import CategoryRepository
 
 
+ALLOWED_IMAGE_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+
+
 class AuctionItemService:
     def __init__(
         self,
         item_repository: AuctionItemRepository,
         session_repository: AuctionSessionRepository,
         category_repository: CategoryRepository,
+        storage_service: StorageService,
     ) -> None:
         self.item_repository = item_repository
         self.session_repository = session_repository
         self.category_repository = category_repository
+        self.storage_service = storage_service
 
     async def list_items(
         self,
@@ -264,6 +275,96 @@ class AuctionItemService:
                 code="CREATE_ITEM_FAILED",
                 message="Unable to create auction item",
             ) from exception
+
+        except Exception:
+            await db.rollback()
+            raise
+
+    async def upload_image(
+        self,
+        db: AsyncSession,
+        item_id: uuid.UUID,
+        seller_id: uuid.UUID,
+        file_content: bytes,
+        original_filename: str,
+        content_type: str,
+        is_primary: bool,
+    ) -> ItemImage:
+        if content_type not in ALLOWED_IMAGE_CONTENT_TYPES:
+            raise AppException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                code="INVALID_FILE_TYPE",
+                message="Only JPEG, PNG, or WEBP images are allowed",
+            )
+
+        item = await self.item_repository.find_by_id_with_session(
+            db=db,
+            item_id=item_id,
+        )
+
+        if item is None:
+            raise AppException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                code="ITEM_NOT_FOUND",
+                message="Auction item not found",
+            )
+
+        if item.seller_id != seller_id:
+            raise AppException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                code="FORBIDDEN",
+                message="You are not the owner of this auction item",
+            )
+
+        if item.session.status not in (
+            AuctionSessionStatus.PENDING_APPROVAL,
+            AuctionSessionStatus.SCHEDULED,
+        ):
+            raise AppException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                code="SESSION_NOT_EDITABLE",
+                message=(
+                    "Images can only be uploaded before the auction "
+                    "session starts"
+                ),
+            )
+
+        try:
+            image_url = await self.storage_service.save(
+                file_content=file_content,
+                original_filename=original_filename,
+                content_type=content_type,
+            )
+
+            if is_primary:
+                await self.item_repository.unset_primary_images(
+                    db=db,
+                    item_id=item_id,
+                )
+
+            sort_order = await self.item_repository.get_next_sort_order(
+                db=db,
+                item_id=item_id,
+            )
+
+            image = ItemImage(
+                item_id=item_id,
+                image_url=image_url,
+                is_primary=is_primary,
+                sort_order=sort_order,
+            )
+
+            created_image = await self.item_repository.create_image(
+                db=db,
+                image=image,
+            )
+            await db.commit()
+
+            return created_image
+
+        except AppException:
+            await db.rollback()
+            raise
 
         except Exception:
             await db.rollback()

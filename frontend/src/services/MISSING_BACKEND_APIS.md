@@ -28,7 +28,9 @@ TODO(BACKEND)
 ```
 **** Để chạy dự án, dùng tính năng quên mật khẩu cần:
 Điền vào file .env:
-
+STORAGE_BACKEND=local
+UPLOAD_DIR=uploads
+MAX_UPLOAD_SIZE_MB=5
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USERNAME=youremail@gmail.com
@@ -43,9 +45,7 @@ Bước 1: Bật 2-Step Verification cho tài khoản Gmail
 App Password chỉ xuất hiện khi tài khoản Google đã bật xác minh 2 bước — nếu chưa bật, Google sẽ không cho tạo App Password.
 
 Vào https://myaccount.google.com/security
-Tìm mục "2-Step Verification" (Xác minh 2 bước)
-Nếu đang tắt → bấm vào, làm theo hướng dẫn (thường cần xác nhận qua số điện thoại)
-Sau khi bật xong, quay lại bước 2
+Tìm mục "2-Step Verification" (Xác minh 2 bước) và bật lên nếu nó đang tắt
 Bước 2: Tạo App Password
 Vào thẳng link: https://myaccount.google.com/apppasswords
 (Nếu Google chặn không cho vào thẳng, tìm theo đường: Security → 2-Step Verification → cuộn xuống dưới cùng → "App passwords")
@@ -55,8 +55,11 @@ Google hiện ra 1 mã gồm 16 ký tự, dạng: abcd efgh ijkl mnop
 Copy mã này ngay — Google chỉ hiện 1 lần duy nhất, đóng popup là mất, phải tạo lại cái mới nếu quên copy.
 
 
-ở file env
+Hướng dẫn điền thông số vào file env:
 ==>> giữ nguyên các trường thông tin này:
+STORAGE_BACKEND=local
+UPLOAD_DIR=uploads
+MAX_UPLOAD_SIZE_MB=5
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 FRONTEND_RESET_PASSWORD_URL=http://localhost:5173/reset-password

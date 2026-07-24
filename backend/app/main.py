@@ -24,6 +24,8 @@ from app.core.database import engine
 from app.core.exceptions import AppException
 from app.database.base import Base
 from modules.notifications.notification_router import router as notification_router
+from fastapi.staticfiles import StaticFiles
+import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,8 +49,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
 
+)
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.exception_handler(AppException)
 async def app_exception_handler(

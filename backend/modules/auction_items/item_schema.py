@@ -187,3 +187,24 @@ class ListAuctionItemsResponse(BaseModel):
     code: int
     message: str
     data: AuctionItemListData
+
+
+class UploadAuctionItemImageData(BaseModel):
+    id: uuid.UUID
+    item_id: uuid.UUID = Field(serialization_alias="itemId")
+    image_url: str = Field(serialization_alias="imageUrl")
+    is_primary: bool = Field(serialization_alias="isPrimary")
+    sort_order: int = Field(serialization_alias="sortOrder")
+    created_at: datetime = Field(serialization_alias="createdAt")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+    )
+
+
+class UploadAuctionItemImageResponse(BaseModel):
+    status: int
+    code: str
+    message: str
+    data: UploadAuctionItemImageData
