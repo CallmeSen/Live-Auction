@@ -101,6 +101,26 @@ DATABASE_URL=mysql+asyncmy://auction_user:change_this_user_password@mysql:3306/a
 JWT_SECRET_KEY=replace_with_a_long_random_secret
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# File uploads
+STORAGE_BACKEND=local
+UPLOAD_DIR=uploads
+MAX_UPLOAD_SIZE_MB=5
+
+# Forgot password (SMTP) — see frontend/src/services/MISSING_BACKEND_APIS.md
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=youremail@gmail.com
+SMTP_PASSWORD=your_gmail_app_password
+SMTP_FROM_EMAIL=youremail@gmail.com
+FRONTEND_RESET_PASSWORD_URL=http://localhost:5173/reset-password
+PASSWORD_RESET_TOKEN_EXPIRE_MINUTES=15
+```
+
+Copy from the template:
+
+```powershell
+copy .env.example .env
 ```
 
 Generate a secure JWT secret:
@@ -131,6 +151,23 @@ DATABASE_URL=mysql+asyncmy://auction_user:change_this_user_password@localhost:33
 JWT_SECRET_KEY=replace_with_the_same_or_another_local_secret
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+STORAGE_BACKEND=local
+UPLOAD_DIR=uploads
+MAX_UPLOAD_SIZE_MB=5
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=youremail@gmail.com
+SMTP_PASSWORD=your_gmail_app_password
+SMTP_FROM_EMAIL=youremail@gmail.com
+FRONTEND_RESET_PASSWORD_URL=http://localhost:5173/reset-password
+PASSWORD_RESET_TOKEN_EXPIRE_MINUTES=15
+```
+
+Copy from the template:
+
+```powershell
+copy backend\.env.example backend\.env
 ```
 
 The database host is different depending on where FastAPI runs.

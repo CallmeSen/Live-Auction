@@ -18,18 +18,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.alter_column(
-        "item_images",
-        "image_url",
-        existing_type=sa.String(length=500),
-        nullable=True,
-    )
+    """Skipped: item_images.image_url is already nullable in 171bf3dda30e."""
+    pass
 
 
 def downgrade() -> None:
-    op.alter_column(
-        "item_images",
-        "image_url",
-        existing_type=sa.String(length=500),
-        nullable=False,
-    )
+    """Skipped: see 171bf3dda30e downgrade."""
+    pass

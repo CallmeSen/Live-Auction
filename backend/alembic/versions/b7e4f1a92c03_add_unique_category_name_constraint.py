@@ -17,19 +17,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_unique_constraint(
-        "uq_categories_name",
-        "categories",
-        ["name"],
-    )
-    op.create_index(
-        "ix_categories_status",
-        "categories",
-        ["status"],
-        unique=False,
-    )
+    """Skipped: constraints are created in 171bf3dda30e."""
+    pass
 
 
 def downgrade() -> None:
-    op.drop_index("ix_categories_status", table_name="categories")
-    op.drop_constraint("uq_categories_name", "categories", type_="unique")
+    """Skipped: see 171bf3dda30e downgrade."""
+    pass

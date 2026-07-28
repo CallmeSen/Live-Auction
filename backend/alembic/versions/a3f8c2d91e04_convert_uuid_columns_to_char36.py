@@ -211,66 +211,10 @@ def _restore_uuid_column(
 
 
 def upgrade() -> None:
-    op.execute("SET FOREIGN_KEY_CHECKS = 0")
-
-    for table, constraint_name in FOREIGN_KEYS:
-        op.execute(
-            f"ALTER TABLE `{table}` DROP FOREIGN KEY `{constraint_name}`"
-        )
-
-    for table, column, nullable, is_primary_key in UUID_COLUMNS:
-        _convert_uuid_column(table, column, nullable, is_primary_key)
-
-    for (
-        table,
-        constraint_name,
-        column,
-        referenced_table,
-        referenced_column,
-        on_delete,
-    ) in FOREIGN_KEY_DEFINITIONS:
-        on_delete_sql = (
-            f" ON DELETE {on_delete}" if on_delete is not None else ""
-        )
-        op.execute(
-            f"ALTER TABLE `{table}` "
-            f"ADD CONSTRAINT `{constraint_name}` "
-            f"FOREIGN KEY (`{column}`) "
-            f"REFERENCES `{referenced_table}` (`{referenced_column}`)"
-            f"{on_delete_sql}"
-        )
-
-    op.execute("SET FOREIGN_KEY_CHECKS = 1")
+    """Skipped: tables are created with CHAR(36) UUIDs in 171bf3dda30e."""
+    pass
 
 
 def downgrade() -> None:
-    op.execute("SET FOREIGN_KEY_CHECKS = 0")
-
-    for table, constraint_name in FOREIGN_KEYS:
-        op.execute(
-            f"ALTER TABLE `{table}` DROP FOREIGN KEY `{constraint_name}`"
-        )
-
-    for table, column, nullable, is_primary_key in reversed(UUID_COLUMNS):
-        _restore_uuid_column(table, column, nullable, is_primary_key)
-
-    for (
-        table,
-        constraint_name,
-        column,
-        referenced_table,
-        referenced_column,
-        on_delete,
-    ) in FOREIGN_KEY_DEFINITIONS:
-        on_delete_sql = (
-            f" ON DELETE {on_delete}" if on_delete is not None else ""
-        )
-        op.execute(
-            f"ALTER TABLE `{table}` "
-            f"ADD CONSTRAINT `{constraint_name}` "
-            f"FOREIGN KEY (`{column}`) "
-            f"REFERENCES `{referenced_table}` (`{referenced_column}`)"
-            f"{on_delete_sql}"
-        )
-
-    op.execute("SET FOREIGN_KEY_CHECKS = 1")
+    """Skipped: see 171bf3dda30e downgrade."""
+    pass

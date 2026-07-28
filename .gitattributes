@@ -1,0 +1,7 @@
+# Shell scripts must use LF so Linux containers can run them.
+*.sh text eol=lf
+
+# Docker / env templates
+docker-compose.yml text eol=lf
+Dockerfile text eol=lf
+.env.example text eol=lf
