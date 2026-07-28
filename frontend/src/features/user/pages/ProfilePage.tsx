@@ -163,7 +163,7 @@ export default function ProfilePage() {
     }
 
     logout();
-    window.location.replace('/auctions');
+    navigate('/auctions', { replace: true });
   };
 
   const closeUnsavedModal = () => {
@@ -180,7 +180,7 @@ export default function ProfilePage() {
 
     if (shouldLogout) {
       logout();
-      window.location.replace('/auctions');
+      navigate('/auctions', { replace: true });
       return;
     }
 

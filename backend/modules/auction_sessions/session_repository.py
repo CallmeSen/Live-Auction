@@ -6,9 +6,14 @@ from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.bid_model import Bid
 from app.models.item_model import AuctionItem
 from app.models.session_model import AuctionSession
-from common.enum import AuctionItemStatus, AuctionSessionStatus
+from common.enum import (
+    AuctionItemStatus,
+    AuctionSessionStatus,
+    BidStatus,
+)
 
 
 @dataclass(frozen=True)
@@ -201,6 +206,59 @@ class AuctionSessionRepository:
 
         return list(result.scalars().unique().all()), total
 
+    async def _finalize_ended_items(
+        self,
+        db: AsyncSession,
+        current_time: datetime,
+    ) -> int:
+        pending_item_statuses = (
+            AuctionItemStatus.DRAFT,
+            AuctionItemStatus.READY,
+            AuctionItemStatus.OPEN,
+        )
+
+        statement = (
+            select(AuctionItem)
+            .join(
+                AuctionSession,
+                AuctionSession.id == AuctionItem.session_id,
+            )
+            .where(
+                AuctionSession.status == AuctionSessionStatus.ENDED,
+                AuctionItem.status.in_(pending_item_statuses),
+            )
+        )
+
+        result = await db.execute(statement)
+        items = list(result.scalars().unique().all())
+
+        for item in items:
+            winning_result = await db.execute(
+                select(Bid)
+                .where(
+                    Bid.item_id == item.id,
+                    Bid.status == BidStatus.WINNING,
+                )
+                .order_by(Bid.amount.desc(), Bid.created_at.asc())
+                .limit(1)
+            )
+            winning_bid = winning_result.scalar_one_or_none()
+
+            item.closed_at = current_time
+
+            if winning_bid is None:
+                item.status = AuctionItemStatus.UNSOLD
+                item.winner_user_id = None
+                item.final_price = None
+                continue
+
+            item.status = AuctionItemStatus.SOLD
+            item.winner_user_id = winning_bid.bidder_id
+            item.final_price = winning_bid.amount
+            item.current_price = winning_bid.amount
+
+        return len(items)
+
     async def synchronize_time_based_statuses(
         self,
         db: AsyncSession,
@@ -287,8 +345,17 @@ class AuctionSessionRepository:
             getattr(rescheduled_result, "rowcount", 0) or 0,
             0,
         )
+        finalized_count = await self._finalize_ended_items(
+            db=db,
+            current_time=current_time,
+        )
 
-        return expired_count + active_count + rescheduled_count
+        return (
+            expired_count
+            + active_count
+            + rescheduled_count
+            + finalized_count
+        )
 
     async def create(
         self,

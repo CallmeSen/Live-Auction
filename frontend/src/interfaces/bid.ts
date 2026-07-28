@@ -6,6 +6,12 @@ export type BidStatus =
   | 'OUTBID'
   | 'CANCELLED';
 
+export type MyBidOutcome =
+  | 'LEADING'
+  | 'OUTBID'
+  | 'WON'
+  | 'LOST';
+
 export interface PlaceBidRequest {
   amount: number;
 }
@@ -23,18 +29,20 @@ export interface PlaceBidResponse {
 export interface MyBidListRequest {
   page?: number;
   pageSize?: number;
-  status?: BidStatus;
+  outcome?: MyBidOutcome;
 }
 
 export interface MyBidListItemResponse {
   id: string;
   amount: string;
   status: BidStatus;
+  outcome: MyBidOutcome;
   createdAt: string;
   itemId: string;
   itemTitle: string;
   itemStatus: AuctionItemStatus;
   itemCurrentPrice: string;
+  itemFinalPrice: string | null;
   sessionId: string;
   sessionTitle: string;
   sessionStatus: AuctionSessionStatus;

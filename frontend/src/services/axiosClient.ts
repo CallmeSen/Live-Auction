@@ -31,11 +31,15 @@ axiosClient.interceptors.response.use(
     (error: unknown) => {
         if (axios.isAxiosError(error) && error.response?.status === 401) {
             const requestUrl = error.config?.url ?? '';
-            const isAuthRequest =
-                requestUrl.includes('/auth/login') ||
-                requestUrl.includes('/auth/register');
+            const isAuthRequest = requestUrl.includes('/auth/');
+            const hasActiveSession = Boolean(
+                localStorage.getItem('accessToken'),
+            );
 
-            if (!isAuthRequest) {
+            // Một request bảo vệ có thể hoàn tất sau khi người dùng vừa
+            // chủ động đăng xuất. Khi token đã bị xóa, không được ép điều
+            // hướng lần hai sang /login.
+            if (!isAuthRequest && hasActiveSession) {
                 logoutSession();
 
                 if (window.location.pathname !== '/login') {

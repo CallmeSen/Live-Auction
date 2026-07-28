@@ -8,7 +8,12 @@ from pydantic import (
     Field,
 )
 
-from common.enum import AuctionItemStatus, AuctionSessionStatus, BidStatus
+from common.enum import (
+    AuctionItemStatus,
+    AuctionSessionStatus,
+    BidStatus,
+    MyBidOutcome,
+)
 
 
 class PlaceBidRequest(BaseModel):
@@ -45,12 +50,16 @@ class MyBidListItem(BaseModel):
     id: uuid.UUID
     amount: Decimal
     status: BidStatus
+    outcome: MyBidOutcome
     created_at: datetime = Field(serialization_alias="createdAt")
     item_id: uuid.UUID = Field(serialization_alias="itemId")
     item_title: str = Field(serialization_alias="itemTitle")
     item_status: AuctionItemStatus = Field(serialization_alias="itemStatus")
     item_current_price: Decimal = Field(
         serialization_alias="itemCurrentPrice",
+    )
+    item_final_price: Decimal | None = Field(
+        serialization_alias="itemFinalPrice",
     )
     session_id: uuid.UUID = Field(serialization_alias="sessionId")
     session_title: str = Field(serialization_alias="sessionTitle")
