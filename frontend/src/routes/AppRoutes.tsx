@@ -38,15 +38,18 @@ export default function AppRoutes() {
       <Route element={<MainLayout />}>
         <Route path="/auctions" element={<AuctionListPage />} />
         <Route path="/auction-sessions/:id" element={<AuctionSessionDetailPage />} />
-        <Route path="/auction-items/:id" element={<AuctionDetailPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/forbidden" element={<AccessDeniedPage />} />
 
-          <Route element={<RoleRoute allowedRoles={['USER']} />}>
+          <Route element={<RoleRoute allowedRoles={['BIDDER']} />}>
             <Route path="/my-bids" element={<MyBidsPage />} />
+            <Route path="/auction-items/:id" element={<AuctionDetailPage />} />
+          </Route>
+
+          <Route element={<RoleRoute allowedRoles={['SELLER']} />}>
             <Route path="/auctions/create" element={<CreateAuctionPage />} />
             <Route path="/my-auctions" element={<MyAuctionsPage />} />
             <Route

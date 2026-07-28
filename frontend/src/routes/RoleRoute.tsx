@@ -1,16 +1,25 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import type { UserRole } from '../features/auth/types';
-import { getCurrentUser, isAuthenticated } from '../store/authStore';
+import type { AuthRole } from '../auth/types';
+import useAuth from '../hooks/useAuth';
 
-export default function RoleRoute({ allowedRoles }: { allowedRoles: UserRole[] }) {
+export default function RoleRoute({ allowedRoles }: { allowedRoles: AuthRole[] }) {
   const location = useLocation();
-  const user = getCurrentUser();
+  const { status, session } = useAuth();
 
-  if (!isAuthenticated() || !user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (status === 'loading') {
+    return (
+      <div role="status" aria-live="polite">
+        Loading session...
+      </div>
+    );
   }
 
-  if (!allowedRoles.includes(user.role)) {
+  if (status === 'anonymous' || !session) {
+    const from = `${location.pathname}${location.search}`;
+    return <Navigate to="/login" replace state={{ from }} />;
+  }
+
+  if (!allowedRoles.includes(session.role)) {
     return <Navigate to="/forbidden" replace />;
   }
 

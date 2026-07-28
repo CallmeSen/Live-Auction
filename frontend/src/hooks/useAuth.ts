@@ -1,27 +1,59 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useAuthContext } from '../auth/AuthProvider';
 import type { AuthUser } from '../features/auth/types';
-import { AUTH_CHANGED_EVENT, getCurrentUser, logoutSession, updateCurrentUserProfile, } from '../store/authStore';
+
+type CompatibilityProfile = {
+  sub: string;
+  fullName: string;
+  phone: string;
+};
+
+type ProfileUpdate = Pick<CompatibilityProfile, 'fullName' | 'phone'>;
 
 export default function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(() => getCurrentUser());
+  const auth = useAuthContext();
+  const [profile, setProfile] = useState<CompatibilityProfile | null>(null);
+  const session = auth.session;
+  const activeProfile = session && profile?.sub === session.sub
+    ? profile
+    : session
+      ? { sub: session.sub, fullName: session.email, phone: '' }
+      : null;
+  const user: AuthUser | null = session && activeProfile
+    ? {
+        id: session.sub,
+        email: session.email,
+        fullName: activeProfile.fullName,
+        phone: activeProfile.phone,
+        role: session.role === 'ADMIN' ? 'ADMIN' : 'USER',
+        status: 'ACTIVE',
+      }
+    : null;
 
-  useEffect(() => {
-    const sync = () => setUser(getCurrentUser());
-    window.addEventListener(AUTH_CHANGED_EVENT, sync);
-    window.addEventListener('storage', sync);
-    return () => {
-      window.removeEventListener(AUTH_CHANGED_EVENT, sync);
-      window.removeEventListener('storage', sync);
+  const updateProfile = useCallback((update: ProfileUpdate): AuthUser | null => {
+    if (!session) return null;
+
+    const nextProfile: CompatibilityProfile = {
+      sub: session.sub,
+      fullName: update.fullName.trim(),
+      phone: update.phone.trim(),
     };
-  }, []);
-  const logout = () => {
-    logoutSession();
-    setUser(null);
-  };
+    setProfile(nextProfile);
+
+    return {
+      id: session.sub,
+      email: session.email,
+      fullName: nextProfile.fullName,
+      phone: nextProfile.phone,
+      role: session.role === 'ADMIN' ? 'ADMIN' : 'USER',
+      status: 'ACTIVE',
+    };
+  }, [session]);
+
   return {
+    ...auth,
     user,
-    authenticated: Boolean(user),
-    updateProfile: updateCurrentUserProfile,
-    logout,
+    authenticated: auth.status === 'authenticated',
+    updateProfile,
   };
 }
