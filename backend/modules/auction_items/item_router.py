@@ -19,9 +19,13 @@ from modules.auction_items.item_schema import (
     CreateAuctionItemData,
     CreateAuctionItemRequest,
     CreateAuctionItemResponse,
+    DeleteAuctionItemData,
+    DeleteAuctionItemResponse,
     GetAuctionItemDetailResponse,
     ListAuctionItemsResponse,
     SortOrder,
+    UpdateAuctionItemRequest,
+    UpdateAuctionItemResponse,
     UploadAuctionItemImageData,
     UploadAuctionItemImageResponse,
 )
@@ -156,6 +160,60 @@ async def get_auction_item_detail(
         code=1000,
         message="Get auction item detail successfully",
         data=data,
+    )
+
+
+@public_router.patch(
+    "/{item_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=UpdateAuctionItemResponse,
+    dependencies=[Depends(security)],
+)
+async def update_auction_item(
+    item_id: uuid.UUID,
+    request: UpdateAuctionItemRequest,
+    db: DatabaseSession,
+    seller_id: CurrentUserId,
+    item_service: AuctionItemServiceDependency,
+) -> UpdateAuctionItemResponse:
+    item = await item_service.update_item(
+        db=db,
+        item_id=item_id,
+        seller_id=seller_id,
+        request=request,
+    )
+
+    return UpdateAuctionItemResponse(
+        status=status.HTTP_200_OK,
+        code=1000,
+        message="Update auction item successfully",
+        data=CreateAuctionItemData.model_validate(item),
+    )
+
+
+@public_router.delete(
+    "/{item_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=DeleteAuctionItemResponse,
+    dependencies=[Depends(security)],
+)
+async def delete_auction_item(
+    item_id: uuid.UUID,
+    db: DatabaseSession,
+    seller_id: CurrentUserId,
+    item_service: AuctionItemServiceDependency,
+) -> DeleteAuctionItemResponse:
+    deleted_id = await item_service.delete_item(
+        db=db,
+        item_id=item_id,
+        seller_id=seller_id,
+    )
+
+    return DeleteAuctionItemResponse(
+        status=status.HTTP_200_OK,
+        code=1000,
+        message="Delete auction item successfully",
+        data=DeleteAuctionItemData(id=deleted_id),
     )
 
 

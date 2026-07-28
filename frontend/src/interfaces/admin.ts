@@ -20,33 +20,16 @@ export interface CreateAdminUserResponse {
   createdAt: string;
 }
 
-export interface AdminUserListRequest {
-  page?: number;
-  size?: number;
-  status?: AuthUserStatus;
-  keyword?: string;
+export interface UpdateAdminUserStatusRequest {
+  status: AuthUserStatus;
 }
 
-export interface AdminUserListItemResponse {
+export interface UpdateAdminUserStatusResponse {
   id: string;
   email: string;
   fullName: string;
   phone: string;
   role: AuthUserRole;
   status: AuthUserStatus;
-  createdAt: string;
+  updatedAt: string;
 }
-
-export interface AdminUserListResponse {
-  items: AdminUserListItemResponse[];
-  page: number;
-  size: number;
-  total: number;
-}
-
-export interface UpdateAdminUserStatusRequest {
-  status: AuthUserStatus;
-}
-
-export type UpdateAdminUserStatusResponse =
-  AdminUserListItemResponse;

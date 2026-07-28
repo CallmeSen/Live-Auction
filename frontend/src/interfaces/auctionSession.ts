@@ -1,9 +1,11 @@
 import type { AuctionItemSummaryResponse } from './auctionItem';
 
 export type AuctionSessionStatus =
+  | 'PENDING_APPROVAL'
   | 'SCHEDULED'
   | 'ACTIVE'
   | 'ENDED'
+  | 'REJECTED'
   | 'CANCELLED';
 
 export interface AuctionSessionListRequest {
@@ -11,6 +13,7 @@ export interface AuctionSessionListRequest {
   size?: number;
   status?: AuctionSessionStatus;
   keyword?: string;
+  categoryId?: string;
 }
 
 export interface AuctionSessionRuleResponse {
@@ -25,6 +28,7 @@ export interface AuctionSessionListItemResponse {
   endTime: string;
   status: AuctionSessionStatus;
   sellerName: string;
+  primaryImageUrl: string | null;
 }
 
 export interface AuctionSessionListResponse {
@@ -76,19 +80,30 @@ export interface StartAuctionSessionResponse {
   startedAt: string;
 }
 
-export type AuctionSessionReviewStatus =
-  | 'PENDING'
-  | 'APPROVED'
-  | 'REJECTED';
-
-export interface ReviewAuctionSessionRequest {
+export interface RejectAuctionSessionRequest {
   reason?: string | null;
 }
 
-export interface ReviewAuctionSessionResponse {
+export interface ApproveAuctionSessionResponse {
   id: string;
-  reviewStatus: AuctionSessionReviewStatus;
-  reviewedBy: string;
-  reviewedAt: string;
-  rejectionReason: string | null;
+  status: AuctionSessionStatus;
+  approvedAt: string;
+}
+
+export interface RejectAuctionSessionResponse {
+  id: string;
+  status: AuctionSessionStatus;
+  rejectedAt: string;
+  reason: string | null;
+}
+
+export interface CancelAuctionSessionRequest {
+  reason?: string | null;
+}
+
+export interface CancelAuctionSessionResponse {
+  id: string;
+  status: AuctionSessionStatus;
+  cancelledAt: string;
+  reason: string | null;
 }

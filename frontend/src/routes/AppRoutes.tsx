@@ -5,6 +5,8 @@ import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
 import LoginPage from '../features/auth/pages/LoginPage';
 import RegisterPage from '../features/auth/pages/RegisterPage';
+import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from '../features/auth/pages/ResetPasswordPage';
 import AccessDeniedPage from '../features/auth/pages/AccessDeniedPage';
 import AuctionListPage from '../features/auction/pages/AuctionListPage';
 import AuctionDetailPage from '../features/auction/pages/AuctionDetailPage';
@@ -18,6 +20,7 @@ import AdminAuctionsPage from '../features/admin/pages/AdminAuctionsPage';
 import AdminCategoriesPage from '../features/admin/pages/AdminCategoriesPage';
 import NotificationsPage from '../features/notifications/pages/NotificationsPage';
 import AuctionSessionDetailPage from '../features/auction/pages/AuctionSessionDetailPage';
+import AuctionItemEditorPage from '../features/auction/pages/AuctionItemEditorPage';
 
 export default function AppRoutes() {
   return (
@@ -28,6 +31,8 @@ export default function AppRoutes() {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
 
       <Route element={<MainLayout />}>
@@ -44,6 +49,14 @@ export default function AppRoutes() {
             <Route path="/my-bids" element={<MyBidsPage />} />
             <Route path="/auctions/create" element={<CreateAuctionPage />} />
             <Route path="/my-auctions" element={<MyAuctionsPage />} />
+            <Route
+              path="/auction-sessions/:sessionId/items/create"
+              element={<AuctionItemEditorPage />}
+            />
+            <Route
+              path="/auction-items/:itemId/edit"
+              element={<AuctionItemEditorPage />}
+            />
           </Route>
 
           <Route element={<RoleRoute allowedRoles={['ADMIN']} />}>

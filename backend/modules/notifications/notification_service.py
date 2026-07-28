@@ -181,3 +181,30 @@ class NotificationService:
             db=db,
             notification=notification,
         )
+
+    async def notify_session_cancelled(
+        self,
+        db: AsyncSession,
+        seller_id: uuid.UUID,
+        session_id: uuid.UUID,
+        session_title: str,
+        reason: str | None,
+    ) -> None:
+        message = f'Phiên đấu giá "{session_title}" của bạn đã bị quản trị viên hủy.'
+
+        if reason:
+            message += f" Lý do: {reason}"
+
+        notification = Notification(
+            user_id=seller_id,
+            type=NotificationType.AUCTION,
+            title="Phiên đấu giá đã bị hủy",
+            message=message,
+            action_url=f"/auction-sessions/{session_id}",
+            is_read=False,
+        )
+
+        await self.notification_repository.create(
+            db=db,
+            notification=notification,
+        )

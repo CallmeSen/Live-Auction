@@ -9,7 +9,6 @@ const axiosClient = axios.create({
         'http://localhost:8000/api/v1',
     headers: {
         Accept: 'application/json',
-        'Content-Type': 'application/json',
     },
 });
 

@@ -12,7 +12,6 @@ Frontend chưa gọi các method này cho đến khi backend triển khai xong.
 | Duyệt phiên | PATCH | `/admin/auction-sessions/{sessionId}/approve` | `auctionSessionService.approveSession` **** ĐÃ HOÀN THÀNH ****
 | Dừng phiên | PATCH | `/admin/auction-sessions/{sessionId}/reject` | `auctionSessionService.rejectSession` |  **** ĐÃ HOÀN THÀNH ****
 | Danh sách phiên chưa duyệt | PATCH | `/admin/auction-sessions/pending` |          **** ĐÃ HOÀN THÀNH ****
-| Upload ảnh vật phẩm | POST | `/auction-items/{itemId}/images` | `auctionItemService.uploadImage` |
 | Xem hồ sơ | GET | `/users/me` | `userService.getProfile` |          **** ĐÃ HOÀN THÀNH ****
 | Cập nhật hồ sơ | PATCH | `/users/me` | `userService.updateProfile` |          **** ĐÃ HOÀN THÀNH ****
 | Xem tùy chọn thông báo | GET | `/users/me/notification-preferences` | `userService.getNotificationPreferences`**** ĐÃ HOÀN THÀNH ****

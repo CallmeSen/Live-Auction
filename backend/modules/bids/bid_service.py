@@ -1,10 +1,10 @@
 import uuid
-from datetime import datetime
 
 from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
+from app.utils.datetime_utils import vietnam_now_naive
 from app.models.bid_model import Bid
 from app.models.user_model import User
 from common.enum import AuctionItemStatus, AuctionSessionStatus, BidStatus
@@ -106,7 +106,7 @@ class BidService:
                     message="Auction session is not active",
                 )
 
-            current_time = datetime.now()
+            current_time = vietnam_now_naive()
 
             if not (
                 session.start_time <= current_time < session.end_time

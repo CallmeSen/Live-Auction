@@ -6,6 +6,8 @@ import Modal from '../../../components/common/Modal';
 import useAuth from '../../../hooks/useAuth';
 import { roleLabel } from '../../../store/authStore';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { userService } from '../../../services/userService';
+import { getApiErrorMessage } from '../../../services/apiError';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -14,6 +16,10 @@ export default function ProfilePage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loadingProfile, setLoadingProfile] =
+    useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profileError, setProfileError] = useState('');
 
   const [form, setForm] = useState(() => ({
     fullName: user?.fullName ?? '',
@@ -24,6 +30,53 @@ export default function ProfilePage() {
     null,
   );
   const [pendingLogout, setPendingLogout] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadProfile = async () => {
+      try {
+        setLoadingProfile(true);
+        setProfileError('');
+
+        const profile = await userService.getProfile();
+
+        if (cancelled) return;
+
+        updateProfile({
+          fullName: profile.fullName,
+          phone: profile.phone,
+        });
+        setForm({
+          fullName: profile.fullName,
+          phone: profile.phone,
+        });
+      } catch (requestError) {
+        if (!cancelled) {
+          setProfileError(
+            getApiErrorMessage(
+              requestError,
+              'Không thể tải hồ sơ từ hệ thống.',
+            ),
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingProfile(false);
+        }
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, updateProfile]);
 
   const isDirty =
     form.fullName !== (user?.fullName ?? '') ||
@@ -48,29 +101,59 @@ export default function ProfilePage() {
     setSaved(false);
   };
 
-  const saveChanges = () => {
-    if (!isEditing || !form.fullName.trim()) return false;
+  const saveChanges = async (): Promise<boolean> => {
+    const fullName = form.fullName.trim();
+    const phone = form.phone.replace(/[\s-]/g, '');
 
-    const updatedUser = updateProfile(form);
+    if (!isEditing || !fullName) return false;
 
-    if (!updatedUser) return false;
+    if (!/^\+?\d{9,15}$/.test(phone)) {
+      setProfileError(
+        'Số điện thoại phải có từ 9 đến 15 chữ số và có thể bắt đầu bằng +.',
+      );
+      return false;
+    }
 
-    setForm({
-      fullName: updatedUser.fullName,
-      phone: updatedUser.phone,
-    });
+    try {
+      setSaving(true);
+      setProfileError('');
 
-    setIsEditing(false);
-    setSaved(true);
+      const profile = await userService.updateProfile({
+        fullName,
+        phone,
+      });
+      const updatedUser = updateProfile({
+        fullName: profile.fullName,
+        phone: profile.phone,
+      });
 
-    setTimeout(() => setSaved(false), 2500);
+      if (!updatedUser) return false;
 
-    return true;
+      setForm({
+        fullName: updatedUser.fullName,
+        phone: updatedUser.phone,
+      });
+      setIsEditing(false);
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2500);
+
+      return true;
+    } catch (requestError) {
+      setProfileError(
+        getApiErrorMessage(
+          requestError,
+          'Không thể cập nhật hồ sơ.',
+        ),
+      );
+      return false;
+    } finally {
+      setSaving(false);
+    }
   };
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    saveChanges();
+    void saveChanges();
   };
 
   const handleLogout = () => {
@@ -113,8 +196,8 @@ export default function ProfilePage() {
     runPendingAction();
   };
 
-  const saveAndContinue = () => {
-    if (saveChanges()) {
+  const saveAndContinue = async () => {
+    if (await saveChanges()) {
       runPendingAction();
     }
   };
@@ -289,7 +372,7 @@ export default function ProfilePage() {
             </h2>
 
             <span className="text-xs text-[var(--color-text-dim)]">
-              
+              {loadingProfile ? 'Đang tải hồ sơ...' : ''}
             </span>
           </div>
 
@@ -306,11 +389,14 @@ export default function ProfilePage() {
 
             <Input
               label="Số điện thoại"
+              type="tel"
               value={form.phone}
               onChange={(event) =>
                 updateField('phone', event.target.value)
               }
               disabled={!isEditing}
+              pattern="\+?[0-9\s-]{9,18}"
+              required
             />
           </div>
 
@@ -396,6 +482,12 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {profileError && (
+            <p className="mt-6 rounded-md border border-[var(--color-danger-solid)]/40 bg-[var(--color-danger-solid)]/10 px-4 py-3 text-xs text-[var(--color-danger)]">
+              {profileError}
+            </p>
+          )}
+
           <div className="mt-8 flex flex-wrap items-center justify-end gap-3">
             {saved && (
               <span className="mr-auto text-xs text-[var(--color-success)]">
@@ -422,12 +514,17 @@ export default function ProfilePage() {
             <Button
               type="submit"
               disabled={
+                loadingProfile ||
+                saving ||
                 !isEditing ||
                 !isDirty ||
-                !form.fullName.trim()
+                !form.fullName.trim() ||
+                !/^\+?\d{9,15}$/.test(
+                  form.phone.replace(/[\s-]/g, ''),
+                )
               }
             >
-              Lưu thông tin
+              {saving ? 'Đang lưu...' : 'Lưu thông tin'}
             </Button>
           </div>
         </form>
@@ -462,10 +559,16 @@ export default function ProfilePage() {
 
           <Button
             type="button"
-            onClick={saveAndContinue}
-            disabled={!form.fullName.trim()}
+            onClick={() => void saveAndContinue()}
+            disabled={
+              saving ||
+              !form.fullName.trim() ||
+              !/^\+?\d{9,15}$/.test(
+                form.phone.replace(/[\s-]/g, ''),
+              )
+            }
           >
-            Lưu thay đổi
+            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
           </Button>
         </div>
       </Modal>

@@ -7,6 +7,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    model_validator,
 )
 
 from common.enum import AuctionItemStatus, AuctionSessionStatus, BidStatus
@@ -62,6 +63,46 @@ class CreateAuctionItemResponse(BaseModel):
     data: CreateAuctionItemData
 
 
+class UpdateAuctionItemRequest(BaseModel):
+    category_id: uuid.UUID | None = Field(default=None, alias="categoryId")
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = None
+    starting_price: Decimal | None = Field(
+        default=None,
+        alias="startingPrice",
+        gt=0,
+    )
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        str_strip_whitespace=True,
+    )
+
+    @model_validator(mode="after")
+    def require_at_least_one_field(self) -> "UpdateAuctionItemRequest":
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided")
+        return self
+
+
+class UpdateAuctionItemResponse(BaseModel):
+    status: int
+    code: int
+    message: str
+    data: CreateAuctionItemData
+
+
+class DeleteAuctionItemData(BaseModel):
+    id: uuid.UUID
+
+
+class DeleteAuctionItemResponse(BaseModel):
+    status: int
+    code: int
+    message: str
+    data: DeleteAuctionItemData
+
+
 class AuctionItemSellerData(BaseModel):
     id: uuid.UUID
     full_name: str = Field(serialization_alias="fullName")
@@ -107,6 +148,7 @@ class AuctionItemBidData(BaseModel):
 class AuctionItemDetailData(BaseModel):
     id: uuid.UUID
     session_id: uuid.UUID = Field(serialization_alias="sessionId")
+    category_id: uuid.UUID | None = Field(serialization_alias="categoryId")
     title: str
     description: str | None
     starting_price: Decimal = Field(serialization_alias="startingPrice")

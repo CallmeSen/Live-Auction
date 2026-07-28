@@ -1,13 +1,14 @@
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.item_model import AuctionItem
 from app.models.session_model import AuctionSession
-from common.enum import AuctionSessionStatus
+from common.enum import AuctionItemStatus, AuctionSessionStatus
 
 
 @dataclass(frozen=True)
@@ -17,6 +18,8 @@ class SessionListFilters:
     status: AuctionSessionStatus | None
     keyword: str | None
     seller_id: uuid.UUID | None = None
+    category_id: uuid.UUID | None = None
+    excluded_statuses: tuple[AuctionSessionStatus, ...] = ()
 
 class AuctionSessionRepository:
     async def find_by_id(
@@ -81,8 +84,20 @@ class AuctionSessionRepository:
         if filters.status is not None:
             conditions.append(AuctionSession.status == filters.status)
 
+        if filters.excluded_statuses:
+            conditions.append(
+                ~AuctionSession.status.in_(filters.excluded_statuses),
+            )
+
         if filters.seller_id is not None:
             conditions.append(AuctionSession.seller_id == filters.seller_id)
+
+        if filters.category_id is not None:
+            conditions.append(
+                AuctionSession.items.any(
+                    AuctionItem.category_id == filters.category_id,
+                ),
+            )
 
         if filters.keyword:
             keyword_pattern = f"%{filters.keyword.lower()}%"
@@ -115,9 +130,64 @@ class AuctionSessionRepository:
 
         statement = (
             select(AuctionSession)
-            .options(selectinload(AuctionSession.seller))
+            .options(
+                selectinload(AuctionSession.seller),
+                selectinload(AuctionSession.items).selectinload(
+                    AuctionItem.images,
+                ),
+            )
             .order_by(
-                AuctionSession.start_time.asc(),
+                case(
+                    (AuctionSession.status == AuctionSessionStatus.ACTIVE, 0),
+                    (
+                        AuctionSession.status
+                        == AuctionSessionStatus.SCHEDULED,
+                        1,
+                    ),
+                    (
+                        AuctionSession.status
+                        == AuctionSessionStatus.PENDING_APPROVAL,
+                        2,
+                    ),
+                    (AuctionSession.status == AuctionSessionStatus.ENDED, 3),
+                    (
+                        AuctionSession.status
+                        == AuctionSessionStatus.REJECTED,
+                        4,
+                    ),
+                    (
+                        AuctionSession.status
+                        == AuctionSessionStatus.CANCELLED,
+                        5,
+                    ),
+                    else_=6,
+                ).asc(),
+                case(
+                    (
+                        AuctionSession.status
+                        == AuctionSessionStatus.ACTIVE,
+                        AuctionSession.end_time,
+                    ),
+                    (
+                        AuctionSession.status
+                        == AuctionSessionStatus.SCHEDULED,
+                        AuctionSession.start_time,
+                    ),
+                    else_=None,
+                ).asc(),
+                case(
+                    (
+                        AuctionSession.status.in_(
+                            (
+                                AuctionSessionStatus.ENDED,
+                                AuctionSessionStatus.REJECTED,
+                                AuctionSessionStatus.CANCELLED,
+                            ),
+                        ),
+                        AuctionSession.end_time,
+                    ),
+                    else_=None,
+                ).desc(),
                 AuctionSession.created_at.desc(),
             )
             .offset(offset)
@@ -130,6 +200,95 @@ class AuctionSessionRepository:
         result = await db.execute(statement)
 
         return list(result.scalars().unique().all()), total
+
+    async def synchronize_time_based_statuses(
+        self,
+        db: AsyncSession,
+        current_time: datetime,
+    ) -> int:
+        expirable_statuses = (
+            AuctionSessionStatus.PENDING_APPROVAL,
+            AuctionSessionStatus.SCHEDULED,
+            AuctionSessionStatus.ACTIVE,
+        )
+
+        expired_result = await db.execute(
+            update(AuctionSession)
+            .where(
+                AuctionSession.status.in_(expirable_statuses),
+                AuctionSession.end_time <= current_time,
+            )
+            .values(status=AuctionSessionStatus.ENDED),
+        )
+
+        future_active_session_ids = select(AuctionSession.id).where(
+            AuctionSession.status == AuctionSessionStatus.ACTIVE,
+            AuctionSession.start_time > current_time,
+        )
+
+        await db.execute(
+            update(AuctionItem)
+            .where(
+                AuctionItem.session_id.in_(future_active_session_ids),
+                AuctionItem.status == AuctionItemStatus.OPEN,
+            )
+            .values(
+                status=AuctionItemStatus.READY,
+                opened_at=None,
+            ),
+        )
+
+        rescheduled_result = await db.execute(
+            update(AuctionSession)
+            .where(
+                AuctionSession.status == AuctionSessionStatus.ACTIVE,
+                AuctionSession.start_time > current_time,
+            )
+            .values(status=AuctionSessionStatus.SCHEDULED),
+        )
+
+        active_session_ids = select(AuctionSession.id).where(
+            AuctionSession.status == AuctionSessionStatus.SCHEDULED,
+            AuctionSession.start_time <= current_time,
+            AuctionSession.end_time > current_time,
+        )
+
+        await db.execute(
+            update(AuctionItem)
+            .where(
+                AuctionItem.session_id.in_(active_session_ids),
+                AuctionItem.status == AuctionItemStatus.READY,
+            )
+            .values(
+                status=AuctionItemStatus.OPEN,
+                opened_at=current_time,
+            ),
+        )
+
+        active_result = await db.execute(
+            update(AuctionSession)
+            .where(
+                AuctionSession.status == AuctionSessionStatus.SCHEDULED,
+                AuctionSession.start_time <= current_time,
+                AuctionSession.end_time > current_time,
+            )
+            .values(status=AuctionSessionStatus.ACTIVE),
+        )
+
+        expired_count = max(
+            getattr(expired_result, "rowcount", 0) or 0,
+            0,
+        )
+        active_count = max(
+            getattr(active_result, "rowcount", 0) or 0,
+            0,
+        )
+        rescheduled_count = max(
+            getattr(rescheduled_result, "rowcount", 0) or 0,
+            0,
+        )
+
+        return expired_count + active_count + rescheduled_count
 
     async def create(
         self,

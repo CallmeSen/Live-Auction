@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -57,8 +58,9 @@ export default function LoginPage() {
         />
         <Input
           label="Mật khẩu"
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           name="password"
+          autoComplete="current-password"
           placeholder="••••••"
           required
           value={form.password}
@@ -67,8 +69,16 @@ export default function LoginPage() {
         />
 
         <div className="flex items-center justify-between text-sm">
-          <label className="flex items-center gap-2 text-[var(--color-text-muted)]"><input type="checkbox" className="accent-[var(--color-primary)]" /> Ghi nhớ đăng nhập</label>
-          <button type="button" className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)]">Quên mật khẩu?</button>
+          <label className="flex items-center gap-2 text-[var(--color-text-muted)]">
+            <input
+              type="checkbox"
+              checked={showPassword}
+              onChange={(event) => setShowPassword(event.target.checked)}
+              className="accent-[var(--color-primary)]"
+            />
+            {'Hi\u1EC7n m\u1EADt kh\u1EA9u'}
+          </label>
+          <Link to="/forgot-password" className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)]">Quên mật khẩu?</Link>
         </div>
 
         <Button type="submit" disabled={loading} className="mt-1 w-full">{loading ? 'Đang đăng nhập...' : 'Đăng nhập'}</Button>

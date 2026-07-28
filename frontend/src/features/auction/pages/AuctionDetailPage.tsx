@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import BidForm from '../../../components/auction/BidForm';
 import AuthRequiredModal from '../../../components/common/AuthRequiredModal';
 import useAuth from '../../../hooks/useAuth';
@@ -10,6 +11,7 @@ import type {
 } from '../../../interfaces/auctionItem';
 import { bidService } from '../../../services/bidService';
 import { getApiErrorMessage } from '../../../services/apiError';
+import { resolveBackendAssetUrl } from '../../../utils/assetUrl';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import {
   formatDateTime,
@@ -17,19 +19,17 @@ import {
 } from '../../../utils/formatDate';
 
 const itemStatusLabel: Record<AuctionItemStatus, string> = {
+  DRAFT: 'Bản nháp',
+  READY: 'Chờ phiên bắt đầu',
+  OPEN: 'Đang nhận trả giá',
   SOLD: 'Đã bán',
-  UNSOLD: 'Sắp bán',
-  CANCELLED: 'Đã huỷ',
+  UNSOLD: 'Không bán được',
+  CANCELLED: 'Đã hủy',
 };
 
-function getItemStatusLabel(status: string): string {
-  if (status === 'SOLD' || status === 'CANCELLED') {
-    return itemStatusLabel[status];
-  }
-  return itemStatusLabel.UNSOLD;
-}
-
-export default function AuctionDetailPage() {
+function getItemStatusLabel(status: AuctionItemStatus): string {
+  return itemStatusLabel[status];
+}export default function AuctionDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
 
@@ -168,8 +168,25 @@ export default function AuctionDetailPage() {
 
   const displayableImages = item.images.filter(
     (image): image is typeof image & { imageUrl: string } =>
-      Boolean(image.imageUrl), 
+      Boolean(image.imageUrl),
   );
+
+  const selectedImageIndex = Math.max(
+    displayableImages.findIndex(
+      (image) => image.imageUrl === selectedImage,
+    ),
+    0,
+  );
+
+  const selectRelativeImage = (offset: number) => {
+    if (displayableImages.length < 2) return;
+
+    const nextIndex =
+      (selectedImageIndex + offset + displayableImages.length) %
+      displayableImages.length;
+
+    setSelectedImage(displayableImages[nextIndex].imageUrl);
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8 sm:py-12">
@@ -182,13 +199,41 @@ export default function AuctionDetailPage() {
 
       <div className="mt-7 grid gap-10 lg:grid-cols-[1.15fr_0.85fr]">
         <div>
-          <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+          <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
             {selectedImage ? (
-              <img
-                src={selectedImage}
-                alt={item.title}
-                className="aspect-[4/3] w-full object-cover"
-              />
+              <>
+                <img
+                  src={resolveBackendAssetUrl(selectedImage) ?? undefined}
+                  alt={item.title}
+                  className="aspect-[4/3] w-full object-cover"
+                />
+
+                {displayableImages.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Xem ảnh trước"
+                      onClick={() => selectRelativeImage(-1)}
+                      className="absolute left-3 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-black/55 p-2 text-white transition hover:bg-black/75"
+                    >
+                      <ChevronLeft size={22} />
+                    </button>
+
+                    <button
+                      type="button"
+                      aria-label="Xem ảnh tiếp theo"
+                      onClick={() => selectRelativeImage(1)}
+                      className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-black/55 p-2 text-white transition hover:bg-black/75"
+                    >
+                      <ChevronRight size={22} />
+                    </button>
+
+                    <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
+                      {selectedImageIndex + 1}/{displayableImages.length}
+                    </span>
+                  </>
+                )}
+              </>
             ) : (
               <div className="flex aspect-[4/3] items-center justify-center text-sm text-[var(--color-text-dim)]">
                 Vật phẩm chưa có hình ảnh
@@ -197,7 +242,7 @@ export default function AuctionDetailPage() {
           </div>
 
           {displayableImages.length > 0 && (
-            <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
               {displayableImages.map((image, index) => (
                 <button
                   type="button"
@@ -210,7 +255,7 @@ export default function AuctionDetailPage() {
                   }`}
                 >
                   <img
-                    src={image.imageUrl}
+                    src={resolveBackendAssetUrl(image.imageUrl) ?? undefined}
                     alt={`${item.title} ảnh ${index + 1}`}
                     className="aspect-[4/3] w-full object-cover"
                   />
