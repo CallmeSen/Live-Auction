@@ -1,7 +1,4 @@
-import axios, {
-    type InternalAxiosRequestConfig,
-} from 'axios';
-import { logoutSession } from '../store/authStore';
+import axios from 'axios';
 
 const axiosClient = axios.create({
     baseURL:
@@ -11,45 +8,5 @@ const axiosClient = axios.create({
         Accept: 'application/json',
     },
 });
-
-axiosClient.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
-        const accessToken =
-            localStorage.getItem('accessToken');
-
-        if (accessToken) {
-            config.headers.Authorization =
-                `Bearer ${accessToken}`;
-        }
-
-        return config;
-    },
-);
-
-axiosClient.interceptors.response.use(
-    (response) => response,
-    (error: unknown) => {
-        if (axios.isAxiosError(error) && error.response?.status === 401) {
-            const requestUrl = error.config?.url ?? '';
-            const isAuthRequest = requestUrl.includes('/auth/');
-            const hasActiveSession = Boolean(
-                localStorage.getItem('accessToken'),
-            );
-
-            // Một request bảo vệ có thể hoàn tất sau khi người dùng vừa
-            // chủ động đăng xuất. Khi token đã bị xóa, không được ép điều
-            // hướng lần hai sang /login.
-            if (!isAuthRequest && hasActiveSession) {
-                logoutSession();
-
-                if (window.location.pathname !== '/login') {
-                    window.location.replace('/login');
-                }
-            }
-        }
-
-        return Promise.reject(error);
-    },
-);
 
 export default axiosClient;

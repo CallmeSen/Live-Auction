@@ -20,6 +20,8 @@ export default function ProfilePage() {
     useState(true);
   const [saving, setSaving] = useState(false);
   const [profileError, setProfileError] = useState('');
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
 
   const [form, setForm] = useState(() => ({
     fullName: user?.fullName ?? '',
@@ -156,14 +158,29 @@ export default function ProfilePage() {
     void saveChanges();
   };
 
+  const performLogout = async () => {
+    if (loggingOut) return;
+
+    setLoggingOut(true);
+    setLogoutError('');
+
+    try {
+      await logout();
+      navigate('/auctions', { replace: true });
+    } catch {
+      setLogoutError('Unable to sign out. Please try again.');
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
   const handleLogout = () => {
     if (isEditing && isDirty) {
       setPendingLogout(true);
       return;
     }
 
-    logout();
-    navigate('/auctions', { replace: true });
+    void performLogout();
   };
 
   const closeUnsavedModal = () => {
@@ -171,7 +188,7 @@ export default function ProfilePage() {
     setPendingLogout(false);
   };
 
-  const runPendingAction = () => {
+  const runPendingAction = async () => {
     const destination = pendingDestination;
     const shouldLogout = pendingLogout;
 
@@ -179,8 +196,7 @@ export default function ProfilePage() {
     setPendingLogout(false);
 
     if (shouldLogout) {
-      logout();
-      navigate('/auctions', { replace: true });
+      await performLogout();
       return;
     }
 
@@ -193,12 +209,12 @@ export default function ProfilePage() {
     resetForm();
     setIsEditing(false);
     setSaved(false);
-    runPendingAction();
+    void runPendingAction();
   };
 
   const saveAndContinue = async () => {
     if (await saveChanges()) {
-      runPendingAction();
+      await runPendingAction();
     }
   };
 
@@ -356,10 +372,20 @@ export default function ProfilePage() {
           <button
             type="button"
             onClick={handleLogout}
+            disabled={loggingOut}
             className="mt-5 inline-flex w-full items-center justify-center rounded-md border border-[var(--color-danger-border)] px-5 py-2.5 text-sm font-semibold text-[var(--color-danger)] transition hover:border-[var(--color-danger)] hover:bg-[var(--color-danger-border)]/15"
           >
             Đăng xuất
           </button>
+
+          {logoutError && (
+            <p
+              role="alert"
+              className="mt-3 text-xs text-[var(--color-danger)]"
+            >
+              {logoutError}
+            </p>
+          )}
         </aside>
 
         <form
