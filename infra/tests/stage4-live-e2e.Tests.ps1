@@ -99,7 +99,7 @@ Describe 'Stage 4 live browser checkpoint contract' {
         $runner = Get-Content -Raw -LiteralPath $runnerPath
         $runner | Should Match '\[switch\]\$RunStage4LiveE2E'
         $runner | Should Match '\$bidderBUsername'
-        $runner | Should Match '(?s)New-CognitoFixtureUser.*?-Group ''BIDDER''.*?\$bidderB'
+        $runner | Should Match '(?s)New-CognitoFixtureUser.*?-Group ''USER''.*?\$bidderB'
         $runner | Should Match 'npm run test:e2e:live'
         $runner | Should Match '(?s)finally\s*\{.*?\$bidderBSub.*?generated Cognito user'
     }

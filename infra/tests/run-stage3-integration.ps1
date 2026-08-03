@@ -382,7 +382,7 @@ function New-CognitoFixtureUser {
         [Parameter(Mandatory)][string]$PoolId,
         [Parameter(Mandatory)][string]$Username,
         [Parameter(Mandatory)][string]$Password,
-        [Parameter(Mandatory)][ValidateSet('SELLER', 'BIDDER')][string]$Group,
+        [Parameter(Mandatory)][ValidateSet('USER')][string]$Group,
         [Parameter(Mandatory)]
         [AllowEmptyCollection()]
         [System.Collections.Generic.List[string]]$CreatedUsers
@@ -1171,12 +1171,12 @@ try {
     Write-Output 'invalid token: denied'
 
     New-CognitoFixtureUser -PoolId $poolId -Username $sellerUsername `
-        -Password $sellerPassword -Group 'SELLER' -CreatedUsers $createdUsers
+        -Password $sellerPassword -Group 'USER' -CreatedUsers $createdUsers
     New-CognitoFixtureUser -PoolId $poolId -Username $bidderUsername `
-        -Password $bidderPassword -Group 'BIDDER' -CreatedUsers $createdUsers
+        -Password $bidderPassword -Group 'USER' -CreatedUsers $createdUsers
     if ($RunStage4LiveE2E) {
         New-CognitoFixtureUser -PoolId $poolId -Username $bidderBUsername `
-            -Password $bidderBPassword -Group 'BIDDER' -CreatedUsers $createdUsers
+            -Password $bidderBPassword -Group 'USER' -CreatedUsers $createdUsers
     }
     $sellerIdentity = Get-CognitoIdentity -PoolId $poolId -ClientId $clientId `
         -Username $sellerUsername -Password $sellerPassword

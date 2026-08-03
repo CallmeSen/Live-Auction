@@ -191,8 +191,8 @@ Describe 'Stage 2 Cognito identity resources' {
         $userPool | Should Match 'temporary_password_validity_days\s*=\s*7'
     }
 
-    It 'limits signup and protects verified email updates' {
-        $userPool | Should Match '(?s)admin_create_user_config\s*\{.*?allow_admin_create_user_only\s*=\s*true'
+    It 'allows self sign-up and protects verified email updates' {
+        $userPool | Should Match '(?s)admin_create_user_config\s*\{.*?allow_admin_create_user_only\s*=\s*false'
         $userPool | Should Match '(?s)user_attribute_update_settings\s*\{.*?attributes_require_verification_before_update\s*=\s*\["email"\]'
         $userPool | Should Match 'deletion_protection\s*=\s*var\.enable_cognito_deletion_protection\s*\?\s*"ACTIVE"\s*:\s*"INACTIVE"'
     }
@@ -217,13 +217,12 @@ Describe 'Stage 2 Cognito identity resources' {
         $webClient | Should Match '(?s)token_validity_units\s*\{.*?access_token\s*=\s*"hours".*?id_token\s*=\s*"hours".*?refresh_token\s*=\s*"days"'
     }
 
-    It 'creates the three role groups with deterministic precedence' {
+    It 'creates ADMIN and USER groups with deterministic precedence' {
         ([regex]::Matches($main, 'resource\s+"aws_cognito_user_group"\s+')).Count |
-            Should Be 3
+            Should Be 2
         foreach ($group in @(
             @{ Resource = 'admin'; Name = 'ADMIN'; Precedence = 1 },
-            @{ Resource = 'seller'; Name = 'SELLER'; Precedence = 2 },
-            @{ Resource = 'bidder'; Name = 'BIDDER'; Precedence = 3 }
+            @{ Resource = 'user'; Name = 'USER'; Precedence = 2 }
         )) {
             $block = Get-HclBlock $main "resource\s+`"aws_cognito_user_group`"\s+`"$($group.Resource)`""
             $block | Should Match 'user_pool_id\s*=\s*aws_cognito_user_pool\.main\.id'
@@ -232,8 +231,10 @@ Describe 'Stage 2 Cognito identity resources' {
         }
     }
 
-    It 'does not add post-confirmation or unrelated infrastructure' {
-        $main | Should Not Match 'post_confirmation|lambda_config|aws_lambda_'
+    It 'adds only the Post Confirmation Lambda needed for USER assignment' {
+        $main | Should Match 'post_confirmation|lambda_config|aws_lambda_function'
+        $main | Should Match 'cognito-idp:AdminAddUserToGroup'
+        $main | Should Match 'aws_lambda_permission'
         $main | Should Not Match 'aws_vpc|aws_subnet|aws_rds|aws_db_|aurora|aws_ecs|aws_apigateway'
         $main | Should Not Match '111122223333|<account-id>|access_key|secret_key|root'
     }

@@ -211,7 +211,7 @@ function New-CognitoBidder {
         'cognito-idp', 'admin-add-user-to-group',
         '--user-pool-id', $PoolId,
         '--username', $Username,
-        '--group-name', 'BIDDER'
+        '--group-name', 'USER'
     ) | Out-Null
 }
 

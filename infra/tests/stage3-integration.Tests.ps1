@@ -125,15 +125,14 @@ Describe 'Stage 3 integration runner static safety contract' {
             @($markerLiterals | Sort-Object)).Count | Should Be 0
     }
 
-    It 'creates scoped seller and bidder Cognito fixtures and retains only ID tokens' {
+    It 'creates scoped USER Cognito fixtures and retains only ID tokens' {
         $source | Should Match 'stage3-'
         $source | Should Match 'cognito-idp'',\s*''admin-create-user'''
         $source | Should Match 'cognito-idp'',\s*''admin-set-user-password'''
         $source | Should Match 'Permanent\s*=\s*\$true'
         $source | Should Match 'cognito-idp'',\s*''admin-add-user-to-group'''
-        $source | Should Match "ValidateSet\('SELLER',\s*'BIDDER'\)"
-        $source | Should Match "-Group\s+'SELLER'"
-        $source | Should Match "-Group\s+'BIDDER'"
+        $source | Should Match "ValidateSet\('USER'\)"
+        $source | Should Match "-Group\s+'USER'"
         $source | Should Match 'ADMIN_USER_PASSWORD_AUTH'
         $source | Should Match 'admin-delete-user'
     }
