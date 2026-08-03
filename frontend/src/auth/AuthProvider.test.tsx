@@ -19,10 +19,10 @@ import { AuthProvider } from './AuthProvider';
 import LoginPage from '../features/auth/pages/LoginPage';
 import useAuth from '../hooks/useAuth';
 
-const bidderSession: AuthSession = {
-  sub: 'bidder-1',
-  email: 'bidder@example.test',
-  role: 'BIDDER',
+const userSession: AuthSession = {
+  sub: 'user-1',
+  email: 'user@example.test',
+  role: 'USER',
 };
 
 function deferred<T>() {
@@ -40,7 +40,7 @@ function createAdapter(
   overrides: Partial<CognitoAuthAdapter> = {},
 ): CognitoAuthAdapter {
   return {
-    signIn: vi.fn().mockResolvedValue(bidderSession),
+    signIn: vi.fn().mockResolvedValue(userSession),
     restore: vi.fn().mockResolvedValue(null),
     idToken: vi.fn().mockResolvedValue('id-token'),
     signOut: vi.fn().mockResolvedValue(undefined),
@@ -59,7 +59,7 @@ function AuthProbe() {
       </span>
       <button
         type="button"
-        onClick={() => void auth.login('bidder@example.test', 'secret-value').catch(() => {
+        onClick={() => void auth.login('user@example.test', 'secret-value').catch(() => {
           document.body.dataset.authError = 'login-failed';
         })}
       >
@@ -103,13 +103,13 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('status')).toHaveTextContent('loading');
     expect(adapter.restore).toHaveBeenCalledOnce();
 
-    restoration.resolve(bidderSession);
+    restoration.resolve(userSession);
 
     await waitFor(() => {
       expect(screen.getByTestId('status')).toHaveTextContent('authenticated');
     });
     expect(screen.getByTestId('session')).toHaveTextContent(
-      'bidder@example.test:BIDDER',
+      'user@example.test:USER',
     );
   });
 
@@ -146,7 +146,7 @@ describe('AuthProvider', () => {
 
     await user.click(screen.getByRole('button', { name: 'Login' }));
     expect(adapter.signIn).toHaveBeenCalledWith(
-      'bidder@example.test',
+      'user@example.test',
       'secret-value',
     );
     expect(screen.getByTestId('status')).toHaveTextContent('authenticated');
@@ -169,14 +169,14 @@ describe('AuthProvider', () => {
 
   it('does not let a stale restore overwrite a newer login', async () => {
     const restoration = deferred<AuthSession | null>();
-    const sellerSession: AuthSession = {
-      sub: 'seller-1',
-      email: 'seller@example.test',
-      role: 'SELLER',
+    const restoredUserSession: AuthSession = {
+      sub: 'user-2',
+      email: 'other-user@example.test',
+      role: 'USER',
     };
     const adapter = createAdapter({
       restore: vi.fn(() => restoration.promise),
-      signIn: vi.fn().mockResolvedValue(sellerSession),
+      signIn: vi.fn().mockResolvedValue(restoredUserSession),
     });
     renderProbe(adapter);
 
@@ -184,17 +184,17 @@ describe('AuthProvider', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('session')).toHaveTextContent(
-        'seller@example.test:SELLER',
+        'other-user@example.test:USER',
       );
     });
 
-    restoration.resolve(bidderSession);
+    restoration.resolve(userSession);
     await act(async () => {
       await restoration.promise;
     });
 
     expect(screen.getByTestId('session')).toHaveTextContent(
-      'seller@example.test:SELLER',
+      'other-user@example.test:USER',
     );
   });
 
@@ -220,9 +220,9 @@ describe('AuthProvider', () => {
     const view = renderProbe(adapter);
 
     view.unmount();
-    restoration.resolve(bidderSession);
+    restoration.resolve(userSession);
 
-    await expect(restoration.promise).resolves.toEqual(bidderSession);
+    await expect(restoration.promise).resolves.toEqual(userSession);
   });
 });
 
@@ -253,11 +253,10 @@ async function submitLogin(password = 'top-secret-password') {
 describe('LoginPage', () => {
   it.each([
     ['ADMIN', '/admin'],
-    ['SELLER', '/my-auctions'],
-    ['BIDDER', '/auctions'],
+    ['USER', '/auctions'],
   ] as const)('redirects restored %s sessions to %s without submitting', async (role, destination) => {
     const adapter = createAdapter({
-      restore: vi.fn().mockResolvedValue({ ...bidderSession, role }),
+      restore: vi.fn().mockResolvedValue({ ...userSession, role }),
     });
 
     render(
@@ -277,7 +276,7 @@ describe('LoginPage', () => {
 
   it('returns a restored bidder to an allowed protected from location', async () => {
     const adapter = createAdapter({
-      restore: vi.fn().mockResolvedValue(bidderSession),
+      restore: vi.fn().mockResolvedValue(userSession),
     });
 
     render(
@@ -297,26 +296,26 @@ describe('LoginPage', () => {
     expect(await screen.findByText('restored bid history')).toBeInTheDocument();
   });
 
-  it('sends a restored bidder to role home when from is not allowed', async () => {
+  it('sends a restored user to role home when from is not allowed', async () => {
     const adapter = createAdapter({
-      restore: vi.fn().mockResolvedValue(bidderSession),
+      restore: vi.fn().mockResolvedValue(userSession),
     });
 
     render(
       <AuthProvider adapter={adapter}>
         <MemoryRouter initialEntries={[{
           pathname: '/login',
-          state: { from: '/my-auctions' },
+          state: { from: '/admin' },
         }]}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/auctions" element={<div>restored bidder home</div>} />
+            <Route path="/auctions" element={<div>restored user home</div>} />
           </Routes>
         </MemoryRouter>
       </AuthProvider>,
     );
 
-    expect(await screen.findByText('restored bidder home')).toBeInTheDocument();
+    expect(await screen.findByText('restored user home')).toBeInTheDocument();
   });
 
   it('clears the password immediately and disables submission while pending', async () => {
@@ -330,7 +329,7 @@ describe('LoginPage', () => {
     expect(document.body).not.toHaveTextContent('top-secret-password');
     expect(screen.getByRole('button', { name: /login|ng nh/i })).toBeDisabled();
 
-    signIn.resolve(bidderSession);
+    signIn.resolve(userSession);
     await screen.findByTestId('destination');
   });
 
@@ -353,11 +352,10 @@ describe('LoginPage', () => {
 
   it.each([
     ['ADMIN', '/admin'],
-    ['SELLER', '/my-auctions'],
-    ['BIDDER', '/auctions'],
+    ['USER', '/auctions'],
   ] as const)('redirects %s to %s', async (role, destination) => {
     const adapter = createAdapter({
-      signIn: vi.fn().mockResolvedValue({ ...bidderSession, role }),
+      signIn: vi.fn().mockResolvedValue({ ...userSession, role }),
     });
     render(
       <AuthProvider adapter={adapter}>
@@ -375,7 +373,7 @@ describe('LoginPage', () => {
     expect(await screen.findByText(destination)).toBeInTheDocument();
   });
 
-  it('returns a bidder to a valid protected route but rejects another role route', async () => {
+  it('returns a user to an allowed protected route but rejects an admin route', async () => {
     const validAdapter = createAdapter();
     const validView = render(
       <AuthProvider adapter={validAdapter}>
@@ -395,25 +393,25 @@ describe('LoginPage', () => {
     const invalidAdapter = createAdapter();
     render(
       <AuthProvider adapter={invalidAdapter}>
-        <MemoryRouter initialEntries={[{ pathname: '/login', state: { from: '/my-auctions' } }]}>
+        <MemoryRouter initialEntries={[{ pathname: '/login', state: { from: '/admin' } }]}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/auctions" element={<div>bidder home</div>} />
+            <Route path="/auctions" element={<div>user home</div>} />
           </Routes>
         </MemoryRouter>
       </AuthProvider>,
     );
 
     await submitLogin('safe-password');
-    expect(await screen.findByText('bidder home')).toBeInTheDocument();
+    expect(await screen.findByText('user home')).toBeInTheDocument();
   });
 
-  it('does not link registration or password reset flows', async () => {
+  it('links registration and password reset flows', async () => {
     renderLogin(createAdapter());
 
     await screen.findByLabelText('Email');
 
-    expect(screen.queryByRole('link', { name: /register|ng k/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /forgot|qu.*n/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /create a new account/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /forgot password/i })).toBeInTheDocument();
   });
 });

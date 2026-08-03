@@ -19,7 +19,7 @@ vi.mock('../../../hooks/useAuth', () => ({
     session: {
       sub: 'seller-1',
       email: 'seller@example.test',
-      role: 'SELLER',
+      role: 'USER',
     },
     user: {
       id: 'seller-1',

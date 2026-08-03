@@ -1,8 +1,9 @@
-import AuctionChatInput, {
-  getConnectionStatusLabel,
-} from './AuctionChatInput';
+import AuctionChatInput from './AuctionChatInput';
 import AuctionChatMessageList from './AuctionChatMessageList';
-import type { AuctionChatTimelineEntry } from './auction-chat.types';
+import {
+  getConnectionStatusLabel,
+  type AuctionChatTimelineEntry,
+} from './auction-chat.types';
 import type { ConnectionStatus } from '../../features/auction-items/services/auctionItemSocketClient';
 
 type AuctionChatBoxProps = {

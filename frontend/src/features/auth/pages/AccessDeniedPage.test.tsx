@@ -6,7 +6,7 @@ import accessDeniedSource from './AccessDeniedPage.tsx?raw';
 import type { AuthRole } from '../../../auth/types';
 
 const authState = vi.hoisted(() => ({
-  role: 'BIDDER' as AuthRole,
+  role: 'USER' as AuthRole,
   logout: vi.fn(),
 }));
 
@@ -50,14 +50,13 @@ function renderAccessDenied() {
 
 describe('AccessDeniedPage', () => {
   beforeEach(() => {
-    authState.role = 'BIDDER';
+    authState.role = 'USER';
     authState.logout.mockReset();
   });
 
   it.each([
     ['ADMIN', '/admin'],
-    ['SELLER', '/my-auctions'],
-    ['BIDDER', '/auctions'],
+    ['USER', '/auctions'],
   ] as const)('uses the %s session for role-correct home navigation', (role, home) => {
     authState.role = role;
     renderAccessDenied();

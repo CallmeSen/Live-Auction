@@ -13,8 +13,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Khám phá', to: '/auctions' },
-  { label: 'Đã đặt giá', to: '/my-bids', roles: ['BIDDER'] },
-  { label: 'Phiên của tôi', to: '/my-auctions', roles: ['SELLER'] },
+  { label: 'Đã đặt giá', to: '/my-bids', roles: ['USER'] },
+  { label: 'Phiên của tôi', to: '/my-auctions', roles: ['USER'] },
   { label: 'Tổng quan', to: '/admin', roles: ['ADMIN'] },
   { label: 'Người dùng', to: '/admin/users', roles: ['ADMIN'] },
   { label: 'Kiểm duyệt', to: '/admin/auctions', roles: ['ADMIN'] },
@@ -31,7 +31,7 @@ export default function Navbar() {
   const initials = session?.email.slice(0, 1).toUpperCase() ?? 'G';
   const roleHome = session?.role === 'ADMIN'
     ? '/admin'
-    : session?.role === 'SELLER'
+    : session?.role === 'USER'
       ? '/my-auctions'
       : '/auctions';
 
@@ -64,7 +64,7 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3">
-          {session?.role === 'SELLER' && <Link to="/auctions/create" className="hidden rounded-md bg-[var(--color-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-bg)] transition hover:bg-[var(--color-primary-hover)] sm:block">＋ Tạo phiên</Link>}
+          {session?.role === 'USER' && <Link to="/auctions/create" className="hidden rounded-md bg-[var(--color-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-bg)] transition hover:bg-[var(--color-primary-hover)] sm:block">＋ Tạo phiên</Link>}
           {session ? (
             <>
               <div className="hidden text-right sm:block">
@@ -110,7 +110,7 @@ export default function Navbar() {
         <div className="border-t border-[var(--color-border)] bg-[var(--color-bg)] px-6 py-5 lg:hidden">
           <nav className="flex flex-col gap-4">
             {visibleItems.map((item) => <NavLink key={item.to} to={item.to} onClick={() => setMobileOpen(false)} className={navClass}>{item.label}</NavLink>)}
-            {session?.role === 'SELLER' && <Link to="/auctions/create" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-[var(--color-primary)]">＋ Tạo phiên đấu giá</Link>}
+            {session?.role === 'USER' && <Link to="/auctions/create" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-[var(--color-primary)]">＋ Tạo phiên đấu giá</Link>}
             {!session && (
               <div className="border-t border-[var(--color-border)] pt-4">
                 <Link

@@ -10,7 +10,7 @@ const baseProps = {
   highestBidderAlias: 'Bidder #21',
   bidderAlias: 'Bidder #12',
   extensionCount: 2,
-  role: 'BIDDER' as const,
+  role: 'USER' as const,
   onRetry: vi.fn(),
   now: () => 100_000,
 };
@@ -80,7 +80,7 @@ describe('AuctionRoomPanel', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('updates aliases and shows bid controls only to bidders', () => {
+  it('updates aliases and shows bid controls only to users', () => {
     const bidControl = <button type="button">Trả giá</button>;
     const { rerender } = render(
       <AuctionRoomPanel {...baseProps} bidControl={bidControl} />,
@@ -98,8 +98,6 @@ describe('AuctionRoomPanel', () => {
     expect(screen.getByText('Bidder #44')).toBeVisible();
     expect(screen.getByText('Bidder #45')).toBeVisible();
 
-    rerender(<AuctionRoomPanel {...baseProps} role="SELLER" bidControl={bidControl} />);
-    expect(screen.queryByRole('button', { name: 'Trả giá' })).not.toBeInTheDocument();
     rerender(<AuctionRoomPanel {...baseProps} role="ADMIN" bidControl={bidControl} />);
     expect(screen.queryByRole('button', { name: 'Trả giá' })).not.toBeInTheDocument();
   });

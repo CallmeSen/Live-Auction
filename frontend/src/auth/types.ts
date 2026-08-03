@@ -1,4 +1,4 @@
-export type AuthRole = 'ADMIN' | 'SELLER' | 'BIDDER';
+export type AuthRole = 'ADMIN' | 'USER';
 
 export type AuthSession = {
   sub: string;

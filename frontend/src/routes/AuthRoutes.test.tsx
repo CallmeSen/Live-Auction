@@ -55,6 +55,7 @@ vi.mock('../layouts/MainLayout', () => ({ default: Outlet }));
 
 vi.mock('../features/auth/pages/LoginPage', () => ({ default: () => <div>login</div> }));
 vi.mock('../features/auth/pages/RegisterPage', () => ({ default: () => <div>register</div> }));
+vi.mock('../features/auth/pages/ConfirmSignUpPage', () => ({ default: () => <div>confirm-signup</div> }));
 vi.mock('../features/auth/pages/ForgotPasswordPage', () => ({ default: () => <div>forgot-password</div> }));
 vi.mock('../features/auth/pages/ResetPasswordPage', () => ({ default: () => <div>reset-password</div> }));
 vi.mock('../features/auth/pages/AccessDeniedPage', () => ({ default: () => <div>forbidden</div> }));
@@ -159,12 +160,12 @@ describe('RoleRoute', () => {
   });
 
   it('allows a role listed in AuthRole[]', () => {
-    setAuth('SELLER');
+    setAuth('USER');
 
     render(
       <MemoryRouter initialEntries={['/seller']}>
         <Routes>
-          <Route element={<RoleRoute allowedRoles={['SELLER']} />}>
+        <Route element={<RoleRoute allowedRoles={['USER']} />}>
             <Route path="/seller" element={<div>seller content</div>} />
           </Route>
         </Routes>
@@ -175,12 +176,12 @@ describe('RoleRoute', () => {
   });
 
   it('redirects an authenticated disallowed role to access denied', () => {
-    setAuth('BIDDER');
+    setAuth('ADMIN');
 
     render(
       <MemoryRouter initialEntries={['/seller']}>
         <Routes>
-          <Route element={<RoleRoute allowedRoles={['SELLER']} />}>
+        <Route element={<RoleRoute allowedRoles={['USER']} />}>
             <Route path="/seller" element={<div>seller content</div>} />
           </Route>
           <Route path="/forbidden" element={<div>access denied</div>} />
@@ -198,12 +199,12 @@ describe('App route role policy', () => {
   });
 
   it.each([
-    ['BIDDER', '/my-bids', 'my-bids'],
-    ['BIDDER', '/auction-items/item-1', 'room'],
-    ['SELLER', '/auctions/create', 'create-auction'],
-    ['SELLER', '/my-auctions', 'my-auctions'],
-    ['SELLER', '/auction-sessions/session-1/items/create', 'item-editor'],
-    ['SELLER', '/auction-items/item-1/edit', 'item-editor'],
+    ['USER', '/my-bids', 'my-bids'],
+    ['USER', '/auction-items/item-1', 'room'],
+    ['USER', '/auctions/create', 'create-auction'],
+    ['USER', '/my-auctions', 'my-auctions'],
+    ['USER', '/auction-sessions/session-1/items/create', 'item-editor'],
+    ['USER', '/auction-items/item-1/edit', 'item-editor'],
     ['ADMIN', '/admin', 'admin'],
     ['ADMIN', '/admin/users', 'admin-users'],
     ['ADMIN', '/admin/auctions', 'admin-auctions'],
@@ -221,12 +222,10 @@ describe('App route role policy', () => {
   });
 
   it.each([
-    ['BIDDER', '/my-auctions'],
-    ['BIDDER', '/auctions/create'],
-    ['SELLER', '/my-bids'],
-    ['SELLER', '/auction-items/item-1'],
     ['ADMIN', '/my-bids'],
     ['ADMIN', '/my-auctions'],
+    ['ADMIN', '/auctions/create'],
+    ['USER', '/admin'],
   ] as const)('denies %s access to %s', (role, route) => {
     setAuth(role);
 
@@ -247,7 +246,7 @@ describe('Navbar auth behavior', () => {
   });
 
   it('shows context session email and role without a registration link', () => {
-    setAuth('BIDDER');
+    setAuth('USER');
 
     render(
       <MemoryRouter>
@@ -255,13 +254,13 @@ describe('Navbar auth behavior', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('bidder@example.test')).toBeInTheDocument();
-    expect(screen.getByText('BIDDER')).toBeInTheDocument();
+    expect(screen.getByText('user@example.test')).toBeInTheDocument();
+    expect(screen.getByText('USER')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /register|ng k/i })).not.toBeInTheDocument();
   });
 
   it('awaits logout before navigating and disables repeated logout', async () => {
-    setAuth('SELLER');
+    setAuth('USER');
     let finishLogout!: () => void;
     authState.logout.mockImplementation(() => new Promise<void>((resolve) => {
       finishLogout = resolve;
@@ -290,7 +289,7 @@ describe('Navbar auth behavior', () => {
   });
 
   it('handles failed logout without navigating or exposing the rejection', async () => {
-    setAuth('SELLER');
+    setAuth('USER');
     authState.logout.mockRejectedValue(
       new Error('Cognito sign-out failed with sensitive-marker'),
     );

@@ -104,7 +104,7 @@ export default function AuctionRoomPanel({
         </button>
       )}
 
-      {role === 'BIDDER' && bidControl && (
+      {role === 'USER' && bidControl && (
         <section aria-label="Trả giá" className="mt-6 min-w-0">
           {bidControl}
         </section>

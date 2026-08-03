@@ -8,7 +8,7 @@ vi.mock('../../../hooks/useAuth', () => ({
   default: () => ({
     getIdToken: vi.fn(),
     logout: vi.fn(),
-    session: { sub: 'bidder-1', email: 'bidder@example.test', role: 'BIDDER' },
+    session: { sub: 'user-1', email: 'user@example.test', role: 'USER' },
   }),
 }));
 

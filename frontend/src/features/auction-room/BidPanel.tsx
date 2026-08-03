@@ -179,7 +179,7 @@ export default function BidPanel({
     }
   }, [itemId, lastEvent, pending]);
 
-  if (role !== 'BIDDER') return null;
+  if (role !== 'USER') return null;
 
   const submit = () => {
     setOutcome(null);

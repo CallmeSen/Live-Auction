@@ -7,8 +7,7 @@ import useAuth from '../../../hooks/useAuth';
 
 const ROLE_HOME: Record<AuthRole, string> = {
   ADMIN: '/admin',
-  SELLER: '/my-auctions',
-  BIDDER: '/auctions',
+  USER: '/auctions',
 };
 
 const COMMON_PROTECTED_PATHS = new Set(['/profile', '/notifications']);
@@ -18,14 +17,16 @@ function isRoleRoute(role: AuthRole, pathname: string): boolean {
     return pathname === '/admin' || pathname.startsWith('/admin/');
   }
 
-  if (role === 'SELLER') {
+  if (role === 'USER') {
     return pathname === '/my-auctions'
+      || pathname === '/my-bids'
       || pathname === '/auctions/create'
       || /^\/auction-sessions\/[^/]+\/items\/create$/.test(pathname)
-      || /^\/auction-items\/[^/]+\/edit$/.test(pathname);
+      || /^\/auction-items\/[^/]+\/edit$/.test(pathname)
+      || /^\/auction-items\/[^/]+$/.test(pathname);
   }
 
-  return pathname === '/my-bids' || /^\/auction-items\/[^/]+$/.test(pathname);
+  return false;
 }
 
 function getPostLoginPath(role: AuthRole, from?: string): string {
@@ -127,6 +128,16 @@ export default function LoginPage() {
       </form>
 
       <p className="mt-7 text-center text-sm">
+        <Link to="/register" state={{ from }} className="font-medium text-[var(--color-primary)]">
+          Create a new account
+        </Link>
+      </p>
+      <p className="mt-3 text-center text-sm">
+        <Link to="/forgot-password" className="text-[var(--color-text-muted)] transition hover:text-[var(--color-primary)]">
+          Forgot password?
+        </Link>
+      </p>
+      <p className="mt-3 text-center text-sm">
         <Link to="/auctions" className="text-[var(--color-text-muted)] transition hover:text-[var(--color-primary)]">Tiếp tục khám phá mà không cần đăng nhập</Link>
       </p>
     </div>

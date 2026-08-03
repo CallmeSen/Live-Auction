@@ -3,8 +3,12 @@ import cognitoSource from './cognito.ts?raw';
 
 const amplifyMocks = vi.hoisted(() => ({
   configurationCalls: [] as unknown[],
+  confirmResetPassword: vi.fn(),
+  confirmSignUp: vi.fn(),
   fetchAuthSession: vi.fn(),
   getCurrentUser: vi.fn(),
+  resetPassword: vi.fn(),
+  signUp: vi.fn(),
   signIn: vi.fn(),
   signOut: vi.fn(),
 }));
@@ -18,8 +22,12 @@ vi.mock('aws-amplify', () => ({
 }));
 
 vi.mock('aws-amplify/auth', () => ({
+  confirmResetPassword: amplifyMocks.confirmResetPassword,
+  confirmSignUp: amplifyMocks.confirmSignUp,
   fetchAuthSession: amplifyMocks.fetchAuthSession,
   getCurrentUser: amplifyMocks.getCurrentUser,
+  resetPassword: amplifyMocks.resetPassword,
+  signUp: amplifyMocks.signUp,
   signIn: amplifyMocks.signIn,
   signOut: amplifyMocks.signOut,
 }));
@@ -49,7 +57,7 @@ function createIdToken(
     token_use: 'id',
     sub: 'user-123',
     email: 'bidder@example.test',
-    'cognito:groups': ['BIDDER'],
+    'cognito:groups': ['USER'],
   },
 ) {
   return {
@@ -97,9 +105,8 @@ describe('Cognito auth adapter', () => {
   });
 
   it.each([
-    [['BIDDER'], 'BIDDER'],
-    [['BIDDER', 'SELLER'], 'SELLER'],
-    [['SELLER', 'ADMIN', 'BIDDER'], 'ADMIN'],
+    [['USER'], 'USER'],
+    [['USER', 'ADMIN'], 'ADMIN'],
   ] as const)('maps %j with role priority to %s', async (groups, role) => {
     const dependencies = createDependencies({
       token_use: 'id',
@@ -117,6 +124,26 @@ describe('Cognito auth adapter', () => {
     expect(dependencies.signIn).toHaveBeenCalledWith({
       username: 'member@example.test',
       password: 'not-logged',
+    });
+  });
+
+  it('maps the USER Cognito group to the USER application role', async () => {
+    const dependencies = createDependencies({
+      token_use: 'id',
+      sub: 'user-123',
+      email: 'member@example.test',
+      'cognito:groups': ['USER'],
+    });
+
+    await expect(
+      createCognitoAuthAdapter(dependencies).signIn(
+        'member@example.test',
+        'not-logged',
+      ),
+    ).resolves.toEqual({
+      sub: 'user-123',
+      email: 'member@example.test',
+      role: 'USER',
     });
   });
 
@@ -139,7 +166,7 @@ describe('Cognito auth adapter', () => {
     await expect(createCognitoAuthAdapter(dependencies).restore()).resolves.toEqual({
       sub: 'user-123',
       email: 'bidder@example.test',
-      role: 'BIDDER',
+      role: 'USER',
     });
     expect(dependencies.getCurrentUser).toHaveBeenCalledOnce();
   });
@@ -166,7 +193,7 @@ describe('Cognito auth adapter', () => {
       token_use: 'access',
       sub: 'user-123',
       email: 'bidder@example.test',
-      'cognito:groups': ['BIDDER'],
+      'cognito:groups': ['USER'],
     });
 
     await expect(createCognitoAuthAdapter(dependencies).idToken()).rejects.toThrow(
@@ -181,7 +208,7 @@ describe('Cognito auth adapter', () => {
     const dependencies = createDependencies({
       token_use: 'id',
       ...identityClaims,
-      'cognito:groups': ['BIDDER'],
+      'cognito:groups': ['USER'],
     });
 
     await expect(createCognitoAuthAdapter(dependencies).restore()).rejects.toThrow(
@@ -190,8 +217,8 @@ describe('Cognito auth adapter', () => {
   });
 
   it.each([
-    'BIDDER',
-    ['BIDDER', 1],
+    'USER',
+    ['USER', 1],
     [],
     ['AUDITOR'],
   ])('rejects malformed or unsupported groups: %j', async (groups) => {
@@ -220,7 +247,7 @@ describe('Cognito auth adapter', () => {
       token_use: 'id',
       sub: 'user-123',
       email: 'bidder@example.test',
-      'cognito:groups': ['BIDDER'],
+      'cognito:groups': ['USER'],
       exp: Math.floor(Date.now() / 1_000) + 300,
     });
     const adapter = createCognitoAuthAdapter(dependencies);
@@ -237,7 +264,7 @@ describe('Cognito auth adapter', () => {
       token_use: 'id',
       sub: 'user-123',
       email: 'bidder@example.test',
-      'cognito:groups': ['BIDDER'],
+      'cognito:groups': ['USER'],
       exp: Math.floor(Date.now() / 1_000) + 300,
     });
     dependencies.getCurrentUser.mockImplementation(() => pendingCurrentUser.promise);

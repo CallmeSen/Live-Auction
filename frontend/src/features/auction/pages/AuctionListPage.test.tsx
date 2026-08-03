@@ -141,10 +141,10 @@ describe('AuctionListPage', () => {
     expect(await screen.findByRole('heading', { name: 'Page one' })).toBeVisible();
   });
 
-  it('shows the create CTA only to a SELLER session', async () => {
+  it('shows the create CTA to a USER session', async () => {
     const api = createApi();
     api.listSessions = vi.fn().mockResolvedValue({ items: [], nextCursor: null });
-    setSession('SELLER');
+    setSession('USER');
 
     renderPage(api);
 

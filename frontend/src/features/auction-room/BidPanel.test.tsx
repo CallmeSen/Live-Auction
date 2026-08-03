@@ -8,7 +8,7 @@ const baseProps = {
   currentPrice: '100.00',
   minimumBidIncrement: '5.00',
   lastEvent: null,
-  role: 'BIDDER' as const,
+  role: 'USER' as const,
   sendBid: vi.fn<(amount: string, requestId: string) => boolean>(() => true),
   timeoutMs: 5_000,
   now: () => 1_000,
@@ -170,11 +170,8 @@ describe('BidPanel', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/thành công/i);
   });
 
-  it('does not render for seller or admin roles', () => {
-    const { rerender } = render(<BidPanel {...baseProps} role="SELLER" />);
-    expect(screen.queryByRole('textbox', { name: 'Giá của bạn' })).not.toBeInTheDocument();
-
-    rerender(<BidPanel {...baseProps} role="ADMIN" />);
+  it('does not render for admin role', () => {
+    render(<BidPanel {...baseProps} role="ADMIN" />);
     expect(screen.queryByRole('textbox', { name: 'Giá của bạn' })).not.toBeInTheDocument();
   });
 

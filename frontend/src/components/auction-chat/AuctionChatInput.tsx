@@ -4,9 +4,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import {
-  connectionStatusLabels,
   MAX_CHAT_MESSAGE_LENGTH,
-  type ConnectionStatusLabel,
 } from './auction-chat.types';
 import type { ConnectionStatus } from '../../features/auction-items/services/auctionItemSocketClient';
 
@@ -31,7 +29,6 @@ function getValidationError(content: string): string | null {
 
   return null;
 }
-
 export default function AuctionChatInput({
   connectionStatus,
   canSend,
@@ -130,10 +127,4 @@ export default function AuctionChatInput({
       </form>
     </div>
   );
-}
-
-export function getConnectionStatusLabel(
-  status: ConnectionStatus,
-): ConnectionStatusLabel {
-  return connectionStatusLabels[status];
 }

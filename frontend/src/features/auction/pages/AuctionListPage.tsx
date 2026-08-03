@@ -90,7 +90,7 @@ export default function AuctionListPage({ catalogApi }: AuctionListPageProps) {
               </h1>
             </div>
 
-            {session?.role === 'SELLER' && (
+            {session?.role === 'USER' && (
               <Link
                 to="/auctions/create"
                 className="rounded-md bg-[var(--color-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-bg)]"

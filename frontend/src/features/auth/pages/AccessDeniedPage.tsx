@@ -5,8 +5,7 @@ import useAuth from '../../../hooks/useAuth';
 
 const ROLE_HOME: Record<AuthRole, string> = {
   ADMIN: '/admin',
-  SELLER: '/my-auctions',
-  BIDDER: '/auctions',
+  USER: '/auctions',
 };
 
 export default function AccessDeniedPage() {

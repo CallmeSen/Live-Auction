@@ -5,6 +5,7 @@ import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
 import LoginPage from '../features/auth/pages/LoginPage';
 import RegisterPage from '../features/auth/pages/RegisterPage';
+import ConfirmSignUpPage from '../features/auth/pages/ConfirmSignUpPage';
 import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '../features/auth/pages/ResetPasswordPage';
 import AccessDeniedPage from '../features/auth/pages/AccessDeniedPage';
@@ -31,6 +32,7 @@ export default function AppRoutes() {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/confirm-signup" element={<ConfirmSignUpPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
@@ -44,12 +46,12 @@ export default function AppRoutes() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/forbidden" element={<AccessDeniedPage />} />
 
-          <Route element={<RoleRoute allowedRoles={['BIDDER']} />}>
+          <Route element={<RoleRoute allowedRoles={['USER']} />}>
             <Route path="/my-bids" element={<MyBidsPage />} />
             <Route path="/auction-items/:id" element={<AuctionDetailPage />} />
           </Route>
 
-          <Route element={<RoleRoute allowedRoles={['SELLER']} />}>
+          <Route element={<RoleRoute allowedRoles={['USER']} />}>
             <Route path="/auctions/create" element={<CreateAuctionPage />} />
             <Route path="/my-auctions" element={<MyAuctionsPage />} />
             <Route

@@ -1,11 +1,16 @@
 import { Amplify } from 'aws-amplify';
 import {
+  confirmResetPassword,
+  confirmSignUp,
   fetchAuthSession,
   getCurrentUser,
+  resetPassword,
+  signUp,
   signIn,
   signOut,
 } from 'aws-amplify/auth';
 import { runtimeConfig } from '../config/runtime';
+import { createCognitoAccountService } from './account';
 import type { AuthRole, AuthSession, CognitoAuthAdapter } from './types';
 
 Amplify.configure({
@@ -33,7 +38,7 @@ type AuthDependencies = {
   signOut(): Promise<void>;
 };
 
-const ROLE_PRIORITY: readonly AuthRole[] = ['ADMIN', 'SELLER', 'BIDDER'];
+const ROLE_PRIORITY: readonly AuthRole[] = ['ADMIN', 'USER'];
 const INVALID_SESSION_MESSAGE = 'A valid authentication session is required';
 const TOKEN_REFRESH_SKEW_SECONDS = 60;
 const E2E_MOCK_AUTH_ENABLED = import.meta.env.VITE_E2E_MOCK_AUTH === 'true';
@@ -184,9 +189,9 @@ function createE2eMockAuthAdapter(): CognitoAuthAdapter {
         || !('role' in parsed)
         || typeof parsed.sub !== 'string'
         || typeof parsed.email !== 'string'
-        || parsed.role !== 'BIDDER'
+        || parsed.role !== 'USER'
       ) return null;
-      return { sub: parsed.sub, email: parsed.email, role: 'BIDDER' };
+      return { sub: parsed.sub, email: parsed.email, role: 'USER' };
     } catch {
       return null;
     }
@@ -213,7 +218,7 @@ function createE2eMockAuthAdapter(): CognitoAuthAdapter {
       activeSession = {
         sub: `e2e-${localPart}`,
         email,
-        role: 'BIDDER',
+        role: 'USER',
       };
       storeSession(activeSession);
       return activeSession;
@@ -244,3 +249,10 @@ export const cognitoAuthAdapter = E2E_MOCK_AUTH_ENABLED
     fetchAuthSession,
     signOut,
   });
+
+export const cognitoAccountService = createCognitoAccountService({
+  signUp,
+  confirmSignUp,
+  resetPassword,
+  confirmResetPassword,
+});

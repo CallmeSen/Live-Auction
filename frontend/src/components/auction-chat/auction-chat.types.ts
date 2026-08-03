@@ -113,6 +113,12 @@ export const connectionStatusLabels: Record<
   reconnecting: 'Reconnecting',
 };
 
+export function getConnectionStatusLabel(
+  status: ConnectionStatus,
+): ConnectionStatusLabel {
+  return connectionStatusLabels[status];
+}
+
 export function isUserTimelineEntry(
   entry: AuctionChatTimelineEntry,
 ): entry is UserChatTimelineEntry {

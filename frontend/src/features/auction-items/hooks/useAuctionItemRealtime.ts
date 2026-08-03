@@ -69,6 +69,8 @@ function useAuctionItemWebSocket(
 
   useEffect(() => {
     if (!itemId) {
+      // Reset the local snapshot before the next item connection is created.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState(initialState);
       return;
     }
