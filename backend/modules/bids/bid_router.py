@@ -10,6 +10,7 @@ from app.core.dependencies import (
     get_current_user_id,
     security,
 )
+from app.dependencies.realtime_dependencies import get_publish_bid_placed_use_case
 from app.models.user_model import User
 from common.enum import BidStatus
 from modules.auction_items.item_repository import AuctionItemRepository
@@ -48,6 +49,7 @@ def get_bid_service() -> BidService:
             notification_repository=NotificationRepository(),
             notification_preference_repository=NotificationPreferenceRepository(),
         ),
+        publish_bid_placed_use_case=get_publish_bid_placed_use_case(),
     )
 
 

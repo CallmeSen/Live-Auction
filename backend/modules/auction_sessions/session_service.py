@@ -5,7 +5,11 @@ from fastapi import status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.use_cases.realtime.publish_auction_item_timeline_event import (
+    PublishAuctionItemTimelineEventUseCase,
+)
 from app.core.exceptions import AppException
+from app.domain.events.auction_lifecycle_events import create_auction_started_event
 from app.models.image_model import ItemImage
 from app.models.user_model import User
 from common.enum import AuctionItemStatus, AuctionSessionStatus, UserRole
@@ -35,9 +39,13 @@ class AuctionSessionService:
         self,
         session_repository: AuctionSessionRepository,
         notification_service: NotificationService,
+        publish_timeline_event_use_case: (
+            PublishAuctionItemTimelineEventUseCase | None
+        ) = None,
     ) -> None:
         self.session_repository = session_repository
         self.notification_service = notification_service
+        self.publish_timeline_event_use_case = publish_timeline_event_use_case
 
     @staticmethod
     def _get_primary_image_url(
@@ -243,6 +251,20 @@ class AuctionSessionService:
                     item.opened_at = current_time
 
             await db.commit()
+
+            if self.publish_timeline_event_use_case is not None:
+                for item in session.items:
+                    if item.status == AuctionItemStatus.OPEN:
+                        try:
+                            await self.publish_timeline_event_use_case.execute(
+                                item_id=item.id,
+                                event=create_auction_started_event(
+                                    item_id=item.id,
+                                ),
+                            )
+                        except Exception:
+                            # Realtime publication failure must not undo a committed start.
+                            pass
 
             return StartAuctionSessionData(
                 id=session.id,

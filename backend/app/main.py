@@ -19,6 +19,9 @@ from modules.bids.bid_router import my_bids_router
 from modules.bids.bid_router import router as bids_router
 from modules.categories.category_router import router as categories_router
 from modules.users.user_router import router as user_router
+from app.presentation.websocket.auction_item_websocket_router import (
+    router as auction_item_websocket_router,
+)
 import app.models  # noqa: F401
 from app.core.database import engine
 from app.core.exceptions import AppException
@@ -80,6 +83,7 @@ app.include_router(my_bids_router)
 app.include_router(admin_router)
 app.include_router(user_router)
 app.include_router(notification_router)
+app.include_router(auction_item_websocket_router)
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:

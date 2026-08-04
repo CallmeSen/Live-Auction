@@ -1,11 +1,15 @@
 import uuid
 from dataclasses import dataclass
+from decimal import Decimal
 
-from sqlalchemy import func, or_, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import exists, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.application.dto.auction_item_realtime_snapshot import (
+    AuctionItemRealtimeSnapshot,
+)
+from app.models.auction_session_rule_model import AuctionSessionRule
 from app.models.bid_model import Bid
 from app.models.image_model import ItemImage
 from app.models.item_model import AuctionItem
@@ -141,6 +145,75 @@ class AuctionItemRepository:
         ]
 
         return rows, total
+
+    async def exists(
+        self,
+        db: AsyncSession,
+        item_id: uuid.UUID,
+    ) -> bool:
+        statement = select(
+            exists().where(AuctionItem.id == item_id),
+        )
+
+        result = await db.execute(statement)
+
+        return bool(result.scalar())
+
+    async def get_realtime_snapshot(
+        self,
+        db: AsyncSession,
+        item_id: uuid.UUID,
+    ) -> AuctionItemRealtimeSnapshot | None:
+        statement = (
+            select(
+                AuctionItem.id,
+                AuctionItem.status,
+                AuctionItem.current_price,
+                AuctionItem.starting_price,
+                AuctionItem.opened_at,
+                AuctionItem.closed_at,
+                AuctionSessionRule.min_increment,
+            )
+            .join(
+                AuctionSession,
+                AuctionItem.session_id == AuctionSession.id,
+            )
+            .outerjoin(
+                AuctionSessionRule,
+                AuctionSessionRule.session_id == AuctionSession.id,
+            )
+            .where(AuctionItem.id == item_id)
+        )
+
+        result = await db.execute(statement)
+        row = result.one_or_none()
+
+        if row is None:
+            return None
+
+        (
+            snapshot_item_id,
+            status,
+            current_price,
+            starting_price,
+            opened_at,
+            closed_at,
+            min_increment,
+        ) = row
+
+        return AuctionItemRealtimeSnapshot(
+            item_id=snapshot_item_id,
+            status=status.value,
+            current_price=current_price,
+            starting_price=starting_price,
+            min_increment=(
+                min_increment
+                if min_increment is not None
+                else Decimal("1.00")
+            ),
+            opened_at=opened_at,
+            closed_at=closed_at,
+        )
 
     async def find_detail_by_id(
         self,

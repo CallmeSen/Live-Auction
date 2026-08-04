@@ -1,9 +1,13 @@
+import logging
 import uuid
 from datetime import datetime
 
 from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.use_cases.realtime.publish_bid_placed import (
+    PublishBidPlacedUseCase,
+)
 from app.core.exceptions import AppException
 from app.models.bid_model import Bid
 from app.models.user_model import User
@@ -17,6 +21,8 @@ from modules.bids.bid_schema import (
 )
 from modules.notifications.notification_service import NotificationService
 
+logger = logging.getLogger(__name__)
+
 
 class BidService:
     def __init__(
@@ -24,10 +30,12 @@ class BidService:
         bid_repository: BidRepository,
         item_repository: AuctionItemRepository,
         notification_service: NotificationService,
+        publish_bid_placed_use_case: PublishBidPlacedUseCase | None = None,
     ) -> None:
         self.bid_repository = bid_repository
         self.item_repository = item_repository
         self.notification_service = notification_service
+        self.publish_bid_placed_use_case = publish_bid_placed_use_case
 
     async def list_my_bids(
         self,
@@ -99,20 +107,20 @@ class BidService:
                     message="Auction session not found",
                 )
 
-            if session.status != AuctionSessionStatus.ACTIVE:
-                raise AppException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    code="SESSION_NOT_ACTIVE",
-                    message="Auction session is not active",
-                )
+            # if session.status != AuctionSessionStatus.ACTIVE:
+            #     raise AppException(
+            #         status_code=status.HTTP_400_BAD_REQUEST,
+            #         code="SESSION_NOT_ACTIVE",
+            #         message="Auction session is not active",
+            #     )
 
             current_time = datetime.now()
 
             if not (
-                session.start_time <= current_time < session.end_time
+                session.status == AuctionSessionStatus.ACTIVE
             ):
                 raise AppException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                   status_code=status.HTTP_400_BAD_REQUEST,
                     code="AUCTION_NOT_IN_PROGRESS",
                     message="Auction is not in progress",
                 )
@@ -189,6 +197,26 @@ class BidService:
 
             await db.commit()
             await db.refresh(created_bid)
+
+            # Publish only after commit so a rollback never leaves clients
+            # with a BID_PLACED event for an uncommitted bid.
+            if self.publish_bid_placed_use_case is not None:
+                try:
+                    await self.publish_bid_placed_use_case.execute(
+                        item_id=item.id,
+                        bid_id=created_bid.id,
+                        amount=created_bid.amount,
+                        current_price=item.current_price,
+                        placed_at=created_bid.created_at,
+                        bidder_id=bidder.id,
+                        bidder_name=bidder.full_name,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Bid persisted but realtime publication failed item_id=%s bid_id=%s",
+                        item.id,
+                        created_bid.id,
+                    )
 
             return created_bid
 

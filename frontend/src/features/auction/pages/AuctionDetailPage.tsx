@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import BidForm from '../../../components/auction/BidForm';
+import AuctionChatBox from '../../../components/auction-chat/AuctionChatBox';
 import AuthRequiredModal from '../../../components/common/AuthRequiredModal';
 import useAuth from '../../../hooks/useAuth';
 import { auctionItemService } from '../../../services/auctionItemService';
@@ -15,23 +16,46 @@ import {
   formatDateTime,
   getTimeLeft,
 } from '../../../utils/formatDate';
+import useAuctionItemRealtime from '../../auction-items/hooks/useAuctionItemRealtime';
 
 const itemStatusLabel: Record<AuctionItemStatus, string> = {
+  DRAFT: 'Nháp',
+  READY: 'Sẵn sàng',
+  OPEN: 'Đang mở',
   SOLD: 'Đã bán',
   UNSOLD: 'Sắp bán',
   CANCELLED: 'Đã huỷ',
 };
 
 function getItemStatusLabel(status: string): string {
-  if (status === 'SOLD' || status === 'CANCELLED') {
-    return itemStatusLabel[status];
+  if (status in itemStatusLabel) {
+    return itemStatusLabel[status as AuctionItemStatus];
   }
+
   return itemStatusLabel.UNSOLD;
+}
+
+function isItemBiddableStatus(status: string): boolean {
+  return status === 'OPEN' || status === 'UNSOLD';
 }
 
 export default function AuctionDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
+  const {
+    viewerCount,
+    isConnected,
+    connectionStatus,
+    timelineEntries,
+    sendChatMessage,
+    lastError,
+    clearLastError,
+    currentPrice: realtimeCurrentPrice,
+    startingPrice: realtimeStartingPrice,
+    minIncrement: realtimeMinIncrement,
+    status: realtimeItemStatus,
+    latestBid,
+  } = useAuctionItemRealtime(id);
 
   const [item, setItem] =
     useState<AuctionItemDetailResponse | null>(null);
@@ -148,23 +172,32 @@ export default function AuctionDetailPage() {
     );
   }
 
-  const currentPrice = Number(item.currentPrice);
-  const startingPrice = Number(item.startingPrice);
-  const minimumBidIncrement = Number(item.session.minIncrement);
+  const currentPrice = Number(
+    realtimeCurrentPrice ?? item.currentPrice,
+  );
+  const startingPrice = Number(
+    realtimeStartingPrice ?? item.startingPrice,
+  );
+  const minimumBidIncrement = Number(
+    realtimeMinIncrement ?? item.session.minIncrement,
+  );
+
+  const effectiveItemStatus = realtimeItemStatus ?? item.status;
+
+  const isSessionActive =
+    item.session.status === 'ACTIVE' || effectiveItemStatus === 'OPEN';
 
   const isOwner = user?.id === item.seller.id;
 
   const canBid =
-    user?.role === 'USER' &&
-    item.status !== 'SOLD' &&
-    item.status !== 'CANCELLED' &&
-    item.session.status === 'ACTIVE' &&
+    user?.status === 'ACTIVE' &&
+    isSessionActive &&
+    isItemBiddableStatus(effectiveItemStatus) &&
     !isOwner;
 
   const auctionIsOpen =
-    item.status !== 'SOLD' &&
-    item.status !== 'CANCELLED' &&
-    item.session.status === 'ACTIVE';
+    isSessionActive &&
+    isItemBiddableStatus(effectiveItemStatus);
 
   const displayableImages = item.images.filter(
     (image): image is typeof image & { imageUrl: string } =>
@@ -226,9 +259,31 @@ export default function AuctionDetailPage() {
               Vật phẩm #{item.id.slice(0, 8)}
             </span>
 
-            <span className="rounded-full border border-[var(--color-border-strong)] px-3 py-1 text-xs text-[var(--color-primary)]">
-              {getItemStatusLabel(item.status)}
-            </span>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                {isConnected ? (
+                  <>
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-primary)] opacity-60" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--color-primary)]" />
+                    </span>
+                    <span className="font-mono-tag uppercase tracking-wider text-[var(--color-primary)]">
+                      Live
+                    </span>
+                    <span>
+                      {viewerCount}{' '}
+                      {viewerCount === 1 ? 'person' : 'people'} watching
+                    </span>
+                  </>
+                ) : (
+                  <span>Reconnecting...</span>
+                )}
+              </div>
+
+              <span className="rounded-full border border-[var(--color-border-strong)] px-3 py-1 text-xs text-[var(--color-primary)]">
+                {getItemStatusLabel(effectiveItemStatus)}
+              </span>
+            </div>
           </div>
 
           <h1 className="mt-4 font-display text-4xl leading-tight text-[var(--color-text)] sm:text-5xl">
@@ -278,6 +333,13 @@ export default function AuctionDetailPage() {
             ))}
           </dl>
 
+          {latestBid && (
+            <p className="mt-4 text-sm text-[var(--color-primary)]">
+              Latest bid received in real time:{' '}
+              {formatCurrency(Number(latestBid.amount))}
+            </p>
+          )}
+
           <div className="mt-7">
             {!user && auctionIsOpen && (
               <div className="rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface-alt)] p-6 text-center">
@@ -320,6 +382,17 @@ export default function AuctionDetailPage() {
           </div>
         </div>
       </div>
+
+      <section className="mt-10">
+        <AuctionChatBox
+          connectionStatus={connectionStatus}
+          timelineEntries={timelineEntries}
+          sendChatMessage={sendChatMessage}
+          canSend={Boolean(user)}
+          lastError={lastError}
+          onClearLastError={clearLastError}
+        />
+      </section>
 
       <section className="mt-16 grid gap-8 border-t border-[var(--color-border)] pt-12 lg:grid-cols-[1fr_0.85fr]">
         <div>

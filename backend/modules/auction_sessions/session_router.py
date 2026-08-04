@@ -21,6 +21,9 @@ from modules.auction_sessions.session_schema import (
     ListAuctionSessionsResponse,
     StartAuctionSessionResponse,
 )
+from app.dependencies.realtime_dependencies import (
+    get_publish_auction_item_timeline_event_use_case,
+)
 from modules.auction_sessions.session_service import AuctionSessionService
 from modules.notifications.notification_repository import NotificationRepository
 from modules.notifications.notification_service import NotificationService
@@ -42,6 +45,7 @@ def get_auction_session_service() -> AuctionSessionService:
             notification_repository=NotificationRepository(),
             notification_preference_repository=NotificationPreferenceRepository(),
         ),
+        publish_timeline_event_use_case=get_publish_auction_item_timeline_event_use_case(),
     )
 
 
