@@ -1,5 +1,16 @@
 # Live Auction Backend
 
+## Deploy len AWS
+
+Neu ban clone repository de chay serverless tren AWS account cua minh, doc
+[AWS Self-Hosted Setup](docs/aws-self-hosted-setup.md) truoc. Tai lieu nay bat
+dau tu clone, AWS profile khong dung root, remote Terraform state, thu tu deploy,
+kiem tra va teardown.
+
+Luu y: code AWS hien tai con pin vao account deploy ban dau. Nguoi dung account
+khac khong duoc chay Terraform apply cho den khi portability gate trong tai lieu
+pass.
+
 A FastAPI backend for a live auction application.
 
 The backend currently supports:
