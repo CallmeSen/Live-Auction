@@ -27,7 +27,7 @@ describe('auction item realtime state helpers', () => {
       itemId: 'item-123',
       timestamp: '2026-08-04T09:00:00.000Z',
       data: {
-        status: 'OPEN',
+        status: 'UNSOLD',
         currentPrice: '51000000.00',
         startingPrice: '50000000.00',
         minIncrement: '1000000.00',
@@ -48,7 +48,7 @@ describe('auction item realtime state helpers', () => {
       itemId: 'item-123',
       timestamp: '2026-08-04T09:00:00.000Z',
       data: {
-        status: 'OPEN',
+        status: 'UNSOLD',
         currentPrice: '51000000.00',
         startingPrice: '50000000.00',
         minIncrement: '1000000.00',

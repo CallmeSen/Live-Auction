@@ -1,13 +1,7 @@
 import type { AuctionSessionStatus } from './auctionSession';
 import type { BidStatus } from './bid';
 
-export type AuctionItemStatus =
-  | 'DRAFT'
-  | 'READY'
-  | 'OPEN'
-  | 'SOLD'
-  | 'UNSOLD'
-  | 'CANCELLED';
+export type AuctionItemStatus = 'SOLD' | 'UNSOLD' | 'CANCELLED';
 
 export interface AuctionItemSummaryResponse {
   id: string;
@@ -46,6 +40,7 @@ export interface AuctionItemSessionResponse {
   id: string;
   title: string;
   status: AuctionSessionStatus;
+  sellerId: string;
   endTime: string;
   minIncrement: string;
 }

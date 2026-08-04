@@ -56,10 +56,7 @@ class BidService:
 
         if (
             session.status
-            in (
-                AuctionSessionStatus.CANCELLED,
-                AuctionSessionStatus.REJECTED,
-            )
+            == AuctionSessionStatus.CANCELLED
             or item.status == AuctionItemStatus.CANCELLED
         ):
             return None
@@ -108,9 +105,6 @@ class BidService:
         grouped_bids: dict[uuid.UUID, list[Bid]] = {}
 
         for bid in bids:
-            if bid.status == BidStatus.CANCELLED:
-                continue
-
             grouped_bids.setdefault(bid.item_id, []).append(bid)
 
         items: list[MyBidListItem] = []
@@ -193,11 +187,11 @@ class BidService:
                     message="Auction item not found",
                 )
 
-            if item.status == AuctionItemStatus.SOLD:
+            if item.status != AuctionItemStatus.UNSOLD:
                 raise AppException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    code="ITEM_SOLD",
-                    message="Auction item is sold",
+                    code="ITEM_NOT_BIDDABLE",
+                    message="Auction item is not available for bidding",
                 )
 
             session = item.session

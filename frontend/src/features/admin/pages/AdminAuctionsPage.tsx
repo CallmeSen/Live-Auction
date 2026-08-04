@@ -13,10 +13,8 @@ import { formatDateTime } from '../../../utils/formatDate';
 const PAGE_SIZE = 10;
 
 const statusLabel: Record<AuctionSessionStatus, string> = {
-  PENDING_APPROVAL: 'Chờ duyệt',
-  SCHEDULED: 'Sắp diễn ra',
+  SCHEDULED: 'Chờ duyệt',
   ACTIVE: 'Đang diễn ra',
-  REJECTED: 'Đã từ chối',
   ENDED: 'Đã kết thúc',
   CANCELLED: 'Đã hủy',
 };
@@ -26,11 +24,9 @@ const statusOptions: Array<{
   label: string;
 }> = [
   { value: '', label: 'Tất cả' },
-  { value: 'PENDING_APPROVAL', label: 'Chờ duyệt' },
-  { value: 'SCHEDULED', label: 'Sắp diễn ra' },
+  { value: 'SCHEDULED', label: 'Chờ duyệt' },
   { value: 'ACTIVE', label: 'Đang diễn ra' },
   { value: 'ENDED', label: 'Đã kết thúc' },
-  { value: 'REJECTED', label: 'Đã từ chối' },
   { value: 'CANCELLED', label: 'Đã hủy' },
 ];
 
@@ -42,7 +38,7 @@ export default function AdminAuctionsPage() {
   const [draftKeyword, setDraftKeyword] = useState('');
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] =
-    useState<AuctionSessionStatus | ''>('PENDING_APPROVAL');
+    useState<AuctionSessionStatus | ''>('SCHEDULED');
   const [categoryId, setCategoryId] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -352,7 +348,7 @@ export default function AdminAuctionsPage() {
                   Xem chi tiết
                 </Link>
 
-                {session.status === 'PENDING_APPROVAL' && (
+                {session.status === 'SCHEDULED' && (
                   <>
                     <button
                       type="button"

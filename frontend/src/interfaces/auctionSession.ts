@@ -1,11 +1,9 @@
 import type { AuctionItemSummaryResponse } from './auctionItem';
 
 export type AuctionSessionStatus =
-  | 'PENDING_APPROVAL'
   | 'SCHEDULED'
   | 'ACTIVE'
   | 'ENDED'
-  | 'REJECTED'
   | 'CANCELLED';
 
 export interface AuctionSessionListRequest {

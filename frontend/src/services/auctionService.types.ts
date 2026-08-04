@@ -121,6 +121,7 @@ export interface AuctionItemSessionResponse {
     id: string;
     title: string;
     status: AuctionSessionStatus;
+    sellerId: string;
     endTime: string;
     minIncrement: string;
 }

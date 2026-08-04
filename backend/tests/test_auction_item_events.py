@@ -17,7 +17,7 @@ def test_snapshot_event_uses_item_id_alias() -> None:
 
     event = create_auction_item_snapshot_event(
         item_id=item_id,
-        status="OPEN",
+        status="UNSOLD",
         current_price=Decimal("51000000.00"),
         starting_price=Decimal("50000000.00"),
         min_increment=Decimal("1000000.00"),
@@ -37,7 +37,7 @@ def test_snapshot_event_uses_item_id_alias() -> None:
 def test_snapshot_event_preserves_decimal_precision() -> None:
     event = create_auction_item_snapshot_event(
         item_id=uuid.uuid4(),
-        status="OPEN",
+        status="UNSOLD",
         current_price=Decimal("51000000.50"),
         starting_price=Decimal("50000000.00"),
         min_increment=Decimal("1000000.00"),

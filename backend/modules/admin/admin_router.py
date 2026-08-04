@@ -292,7 +292,7 @@ async def list_pending_auction_sessions(
         filters=SessionListFilters(
             page=page,
             size=size,
-            status=AuctionSessionStatus.PENDING_APPROVAL,
+            status=AuctionSessionStatus.SCHEDULED,
             keyword=normalized_keyword,
             category_id=category_id,
         ),

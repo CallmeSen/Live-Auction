@@ -18,23 +18,17 @@ const PAGE_SIZE = 6;
 type StatusFilter = AuctionSessionStatus | 'ALL';
 
 const statusLabel: Record<AuctionSessionStatus, string> = {
-  PENDING_APPROVAL: 'Chờ duyệt',
   SCHEDULED: 'Sắp diễn ra',
   ACTIVE: 'Đang diễn ra',
-  REJECTED: 'Đã từ chối',
   ENDED: 'Đã kết thúc',
   CANCELLED: 'Đã hủy',
 };
 
 const statusTone: Record<AuctionSessionStatus, string> = {
-  PENDING_APPROVAL:
-    'border-[var(--color-primary)]/50 text-[var(--color-primary)]',
   SCHEDULED:
     'border-[var(--color-primary)]/50 text-[var(--color-primary)]',
   ACTIVE:
     'border-[var(--color-success-border)] text-[var(--color-success)]',
-  REJECTED:
-    'border-[var(--color-danger-solid)]/50 text-[var(--color-danger)]',
   ENDED:
     'border-[var(--color-border-strong)] text-[var(--color-text-muted)]',
   CANCELLED:

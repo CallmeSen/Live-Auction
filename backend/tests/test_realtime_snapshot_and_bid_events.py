@@ -37,7 +37,7 @@ from tests.fakes.realtime_connection import FakeRealtimeConnection
 def build_snapshot(item_id: uuid.UUID) -> AuctionItemRealtimeSnapshot:
     return AuctionItemRealtimeSnapshot(
         item_id=item_id,
-        status="OPEN",
+        status="UNSOLD",
         current_price=Decimal("50000000.00"),
         starting_price=Decimal("50000000.00"),
         min_increment=Decimal("1000000.00"),
@@ -171,11 +171,13 @@ async def test_publication_failure_does_not_undo_committed_bid() -> None:
 
     bid_repository = AsyncMock()
     item_repository = AsyncMock()
+    session_repository = AsyncMock()
     notification_service = AsyncMock()
 
     service = BidService(
         bid_repository=bid_repository,
         item_repository=item_repository,
+        session_repository=session_repository,
         notification_service=notification_service,
         publish_bid_placed_use_case=publish_use_case,
     )
@@ -189,7 +191,7 @@ async def test_publication_failure_does_not_undo_committed_bid() -> None:
     item.id = uuid.uuid4()
     item.session_id = uuid.uuid4()
     item.title = "Test item"
-    item.status = AuctionItemStatus.OPEN
+    item.status = AuctionItemStatus.UNSOLD
     item.starting_price = Decimal("50000000.00")
     item.current_price = Decimal("50000000.00")
     item.session = MagicMock()

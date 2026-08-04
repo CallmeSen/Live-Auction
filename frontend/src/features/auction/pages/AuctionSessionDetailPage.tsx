@@ -13,11 +13,9 @@ const statusLabel: Record<
   AuctionSessionDetailResponse['status'],
   string
 > = {
-  PENDING_APPROVAL: 'Chờ duyệt',
-  SCHEDULED: 'Sắp diễn ra',
+  SCHEDULED: 'Chờ duyệt',
   ACTIVE: 'Đang diễn ra',
   ENDED: 'Đã kết thúc',
-  REJECTED: 'Đã từ chối',
   CANCELLED: 'Đã hủy',
 };
 
@@ -212,14 +210,14 @@ export default function AuctionSessionDetailPage() {
 
   const canReview =
     user?.role === 'ADMIN' &&
-    session.status === 'PENDING_APPROVAL';
+    session.status === 'SCHEDULED';
   const canCancel =
     user?.role === 'ADMIN' &&
     session.status === 'SCHEDULED';
   const canManageItems =
     user?.role === 'USER' &&
     user.id === session.seller.id &&
-    session.status === 'PENDING_APPROVAL';
+    session.status === 'SCHEDULED';
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 sm:py-14">

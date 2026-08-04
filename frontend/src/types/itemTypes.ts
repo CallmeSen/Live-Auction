@@ -62,6 +62,7 @@ import {
     id: UUID;
     title: string;
     status: AuctionSessionStatus;
+    sellerId: UUID;
     endTime: ISODateTime;
     minIncrement: Money;
   }

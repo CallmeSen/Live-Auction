@@ -104,8 +104,7 @@ async def list_auction_sessions(
             keyword=normalized_keyword,
             category_id=category_id,
             excluded_statuses=(
-                AuctionSessionStatus.PENDING_APPROVAL,
-                AuctionSessionStatus.REJECTED,
+                AuctionSessionStatus.CANCELLED,
             ),
         ),
     )

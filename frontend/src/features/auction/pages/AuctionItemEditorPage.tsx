@@ -58,7 +58,7 @@ export default function AuctionItemEditorPage() {
         if (itemId) {
           const item = await auctionItemService.getItemById(itemId);
 
-          if (item.session.status !== 'PENDING_APPROVAL') {
+          if (item.session.status !== 'SCHEDULED') {
             throw new Error(
               'Chỉ được sửa vật phẩm khi phiên đang chờ duyệt.',
             );

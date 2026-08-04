@@ -36,7 +36,7 @@ from tests.fakes.realtime_connection import FakeRealtimeConnection
 def build_snapshot(item_id: uuid.UUID) -> AuctionItemRealtimeSnapshot:
     return AuctionItemRealtimeSnapshot(
         item_id=item_id,
-        status="OPEN",
+        status="UNSOLD",
         current_price=Decimal("50000000.00"),
         starting_price=Decimal("50000000.00"),
         min_increment=Decimal("1000000.00"),

@@ -149,23 +149,13 @@ class AuctionSessionRepository:
                         == AuctionSessionStatus.SCHEDULED,
                         1,
                     ),
-                    (
-                        AuctionSession.status
-                        == AuctionSessionStatus.PENDING_APPROVAL,
-                        2,
-                    ),
-                    (AuctionSession.status == AuctionSessionStatus.ENDED, 3),
-                    (
-                        AuctionSession.status
-                        == AuctionSessionStatus.REJECTED,
-                        4,
-                    ),
+                    (AuctionSession.status == AuctionSessionStatus.ENDED, 2),
                     (
                         AuctionSession.status
                         == AuctionSessionStatus.CANCELLED,
-                        5,
+                        3,
                     ),
-                    else_=6,
+                    else_=4,
                 ).asc(),
                 case(
                     (
@@ -185,7 +175,6 @@ class AuctionSessionRepository:
                         AuctionSession.status.in_(
                             (
                                 AuctionSessionStatus.ENDED,
-                                AuctionSessionStatus.REJECTED,
                                 AuctionSessionStatus.CANCELLED,
                             ),
                         ),
@@ -211,11 +200,7 @@ class AuctionSessionRepository:
         db: AsyncSession,
         current_time: datetime,
     ) -> int:
-        pending_item_statuses = (
-            AuctionItemStatus.DRAFT,
-            AuctionItemStatus.READY,
-            AuctionItemStatus.OPEN,
-        )
+        pending_item_statuses = (AuctionItemStatus.UNSOLD,)
 
         statement = (
             select(AuctionItem)
@@ -265,7 +250,6 @@ class AuctionSessionRepository:
         current_time: datetime,
     ) -> int:
         expirable_statuses = (
-            AuctionSessionStatus.PENDING_APPROVAL,
             AuctionSessionStatus.SCHEDULED,
             AuctionSessionStatus.ACTIVE,
         )
@@ -279,32 +263,6 @@ class AuctionSessionRepository:
             .values(status=AuctionSessionStatus.ENDED),
         )
 
-        future_active_session_ids = select(AuctionSession.id).where(
-            AuctionSession.status == AuctionSessionStatus.ACTIVE,
-            AuctionSession.start_time > current_time,
-        )
-
-        await db.execute(
-            update(AuctionItem)
-            .where(
-                AuctionItem.session_id.in_(future_active_session_ids),
-                AuctionItem.status == AuctionItemStatus.OPEN,
-            )
-            .values(
-                status=AuctionItemStatus.READY,
-                opened_at=None,
-            ),
-        )
-
-        rescheduled_result = await db.execute(
-            update(AuctionSession)
-            .where(
-                AuctionSession.status == AuctionSessionStatus.ACTIVE,
-                AuctionSession.start_time > current_time,
-            )
-            .values(status=AuctionSessionStatus.SCHEDULED),
-        )
-
         active_session_ids = select(AuctionSession.id).where(
             AuctionSession.status == AuctionSessionStatus.SCHEDULED,
             AuctionSession.start_time <= current_time,
@@ -315,12 +273,10 @@ class AuctionSessionRepository:
             update(AuctionItem)
             .where(
                 AuctionItem.session_id.in_(active_session_ids),
-                AuctionItem.status == AuctionItemStatus.READY,
+                AuctionItem.status == AuctionItemStatus.UNSOLD,
+                AuctionItem.opened_at.is_(None),
             )
-            .values(
-                status=AuctionItemStatus.OPEN,
-                opened_at=current_time,
-            ),
+            .values(opened_at=current_time),
         )
 
         active_result = await db.execute(
@@ -341,21 +297,12 @@ class AuctionSessionRepository:
             getattr(active_result, "rowcount", 0) or 0,
             0,
         )
-        rescheduled_count = max(
-            getattr(rescheduled_result, "rowcount", 0) or 0,
-            0,
-        )
         finalized_count = await self._finalize_ended_items(
             db=db,
             current_time=current_time,
         )
 
-        return (
-            expired_count
-            + active_count
-            + rescheduled_count
-            + finalized_count
-        )
+        return expired_count + active_count + finalized_count
 
     async def create(
         self,

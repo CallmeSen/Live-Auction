@@ -201,6 +201,7 @@ class AuctionItemService:
                 id=item.session.id,
                 title=item.session.title,
                 status=item.session.status,
+                seller_id=item.session.seller_id,
                 end_time=item.session.end_time,
                 min_increment=item.session.rules.min_increment,
             ),
@@ -249,13 +250,13 @@ class AuctionItemService:
                 message="You are not the owner of this auction session",
             )
 
-        if session.status != AuctionSessionStatus.PENDING_APPROVAL:
+        if session.status != AuctionSessionStatus.SCHEDULED:
             raise AppException(
                 status_code=status.HTTP_409_CONFLICT,
                 code="SESSION_ITEMS_LOCKED",
                 message=(
                     "Items can only be added while the auction "
-                    "session is pending approval"
+                    "session is scheduled"
                 ),
             )
 
@@ -280,7 +281,7 @@ class AuctionItemService:
             description=request.description,
             starting_price=request.starting_price,
             current_price=request.starting_price,
-            status=AuctionItemStatus.READY,
+            status=AuctionItemStatus.UNSOLD,
         )
 
         try:
@@ -331,13 +332,13 @@ class AuctionItemService:
                 message="You are not the owner of this auction item",
             )
 
-        if item.session.status != AuctionSessionStatus.PENDING_APPROVAL:
+        if item.session.status != AuctionSessionStatus.SCHEDULED:
             raise AppException(
                 status_code=status.HTTP_409_CONFLICT,
                 code="SESSION_ITEMS_LOCKED",
                 message=(
                     "Items can only be updated while the auction "
-                    "session is pending approval"
+                    "session is scheduled"
                 ),
             )
 
@@ -412,13 +413,13 @@ class AuctionItemService:
                 message="You are not the owner of this auction item",
             )
 
-        if item.session.status != AuctionSessionStatus.PENDING_APPROVAL:
+        if item.session.status != AuctionSessionStatus.SCHEDULED:
             raise AppException(
                 status_code=status.HTTP_409_CONFLICT,
                 code="SESSION_ITEMS_LOCKED",
                 message=(
                     "Items can only be deleted while the auction "
-                    "session is pending approval"
+                    "session is scheduled"
                 ),
             )
 
@@ -474,13 +475,13 @@ class AuctionItemService:
                 message="Each auction item can have at most 5 images",
             )
 
-        if item.session.status != AuctionSessionStatus.PENDING_APPROVAL:
+        if item.session.status != AuctionSessionStatus.SCHEDULED:
             raise AppException(
                 status_code=status.HTTP_409_CONFLICT,
                 code="SESSION_ITEMS_LOCKED",
                 message=(
                     "Images can only be uploaded while the auction "
-                    "session is pending approval"
+                    "session is scheduled"
                 ),
             )
 

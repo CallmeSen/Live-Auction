@@ -116,6 +116,7 @@ class AuctionItemSessionData(BaseModel):
     id: uuid.UUID
     title: str
     status: AuctionSessionStatus
+    seller_id: uuid.UUID = Field(serialization_alias="sellerId")
     end_time: datetime = Field(serialization_alias="endTime")
     min_increment: Decimal = Field(serialization_alias="minIncrement")
 
