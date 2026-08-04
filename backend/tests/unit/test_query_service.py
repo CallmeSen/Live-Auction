@@ -47,7 +47,7 @@ class FakeTable:
 def identity(sub="trusted-sub", *groups):
     return RequestIdentity(
         sub=sub,
-        groups=frozenset(groups or ("SELLER",)),
+        groups=frozenset(groups or ("USER",)),
     )
 
 
@@ -387,7 +387,7 @@ def test_list_mine_uses_trusted_seller_partition_and_seller_projection():
 
     result = service._list_mine(
         catalog,
-        identity("trusted-sub", "SELLER"),
+        identity("trusted-sub", "USER"),
         page_size=10,
         cursor=None,
     )
@@ -447,7 +447,7 @@ def test_list_mine_rejects_cursor_from_another_seller_partition():
 
     with pytest.raises(BadRequest) as caught:
         service._list_mine(
-            FakeTable(), identity("trusted-sub", "SELLER"), 20, cursor
+            FakeTable(), identity("trusted-sub", "USER"), 20, cursor
         )
 
     assert caught.value.code == "INVALID_CURSOR"
@@ -475,7 +475,7 @@ def test_get_session_strongly_reads_meta_rules_and_consumes_item_pages():
     result = service._get_session(
         catalog,
         FakeTable(),
-        identity("bidder-sub", "BIDDER"),
+        identity("bidder-sub", "USER"),
         "s1",
     )
 
@@ -550,7 +550,7 @@ def test_get_session_enriches_a_live_item_from_the_state_table():
     result = service._get_session(
         catalog,
         state,
-        identity("bidder-sub", "BIDDER"),
+        identity("bidder-sub", "USER"),
         "s1",
     )
 
@@ -617,7 +617,7 @@ def test_get_session_returns_none_rules_when_optional_record_is_absent():
     result = service._get_session(
         catalog,
         FakeTable(),
-        identity("bidder-sub", "BIDDER"),
+        identity("bidder-sub", "USER"),
         "s1",
     )
 
@@ -1213,7 +1213,7 @@ def test_my_bids_queries_trusted_bidder_index_descending_and_sanitizes():
 
     result = service._my_bids(
         events,
-        identity("bidder-sub", "BIDDER"),
+        identity("bidder-sub", "USER"),
         page_size=15,
         cursor=None,
     )
@@ -1270,8 +1270,8 @@ def test_my_bids_rejects_cursor_bound_to_another_bidder():
     )
 
     with pytest.raises(BadRequest) as caught:
-        service._my_bids(
-            FakeTable(), identity("bidder-sub", "BIDDER"), 20, cursor
+            service._my_bids(
+                FakeTable(), identity("bidder-sub", "USER"), 20, cursor
         )
 
     assert caught.value.code == "INVALID_CURSOR"
@@ -1290,7 +1290,7 @@ def test_mine_route_uses_authorizer_subject_not_query_override(monkeypatch):
                 "seller_sub": "forged-sub",
             },
             sub="authorizer-sub",
-            groups="SELLER",
+                groups="USER",
         ),
         None,
     )
@@ -1318,7 +1318,7 @@ def test_my_bids_route_uses_authorizer_subject_not_query_override(monkeypatch):
             "/api/v1/bids/my",
             query={"bidder_sub": "forged-sub"},
             sub="authorizer-sub",
-            groups="BIDDER",
+                groups="USER",
         ),
         None,
     )

@@ -389,7 +389,7 @@ def _validate_schedule(
     *,
     now: int,
 ) -> None:
-    if "SELLER" not in identity.groups:
+    if "USER" not in identity.groups:
         raise Forbidden()
     if session is None:
         raise NotFound("SESSION_NOT_FOUND", "Session was not found")

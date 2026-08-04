@@ -97,7 +97,7 @@ def _create_session(
     session_id: str,
     now: int,
 ) -> dict[str, Any]:
-    require_group(identity, "SELLER")
+    require_group(identity, "USER")
     item = {
         **session_key(session_id),
         "entity_type": "SESSION",
@@ -139,7 +139,7 @@ def _put_rules(
     expected_version: int | None = None,
     now: int | None = None,
 ) -> dict[str, Any]:
-    require_group(identity, "SELLER")
+    require_group(identity, "USER")
     response = catalog.get_item(Key=session_key(session_id), ConsistentRead=True)
     session = response.get("Item")
     if session is None:
@@ -210,7 +210,7 @@ def _put_rules(
 @app.post("/api/v1/auction-sessions")
 def create_session() -> Response:
     identity = identity_from_event(app.current_event.raw_event)
-    require_group(identity, "SELLER")
+    require_group(identity, "USER")
     body = CreateSessionRequest.model_validate(app.current_event.json_body)
     data = _create_session(
         identity,
@@ -225,7 +225,7 @@ def create_session() -> Response:
 @app.put("/api/v1/auction-sessions/<session_id>/rules")
 def put_rules(session_id: str) -> Response:
     identity = identity_from_event(app.current_event.raw_event)
-    require_group(identity, "SELLER")
+    require_group(identity, "USER")
     rules = ControlPlaneRules.model_validate(app.current_event.json_body)
     data = _put_rules(session_id, identity, rules, _catalog_table())
     return _response(

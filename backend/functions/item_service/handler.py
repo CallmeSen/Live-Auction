@@ -131,7 +131,7 @@ def _create_item(
     item_id: str,
     now: int,
 ) -> dict[str, Any]:
-    require_group(identity, "SELLER")
+    require_group(identity, "USER")
     response = catalog.get_item(
         Key=session_key(session_id),
         ConsistentRead=True,
@@ -316,7 +316,7 @@ def _presign_image(
     object_id: str,
     max_bytes: int,
 ) -> dict[str, Any]:
-    require_group(identity, "SELLER")
+    require_group(identity, "USER")
     seller_sub = _path_segment(
         item.get("seller_sub"),
         "INVALID_MEDIA_PATH",
@@ -436,7 +436,7 @@ def create_item(session_id: str) -> Response:
 @app.post("/api/v1/auction-items/<item_id>/images/presign")
 def presign_image(item_id: str) -> Response:
     identity = identity_from_event(app.current_event.raw_event)
-    require_group(identity, "SELLER")
+    require_group(identity, "USER")
     body = PresignImageRequest.model_validate(app.current_event.json_body)
     catalog = _catalog_table()
     item = _find_item(catalog, item_id)

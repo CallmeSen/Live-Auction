@@ -30,7 +30,7 @@ ROOT = Path(__file__).parents[2]
 
 
 def seller(sub="seller-sub"):
-    return RequestIdentity(sub=sub, groups=frozenset({"SELLER"}))
+    return RequestIdentity(sub=sub, groups=frozenset({"USER"}))
 
 
 def admin(sub="admin-sub"):
@@ -301,7 +301,7 @@ def assert_expression_values_are_used(transaction):
         )
 
 
-def rest_event(method, path, body=None, sub="seller-sub", groups="SELLER"):
+def rest_event(method, path, body=None, sub="seller-sub", groups="USER"):
     event = {
         "httpMethod": method,
         "path": path,

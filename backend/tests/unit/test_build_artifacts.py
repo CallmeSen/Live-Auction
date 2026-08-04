@@ -26,7 +26,7 @@ STAGE3_FUNCTION_NAMES = (
     "query_service",
     "admin_command",
 )
-ALL_FUNCTION_NAMES = FUNCTION_NAMES + STAGE3_FUNCTION_NAMES
+ALL_FUNCTION_NAMES = FUNCTION_NAMES + STAGE3_FUNCTION_NAMES + ("cognito_post_confirm",)
 _CREDENTIAL_FILE_NAMES = {
     ".env",
     "credentials",

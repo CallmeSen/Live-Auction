@@ -9,7 +9,7 @@ from jwt import PyJWKClient
 from auction_common.errors import AuthError
 
 
-_ROLE_PRECEDENCE = ("ADMIN", "SELLER", "BIDDER")
+_ROLE_PRECEDENCE = ("ADMIN", "USER")
 _INVALID_TOKEN = "invalid Cognito token"
 
 

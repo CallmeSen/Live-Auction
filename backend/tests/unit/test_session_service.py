@@ -63,10 +63,10 @@ class FakeCatalog:
 
 
 def identity(sub="trusted-sub", *groups):
-    return RequestIdentity(sub=sub, groups=frozenset(groups or ("SELLER",)))
+    return RequestIdentity(sub=sub, groups=frozenset(groups or ("USER",)))
 
 
-def rest_event(method, path, body, sub="trusted-sub", groups="SELLER"):
+def rest_event(method, path, body, sub="trusted-sub", groups="USER"):
     return {
         "httpMethod": method,
         "path": path,
@@ -156,6 +156,21 @@ def test_bidder_cannot_create_session():
         )
 
     assert catalog.put_calls == []
+
+
+def test_user_can_create_session():
+    catalog = FakeCatalog()
+
+    result = service._create_session(
+        identity("user-sub", "USER"),
+        CreateSessionRequest(title="User sale"),
+        catalog,
+        session_id="s1",
+        now=1_700_000_000,
+    )
+
+    assert result == {"session_id": "s1", "status": "DRAFT"}
+    assert catalog.put_calls[0]["Item"]["seller_sub"] == "user-sub"
 
 
 def test_admin_can_create_session():

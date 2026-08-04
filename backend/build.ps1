@@ -10,7 +10,8 @@ param(
         "session_service",
         "item_service",
         "query_service",
-        "admin_command"
+        "admin_command",
+        "cognito_post_confirm"
     )]
     [string]$FunctionName = "bid_processor"
 )

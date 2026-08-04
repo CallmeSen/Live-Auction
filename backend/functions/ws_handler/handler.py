@@ -20,7 +20,7 @@ from boto3.dynamodb.types import TypeSerializer
 
 AUTH_ITEM_ID = "__connection_auth__"
 AUTH_TTL_SECONDS = 2 * 60 * 60
-SUPPORTED_ROLES = frozenset({"ADMIN", "SELLER", "BIDDER"})
+SUPPORTED_ROLES = frozenset({"ADMIN", "USER"})
 _IDENTIFIER_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", re.ASCII)
 _serializer = TypeSerializer()
 
@@ -437,8 +437,8 @@ def _join_room(
 def _place_bid(
     event: Mapping[str, Any], connection_id: str, auth: Mapping[str, Any]
 ) -> dict[str, Any]:
-    if auth.get("role") != "BIDDER":
-        return _response(403, "bidder role required")
+    if auth.get("role") != "USER":
+        return _response(403, "user role required")
     body = _parse_body(event)
     if body is None:
         return _response(400, "invalid message")

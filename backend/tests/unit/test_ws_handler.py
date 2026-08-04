@@ -71,7 +71,7 @@ def auth_record(**overrides):
         "record_type": "AUTH",
         "user_sub": "real-user",
         "email": "real-user@example.test",
-        "role": "BIDDER",
+        "role": "USER",
         "current_item_id": "item-1",
         "session_revision": "revision-1",
         "ttl": 9_999,
@@ -106,7 +106,7 @@ def test_connect_persists_trusted_auth_record_with_reserved_key_and_two_hour_ttl
         {
             "sub": "user-1",
             "email": "user-1@example.test",
-            "role": "BIDDER",
+        "role": "USER",
             "token": "must-not-be-stored",
         }
     )
@@ -121,7 +121,7 @@ def test_connect_persists_trusted_auth_record_with_reserved_key_and_two_hour_ttl
             "record_type": "AUTH",
             "user_sub": "user-1",
             "email": "user-1@example.test",
-            "role": "BIDDER",
+        "role": "USER",
             "session_revision": "revision-connect",
             "ttl": 8_200,
         }
@@ -129,7 +129,7 @@ def test_connect_persists_trusted_auth_record_with_reserved_key_and_two_hour_ttl
     assert "must-not-be-stored" not in json.dumps(response)
 
 
-@pytest.mark.parametrize("role", ["ADMIN", "SELLER", "BIDDER"])
+@pytest.mark.parametrize("role", ["ADMIN", "USER"])
 def test_connect_accepts_only_supported_roles(monkeypatch, role):
     connections = Mock()
     monkeypatch.setattr(module, "table", lambda name: connections)
@@ -144,7 +144,7 @@ def test_connect_accepts_only_supported_roles(monkeypatch, role):
     ("authorizer", "status_code"),
     [
         (None, 401),
-        ({"role": "BIDDER"}, 401),
+        ({"role": "USER"}, 401),
         ({"sub": "user-1"}, 401),
         ({"sub": "user-1", "role": "VIEWER"}, 403),
     ],
@@ -575,7 +575,7 @@ def test_place_bid_ignores_forged_identity_and_builds_server_command(monkeypatch
 
 def test_place_bid_denies_stored_seller_role(monkeypatch):
     monkeypatch.setattr(
-        module, "_get_auth", Mock(return_value=auth_record(role="SELLER"))
+        module, "_get_auth", Mock(return_value=auth_record(role="ADMIN"))
     )
     send_sqs = Mock()
     monkeypatch.setattr(module, "_send_sqs", send_sqs)
@@ -593,6 +593,31 @@ def test_place_bid_denies_stored_seller_role(monkeypatch):
 
     assert response["statusCode"] == 403
     send_sqs.assert_not_called()
+
+
+def test_place_bid_accepts_user_role(monkeypatch):
+    monkeypatch.setattr(
+        module, "_get_auth", Mock(return_value=auth_record(role="USER"))
+    )
+    send_sqs = Mock()
+    ack = Mock()
+    monkeypatch.setattr(module, "_send_sqs", send_sqs)
+    monkeypatch.setattr(module, "_ack", ack)
+
+    response = module._handle(
+        message_event(
+            "placeBid",
+            {
+                "item_id": "item-1",
+                "amount": "101",
+                "request_id": "request-123",
+            },
+        )
+    )
+
+    assert response["statusCode"] == 202
+    send_sqs.assert_called_once()
+    ack.assert_called_once()
 
 
 def test_place_bid_denies_item_other_than_stored_current_room(monkeypatch):
@@ -810,7 +835,7 @@ def test_non_connect_route_without_stored_auth_is_unauthorized(monkeypatch):
                 "amount": "101",
                 "request_id": "request-123",
             },
-            authorizer={"sub": "forged-user", "role": "BIDDER"},
+            authorizer={"sub": "forged-user", "role": "ADMIN"},
         )
     )
 

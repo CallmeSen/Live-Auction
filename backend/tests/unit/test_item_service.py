@@ -135,7 +135,7 @@ class FakeS3:
 
 
 def identity(sub="trusted-sub", *groups):
-    return RequestIdentity(sub=sub, groups=frozenset(groups or ("SELLER",)))
+    return RequestIdentity(sub=sub, groups=frozenset(groups or ("USER",)))
 
 
 def session(**overrides):
@@ -214,7 +214,7 @@ def presign_request(content_type="image/png", size_bytes=1024, **extra):
     )
 
 
-def rest_event(method, path, body, sub="trusted-sub", groups="SELLER"):
+def rest_event(method, path, body, sub="trusted-sub", groups="USER"):
     return {
         "httpMethod": method,
         "path": path,

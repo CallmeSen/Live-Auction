@@ -279,7 +279,7 @@ def _list_mine(
     page_size: int,
     cursor: str | None,
 ) -> dict[str, Any]:
-    require_group(identity, "SELLER")
+    require_group(identity, "USER")
     _validate_page_size(page_size)
     context = {"kind": "mine", "sub": identity.sub}
     start_key = _decoded_cursor(cursor, _GSI1_CURSOR_FIELDS, context)
@@ -522,7 +522,7 @@ def _my_bids(
     page_size: int,
     cursor: str | None,
 ) -> dict[str, Any]:
-    require_group(identity, "BIDDER")
+    require_group(identity, "USER")
     _validate_page_size(page_size)
     context = {"kind": "bids", "sub": identity.sub}
     start_key = _decoded_cursor(cursor, _BID_CURSOR_FIELDS, context)

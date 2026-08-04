@@ -60,20 +60,20 @@ def stub_jwt(monkeypatch, *, claims=None, key_error=None, decode_error=None):
     return client_factory, jwks_client, decoder
 
 
-def test_extract_role_prefers_admin_over_seller_and_bidder():
-    claims = {"cognito:groups": ["BIDDER", "SELLER", "ADMIN"]}
+def test_extract_role_prefers_admin_over_user():
+    claims = {"cognito:groups": ["USER", "ADMIN"]}
 
     assert auth.extract_role(claims) == "ADMIN"
 
 
-def test_extract_role_prefers_seller_over_bidder():
-    claims = {"cognito:groups": ["BIDDER", "SELLER"]}
+def test_extract_role_returns_user_for_user_group():
+    claims = {"cognito:groups": ["USER"]}
 
-    assert auth.extract_role(claims) == "SELLER"
+    assert auth.extract_role(claims) == "USER"
 
 
 def test_extract_role_accepts_a_string_group():
-    assert auth.extract_role({"cognito:groups": "BIDDER"}) == "BIDDER"
+    assert auth.extract_role({"cognito:groups": "USER"}) == "USER"
 
 
 @pytest.mark.parametrize(

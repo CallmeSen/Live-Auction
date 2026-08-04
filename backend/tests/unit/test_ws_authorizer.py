@@ -120,10 +120,10 @@ def test_valid_token_returns_allow_policy_and_identity_context(monkeypatch):
     claims = {
         "sub": "user-123",
         "email": "bidder@example.test",
-        "cognito:groups": ["BIDDER"],
+        "cognito:groups": ["USER"],
     }
     verify_jwt = Mock(return_value=claims)
-    extract_role = Mock(return_value="BIDDER")
+    extract_role = Mock(return_value="USER")
     monkeypatch.setattr(module, "verify_jwt", verify_jwt)
     monkeypatch.setattr(module, "extract_role", extract_role)
 
@@ -138,7 +138,7 @@ def test_valid_token_returns_allow_policy_and_identity_context(monkeypatch):
     assert response["context"] == {
         "sub": "user-123",
         "email": "bidder@example.test",
-        "role": "BIDDER",
+        "role": "USER",
     }
     assert all(isinstance(value, str) for value in response["context"].values())
     verify_jwt.assert_called_once_with(token)
@@ -163,7 +163,7 @@ def test_handler_never_logs_token_when_event_logging_env_is_true():
             "import functions.ws_authorizer.handler as module",
             "module.verify_jwt = lambda token: "
             "{'sub': 'user-123', 'email': 'bidder@example.test'}",
-            "module.extract_role = lambda claims: 'BIDDER'",
+        "module.extract_role = lambda claims: 'USER'",
             "module.handler(",
             f"    {{'queryStringParameters': {{'token': '{token}'}}, "
             f"'methodArn': '{METHOD_ARN}'}},",
