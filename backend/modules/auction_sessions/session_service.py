@@ -1,5 +1,4 @@
 import uuid
-from datetime import datetime
 
 from fastapi import status
 from sqlalchemy.exc import IntegrityError
@@ -12,9 +11,10 @@ from app.core.exceptions import AppException
 from app.domain.events.auction_lifecycle_events import create_auction_started_event
 from app.models.image_model import ItemImage
 from app.models.user_model import User
-from common.enum import AuctionItemStatus, AuctionSessionStatus, UserRole
 from app.models.auction_session_rule_model import AuctionSessionRule
 from app.models.session_model import AuctionSession
+from app.utils.datetime_utils import vietnam_now_naive
+from common.enum import AuctionItemStatus, AuctionSessionStatus, UserRole
 from modules.auction_sessions.session_repository import (
     AuctionSessionRepository,
     SessionListFilters,
@@ -27,6 +27,7 @@ from modules.auction_sessions.session_schema import (
     AuctionSessionListItem,
     AuctionSessionRuleData,
     AuctionSessionSellerData,
+    CancelAuctionSessionData,
     CreateAuctionSessionRequest,
     RejectAuctionSessionData,
     StartAuctionSessionData,
@@ -47,6 +48,20 @@ class AuctionSessionService:
         self.notification_service = notification_service
         self.publish_timeline_event_use_case = publish_timeline_event_use_case
 
+    async def _synchronize_time_based_statuses(
+        self,
+        db: AsyncSession,
+    ) -> None:
+        changed_count = (
+            await self.session_repository.synchronize_time_based_statuses(
+                db=db,
+                current_time=vietnam_now_naive(),
+            )
+        )
+
+        if changed_count > 0:
+            await db.commit()
+
     @staticmethod
     def _get_primary_image_url(
         images: list[ItemImage],
@@ -65,6 +80,8 @@ class AuctionSessionService:
         db: AsyncSession,
         session_id: uuid.UUID,
     ) -> AuctionSessionDetailData:
+        await self._synchronize_time_based_statuses(db)
+
         session = await self.session_repository.find_detail_by_id(
             db=db,
             session_id=session_id,
@@ -118,6 +135,8 @@ class AuctionSessionService:
         db: AsyncSession,
         filters: SessionListFilters,
     ) -> AuctionSessionListData:
+        await self._synchronize_time_based_statuses(db)
+
         sessions, total = await self.session_repository.list_sessions(
             db=db,
             filters=filters,
@@ -132,6 +151,21 @@ class AuctionSessionService:
                 end_time=session.end_time,
                 status=session.status,
                 seller_name=session.seller.full_name,
+                primary_image_url=next(
+                    (
+                        image.image_url
+                        for item in session.items
+                        for image in sorted(
+                            item.images,
+                            key=lambda current_image: (
+                                not current_image.is_primary,
+                                current_image.sort_order,
+                            ),
+                        )
+                        if image.image_url
+                    ),
+                    None,
+                ),
             )
             for session in sessions
         ]
@@ -155,7 +189,7 @@ class AuctionSessionService:
             description=request.description,
             start_time=request.start_time,
             end_time=request.end_time,
-            status=AuctionSessionStatus.PENDING_APPROVAL,
+            status=AuctionSessionStatus.SCHEDULED,
             rules=AuctionSessionRule(
                 min_increment=request.min_increment,
             ),
@@ -183,6 +217,48 @@ class AuctionSessionService:
         except Exception:
             await db.rollback()
             raise
+
+    @staticmethod
+    def _item_is_available_for_auction(item) -> bool:
+        return item.status == AuctionItemStatus.UNSOLD
+
+    @staticmethod
+    def _cancel_unsold_session_items(session: AuctionSession) -> None:
+        for item in session.items:
+            if item.status == AuctionItemStatus.UNSOLD:
+                item.status = AuctionItemStatus.CANCELLED
+
+    async def _activate_session_items(
+        self,
+        session: AuctionSession,
+        current_time,
+    ) -> None:
+        for item in session.items:
+            if not self._item_is_available_for_auction(item):
+                continue
+
+            if item.opened_at is None:
+                item.opened_at = current_time
+
+    async def _publish_auction_started_events(
+        self,
+        session: AuctionSession,
+    ) -> None:
+        if self.publish_timeline_event_use_case is None:
+            return
+
+        for item in session.items:
+            if not self._item_is_available_for_auction(item):
+                continue
+
+            try:
+                await self.publish_timeline_event_use_case.execute(
+                    item_id=item.id,
+                    event=create_auction_started_event(item_id=item.id),
+                )
+            except Exception:
+                # Realtime publication failure must not undo a committed start.
+                pass
 
     async def start_session(
         self,
@@ -227,7 +303,7 @@ class AuctionSessionService:
                     message="Auction session rules have not been configured",
                 )
 
-            current_time = datetime.now()
+            current_time = vietnam_now_naive()
 
             if current_time < session.start_time:
                 raise AppException(
@@ -237,6 +313,9 @@ class AuctionSessionService:
                 )
 
             if current_time >= session.end_time:
+                session.status = AuctionSessionStatus.ENDED
+                await db.commit()
+
                 raise AppException(
                     status_code=status.HTTP_409_CONFLICT,
                     code="SESSION_ALREADY_ENDED",
@@ -244,27 +323,11 @@ class AuctionSessionService:
                 )
 
             session.status = AuctionSessionStatus.ACTIVE
-
-            for item in session.items:
-                if item.status == AuctionItemStatus.READY:
-                    item.status = AuctionItemStatus.OPEN
-                    item.opened_at = current_time
+            self._activate_session_items(session, current_time)
 
             await db.commit()
 
-            if self.publish_timeline_event_use_case is not None:
-                for item in session.items:
-                    if item.status == AuctionItemStatus.OPEN:
-                        try:
-                            await self.publish_timeline_event_use_case.execute(
-                                item_id=item.id,
-                                event=create_auction_started_event(
-                                    item_id=item.id,
-                                ),
-                            )
-                        except Exception:
-                            # Realtime publication failure must not undo a committed start.
-                            pass
+            await self._publish_auction_started_events(session)
 
             return StartAuctionSessionData(
                 id=session.id,
@@ -307,15 +370,40 @@ class AuctionSessionService:
                     message="Auction session not found",
                 )
 
-            if session.status != AuctionSessionStatus.PENDING_APPROVAL:
+            if session.status != AuctionSessionStatus.SCHEDULED:
                 raise AppException(
                     status_code=status.HTTP_409_CONFLICT,
                     code="INVALID_SESSION_STATUS",
-                    message="Auction session is not pending approval",
+                    message="Only scheduled auction sessions can be approved",
                 )
 
-            session.status = AuctionSessionStatus.SCHEDULED
-            current_time = datetime.now()
+            if len(session.items) == 0:
+                raise AppException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    code="SESSION_HAS_NO_ITEMS",
+                    message=(
+                        "Auction session must contain at least one item "
+                        "before approval"
+                    ),
+                )
+
+            current_time = vietnam_now_naive()
+
+            if current_time >= session.end_time:
+                session.status = AuctionSessionStatus.ENDED
+                await db.commit()
+
+                raise AppException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    code="SESSION_APPROVAL_WINDOW_EXPIRED",
+                    message=(
+                        "Auction session cannot be approved after its end time"
+                    ),
+                )
+
+            if current_time >= session.start_time:
+                session.status = AuctionSessionStatus.ACTIVE
+                self._activate_session_items(session, current_time)
 
             await self.notification_service.notify_session_approved(
                 db=db,
@@ -325,6 +413,9 @@ class AuctionSessionService:
             )
 
             await db.commit()
+
+            if session.status == AuctionSessionStatus.ACTIVE:
+                await self._publish_auction_started_events(session)
 
             return ApproveAuctionSessionData(
                 id=session.id,
@@ -359,15 +450,17 @@ class AuctionSessionService:
                     message="Auction session not found",
                 )
 
-            if session.status != AuctionSessionStatus.PENDING_APPROVAL:
+            if session.status != AuctionSessionStatus.SCHEDULED:
                 raise AppException(
                     status_code=status.HTTP_409_CONFLICT,
                     code="INVALID_SESSION_STATUS",
-                    message="Auction session is not pending approval",
+                    message="Only scheduled auction sessions can be rejected",
                 )
 
-            session.status = AuctionSessionStatus.REJECTED
-            current_time = datetime.now()
+            session.status = AuctionSessionStatus.CANCELLED
+            current_time = vietnam_now_naive()
+
+            self._cancel_unsold_session_items(session)
 
             await self.notification_service.notify_session_rejected(
                 db=db,
@@ -383,6 +476,70 @@ class AuctionSessionService:
                 id=session.id,
                 status=session.status,
                 rejected_at=current_time,
+                reason=reason,
+            )
+
+        except AppException:
+            await db.rollback()
+            raise
+
+        except Exception:
+            await db.rollback()
+            raise
+
+    async def cancel_session(
+        self,
+        db: AsyncSession,
+        session_id: uuid.UUID,
+        reason: str | None,
+    ) -> CancelAuctionSessionData:
+        try:
+            session = await self.session_repository.find_by_id_for_update(
+                db=db,
+                session_id=session_id,
+            )
+
+            if session is None:
+                raise AppException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    code="AUCTION_SESSION_NOT_FOUND",
+                    message="Auction session not found",
+                )
+
+            if session.status != AuctionSessionStatus.SCHEDULED:
+                raise AppException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    code="INVALID_SESSION_STATUS",
+                    message="Only scheduled auction sessions can be cancelled",
+                )
+
+            current_time = vietnam_now_naive()
+
+            if current_time >= session.start_time:
+                raise AppException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    code="SESSION_ALREADY_STARTED",
+                    message="Auction session can no longer be cancelled after its start time",
+                )
+
+            session.status = AuctionSessionStatus.CANCELLED
+
+            self._cancel_unsold_session_items(session)
+
+            await self.notification_service.notify_session_cancelled(
+                db=db,
+                seller_id=session.seller_id,
+                session_id=session.id,
+                session_title=session.title,
+                reason=reason,
+            )
+
+            await db.commit()
+
+            return CancelAuctionSessionData(
+                id=session.id,
+                status=session.status,
+                cancelled_at=current_time,
                 reason=reason,
             )
 

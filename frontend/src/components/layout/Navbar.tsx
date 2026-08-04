@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import Logo from '../common/Logo';
 import NotificationBell from './NotificationBell';
 import useAuth from '../../hooks/useAuth';
@@ -23,6 +23,7 @@ const navItems: NavItem[] = [
 ];
 
 export default function Navbar() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const visibleItems = navItems.filter((item) => !item.roles || (user && item.roles.includes(user.role)));
@@ -31,7 +32,7 @@ export default function Navbar() {
   const handleLogout = () => {
     logout();
     setMobileOpen(false);
-    window.location.replace('/auctions');
+    navigate('/auctions', { replace: true });
   };
 
   const navClass = ({ isActive }: { isActive: boolean }) =>

@@ -10,7 +10,6 @@ import type {
 import axiosClient from './axiosClient';
 
 export const userService = {
-  // TODO(BACKEND): GET /users/me chua duoc trien khai.
   async getProfile(): Promise<UserProfileResponse> {
     const response = await axiosClient.get<
       ApiResponse<UserProfileResponse>
@@ -19,7 +18,6 @@ export const userService = {
     return response.data.data;
   },
 
-  // TODO(BACKEND): PATCH /users/me chua duoc trien khai.
   async updateProfile(
     payload: UpdateUserProfileRequest,
   ): Promise<UserProfileResponse> {

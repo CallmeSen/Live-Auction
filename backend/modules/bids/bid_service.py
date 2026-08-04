@@ -1,6 +1,5 @@
 import logging
 import uuid
-from datetime import datetime
 
 from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,10 +8,17 @@ from app.application.use_cases.realtime.publish_bid_placed import (
     PublishBidPlacedUseCase,
 )
 from app.core.exceptions import AppException
+from app.utils.datetime_utils import vietnam_now_naive
 from app.models.bid_model import Bid
 from app.models.user_model import User
-from common.enum import AuctionItemStatus, AuctionSessionStatus, BidStatus
+from common.enum import (
+    AuctionItemStatus,
+    AuctionSessionStatus,
+    BidStatus,
+    MyBidOutcome,
+)
 from modules.auction_items.item_repository import AuctionItemRepository
+from modules.auction_sessions.session_repository import AuctionSessionRepository
 from modules.bids.bid_repository import BidRepository, MyBidListFilters
 from modules.bids.bid_schema import (
     MyBidListData,
@@ -29,43 +35,139 @@ class BidService:
         self,
         bid_repository: BidRepository,
         item_repository: AuctionItemRepository,
+        session_repository: AuctionSessionRepository,
         notification_service: NotificationService,
         publish_bid_placed_use_case: PublishBidPlacedUseCase | None = None,
     ) -> None:
         self.bid_repository = bid_repository
         self.item_repository = item_repository
+        self.session_repository = session_repository
         self.notification_service = notification_service
         self.publish_bid_placed_use_case = publish_bid_placed_use_case
+
+    @staticmethod
+    def _get_outcome(
+        bids: list[Bid],
+        bidder_id: uuid.UUID,
+    ) -> MyBidOutcome | None:
+        representative = bids[0]
+        item = representative.item
+        session = representative.session
+
+        if (
+            session.status
+            in (
+                AuctionSessionStatus.CANCELLED,
+                AuctionSessionStatus.REJECTED,
+            )
+            or item.status == AuctionItemStatus.CANCELLED
+        ):
+            return None
+
+        if (
+            session.status == AuctionSessionStatus.ENDED
+            or item.status
+            in (
+                AuctionItemStatus.SOLD,
+                AuctionItemStatus.UNSOLD,
+            )
+        ):
+            if (
+                item.status == AuctionItemStatus.SOLD
+                and item.winner_user_id == bidder_id
+            ):
+                return MyBidOutcome.WON
+
+            return MyBidOutcome.LOST
+
+        if any(bid.status == BidStatus.WINNING for bid in bids):
+            return MyBidOutcome.LEADING
+
+        return MyBidOutcome.OUTBID
 
     async def list_my_bids(
         self,
         db: AsyncSession,
         filters: MyBidListFilters,
     ) -> MyBidListData:
-        bids, total = await self.bid_repository.list_my_bids(
-            db=db,
-            filters=filters,
+        changed_count = (
+            await self.session_repository.synchronize_time_based_statuses(
+                db=db,
+                current_time=vietnam_now_naive(),
+            )
         )
 
-        items = [
-            MyBidListItem(
-                id=bid.id,
-                amount=bid.amount,
-                status=bid.status,
-                created_at=bid.created_at,
-                item_id=bid.item.id,
-                item_title=bid.item.title,
-                item_status=bid.item.status,
-                item_current_price=bid.item.current_price,
-                session_id=bid.session.id,
-                session_title=bid.session.title,
-                session_status=bid.session.status,
+        if changed_count > 0:
+            await db.commit()
+
+        bids = await self.bid_repository.list_all_by_bidder(
+            db=db,
+            bidder_id=filters.bidder_id,
+        )
+
+        grouped_bids: dict[uuid.UUID, list[Bid]] = {}
+
+        for bid in bids:
+            if bid.status == BidStatus.CANCELLED:
+                continue
+
+            grouped_bids.setdefault(bid.item_id, []).append(bid)
+
+        items: list[MyBidListItem] = []
+
+        for item_bids in grouped_bids.values():
+            item_bids.sort(
+                key=lambda bid: bid.created_at,
+                reverse=True,
             )
-            for bid in bids
-        ]
+            latest_bid = item_bids[0]
+            best_bid = max(
+                item_bids,
+                key=lambda bid: (bid.amount, bid.created_at),
+            )
+            outcome = self._get_outcome(
+                bids=item_bids,
+                bidder_id=filters.bidder_id,
+            )
+
+            if outcome is None:
+                continue
+
+            if (
+                filters.outcome is not None
+                and outcome != filters.outcome
+            ):
+                continue
+
+            items.append(
+                MyBidListItem(
+                    id=latest_bid.id,
+                    amount=best_bid.amount,
+                    status=latest_bid.status,
+                    outcome=outcome,
+                    created_at=latest_bid.created_at,
+                    item_id=latest_bid.item.id,
+                    item_title=latest_bid.item.title,
+                    item_status=latest_bid.item.status,
+                    item_current_price=latest_bid.item.current_price,
+                    item_final_price=latest_bid.item.final_price,
+                    session_id=latest_bid.session.id,
+                    session_title=latest_bid.session.title,
+                    session_status=latest_bid.session.status,
+                )
+            )
+
+        items.sort(
+            key=lambda item: item.created_at,
+            reverse=True,
+        )
+
+        total = len(items)
+        offset = (filters.page - 1) * filters.page_size
+        paginated_items = items[offset : offset + filters.page_size]
 
         return MyBidListData(
-            items=items,
+            items=paginated_items,
             page=filters.page,
             page_size=filters.page_size,
             total=total,
@@ -114,7 +216,7 @@ class BidService:
             #         message="Auction session is not active",
             #     )
 
-            current_time = datetime.now()
+            current_time = vietnam_now_naive()
 
             if not (
                 session.status == AuctionSessionStatus.ACTIVE

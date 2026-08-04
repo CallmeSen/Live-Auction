@@ -1,12 +1,15 @@
 import { createDefaultAuctionSessionList } from '../defaults/auctionSessionDefaults';
 import type {
+  ApproveAuctionSessionResponse,
   AuctionSessionDetailResponse,
   AuctionSessionListRequest,
   AuctionSessionListResponse,
+  CancelAuctionSessionRequest,
+  CancelAuctionSessionResponse,
   CreateAuctionSessionRequest,
   CreateAuctionSessionResponse,
-  ReviewAuctionSessionRequest,
-  ReviewAuctionSessionResponse,
+  RejectAuctionSessionRequest,
+  RejectAuctionSessionResponse,
   StartAuctionSessionResponse,
 } from '../interfaces/auctionSession';
 import type { ApiResponse } from '../interfaces/common';
@@ -25,6 +28,34 @@ export const auctionSessionService = {
     } catch {
       return createDefaultAuctionSessionList(params);
     }
+  },
+
+
+  async getAdminSessions(
+    params: AuctionSessionListRequest = {},
+  ): Promise<AuctionSessionListResponse> {
+    const response = await axiosClient.get<
+      ApiResponse<AuctionSessionListResponse>
+    >('/admin/auction-sessions', { params });
+
+    return response.data.data;
+  },
+
+  async getPendingSessions(
+    params: AuctionSessionListRequest = {},
+  ): Promise<AuctionSessionListResponse> {
+    const response = await axiosClient.get<
+      ApiResponse<AuctionSessionListResponse>
+    >('/admin/auction-sessions/pending', {
+      params: {
+        page: params.page,
+        size: params.size,
+        keyword: params.keyword,
+        categoryId: params.categoryId,
+      },
+    });
+
+    return response.data.data;
   },
 
   async getMySessions(
@@ -71,25 +102,34 @@ export const auctionSessionService = {
     return response.data.data;
   },
 
-  // TODO(BACKEND): PATCH /admin/auction-sessions/{sessionId}/approve chua duoc trien khai.
   async approveSession(
     sessionId: string,
-  ): Promise<ReviewAuctionSessionResponse> {
+  ): Promise<ApproveAuctionSessionResponse> {
     const response = await axiosClient.patch<
-      ApiResponse<ReviewAuctionSessionResponse>
+      ApiResponse<ApproveAuctionSessionResponse>
     >(`/admin/auction-sessions/${sessionId}/approve`);
 
     return response.data.data;
   },
 
-  // TODO(BACKEND): PATCH /admin/auction-sessions/{sessionId}/reject chua duoc trien khai.
   async rejectSession(
     sessionId: string,
-    payload: ReviewAuctionSessionRequest,
-  ): Promise<ReviewAuctionSessionResponse> {
+    payload: RejectAuctionSessionRequest,
+  ): Promise<RejectAuctionSessionResponse> {
     const response = await axiosClient.patch<
-      ApiResponse<ReviewAuctionSessionResponse>
+      ApiResponse<RejectAuctionSessionResponse>
     >(`/admin/auction-sessions/${sessionId}/reject`, payload);
+
+    return response.data.data;
+  },
+
+  async cancelSession(
+    sessionId: string,
+    payload: CancelAuctionSessionRequest,
+  ): Promise<CancelAuctionSessionResponse> {
+    const response = await axiosClient.patch<
+      ApiResponse<CancelAuctionSessionResponse>
+    >(`/admin/auction-sessions/${sessionId}/cancel`, payload);
 
     return response.data.data;
   },

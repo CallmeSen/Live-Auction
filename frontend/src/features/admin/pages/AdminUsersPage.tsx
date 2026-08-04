@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Button from '../../../components/common/Button';
 import Input from '../../../components/common/Input';
+import useAuth from '../../../hooks/useAuth';
 import { adminService } from '../../../services/adminService';
 import { userService } from '../../../services/userService';
 import type { CreateAdminUserResponse } from '../../../interfaces/admin';
@@ -23,7 +24,7 @@ const initialForm = {
 };
 
 const roleLabel: Record<AuthUserRole, string> = {
-  ADMIN: 'Admin',
+  ADMIN: 'Quản trị viên',
   USER: 'Người dùng',
 };
 
@@ -33,6 +34,7 @@ const statusLabel: Record<AuthUserStatus, string> = {
 };
 
 export default function AdminUsersPage() {
+  const { user: currentUser } = useAuth();
   const [form, setForm] = useState(initialForm);
   const [createdAdmin, setCreatedAdmin] =
     useState<CreateAdminUserResponse | null>(null);
@@ -44,16 +46,18 @@ export default function AdminUsersPage() {
     useState<UserListPaginationResponse | null>(null);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState('');
+  const [listMessage, setListMessage] = useState('');
+  const [statusTarget, setStatusTarget] =
+    useState<UserListItemResponse | null>(null);
+  const [statusLoading, setStatusLoading] = useState(false);
 
   const [page, setPage] = useState(1);
   const [keywordInput, setKeywordInput] = useState('');
   const [keyword, setKeyword] = useState('');
-  const [roleFilter, setRoleFilter] = useState<
-    AuthUserRole | ''
-  >('');
-  const [statusFilter, setStatusFilter] = useState<
-    AuthUserStatus | ''
-  >('');
+  const [roleFilter, setRoleFilter] =
+    useState<AuthUserRole | ''>('');
+  const [statusFilter, setStatusFilter] =
+    useState<AuthUserStatus | ''>('');
 
   const loadUsers = useCallback(async () => {
     try {
@@ -85,7 +89,11 @@ export default function AdminUsersPage() {
   }, [keyword, page, roleFilter, statusFilter]);
 
   useEffect(() => {
-    void loadUsers();
+    const timerId = window.setTimeout(() => {
+      void loadUsers();
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
   }, [loadUsers]);
 
   const update = (
@@ -101,6 +109,53 @@ export default function AdminUsersPage() {
   const applyFilters = () => {
     setPage(1);
     setKeyword(keywordInput.trim());
+  };
+
+  const changeUserStatus = async () => {
+    if (!statusTarget) {
+      return;
+    }
+
+    const nextStatus: AuthUserStatus =
+      statusTarget.status === 'ACTIVE' ? 'BANNED' : 'ACTIVE';
+
+    try {
+      setStatusLoading(true);
+      setListError('');
+      setListMessage('');
+
+      const result = await adminService.updateUserStatus(
+        statusTarget.id,
+        { status: nextStatus },
+      );
+
+      setUsers((current) =>
+        current.map((item) =>
+          item.id === result.id
+            ? {
+                ...item,
+                status: result.status,
+                updatedAt: result.updatedAt,
+              }
+            : item,
+        ),
+      );
+      setListMessage(
+        nextStatus === 'BANNED'
+          ? 'Đã khóa tài khoản. Người dùng không thể đăng nhập hoặc gọi API cần xác thực.'
+          : 'Đã mở khóa tài khoản.',
+      );
+      setStatusTarget(null);
+    } catch (requestError) {
+      setListError(
+        getApiErrorMessage(
+          requestError,
+          'Không thể cập nhật trạng thái tài khoản.',
+        ),
+      );
+    } finally {
+      setStatusLoading(false);
+    }
   };
 
   const submit = async (event: React.FormEvent) => {
@@ -156,7 +211,7 @@ export default function AdminUsersPage() {
       </h1>
 
       <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-        Danh sách người dùng được lấy trực tiếp từ backend.
+        Tìm kiếm, lọc, khóa hoặc mở lại tài khoản vi phạm.
       </p>
 
       <section className="mt-7 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 sm:p-8">
@@ -225,17 +280,23 @@ export default function AdminUsersPage() {
           </Button>
         </div>
 
+        {listMessage && (
+          <div className="mt-5 rounded-xl border border-[var(--color-success-border)] px-5 py-4 text-sm text-[var(--color-success)]">
+            {listMessage}
+          </div>
+        )}
+
+        {listError && (
+          <div className="mt-5 rounded-xl border border-[var(--color-danger-solid)]/60 px-5 py-4 text-sm text-[var(--color-danger)]">
+            {listError}
+          </div>
+        )}
+
         {listLoading && (
           <div className="mt-7 rounded-xl border border-[var(--color-border)] py-16 text-center">
             <p className="text-sm text-[var(--color-text-muted)]">
               Đang tải danh sách người dùng...
             </p>
-          </div>
-        )}
-
-        {!listLoading && listError && (
-          <div className="mt-7 rounded-xl border border-[var(--color-danger-solid)]/60 px-5 py-4 text-sm text-[var(--color-danger)]">
-            {listError}
           </div>
         )}
 
@@ -245,67 +306,84 @@ export default function AdminUsersPage() {
               <table className="min-w-full text-left text-sm">
                 <thead className="border-b border-[var(--color-border)] bg-[var(--color-surface-elevated)]/40 text-xs uppercase tracking-wide text-[var(--color-text-dim)]">
                   <tr>
-                    <th className="px-4 py-3 font-medium">
-                      Họ và tên
-                    </th>
-                    <th className="px-4 py-3 font-medium">
-                      Email
-                    </th>
-                    <th className="px-4 py-3 font-medium">
-                      Số điện thoại
-                    </th>
-                    <th className="px-4 py-3 font-medium">
-                      Vai trò
-                    </th>
-                    <th className="px-4 py-3 font-medium">
-                      Trạng thái
-                    </th>
-                    <th className="px-4 py-3 font-medium">
-                      Ngày tạo
-                    </th>
+                    <th className="px-4 py-3 font-medium">Họ và tên</th>
+                    <th className="px-4 py-3 font-medium">Email</th>
+                    <th className="px-4 py-3 font-medium">Số điện thoại</th>
+                    <th className="px-4 py-3 font-medium">Vai trò</th>
+                    <th className="px-4 py-3 font-medium">Trạng thái</th>
+                    <th className="px-4 py-3 font-medium">Ngày tạo</th>
+                    <th className="px-4 py-3 font-medium">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.length > 0 ? (
-                    users.map((user) => (
-                      <tr
-                        key={user.id}
-                        className="border-b border-[var(--color-border)] last:border-b-0"
-                      >
-                        <td className="px-4 py-4 font-medium">
-                          {user.fullName}
-                        </td>
-                        <td className="px-4 py-4 text-[var(--color-text-muted)]">
-                          {user.email}
-                        </td>
-                        <td className="px-4 py-4 text-[var(--color-text-muted)]">
-                          {user.phone}
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className="rounded-full border border-[var(--color-border-strong)] px-2.5 py-1 text-[10px]">
-                            {roleLabel[user.role]}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span
-                            className={`rounded-full border px-2.5 py-1 text-[10px] ${
-                              user.status === 'ACTIVE'
-                                ? 'border-[var(--color-success-border)] text-[var(--color-success)]'
-                                : 'border-[var(--color-danger-solid)]/60 text-[var(--color-danger)]'
-                            }`}
-                          >
-                            {statusLabel[user.status]}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-xs text-[var(--color-text-dim)]">
-                          {formatDateTime(user.createdAt)}
-                        </td>
-                      </tr>
-                    ))
+                    users.map((account) => {
+                      const isCurrentAccount =
+                        currentUser?.id === account.id;
+
+                      return (
+                        <tr
+                          key={account.id}
+                          className="border-b border-[var(--color-border)] last:border-b-0"
+                        >
+                          <td className="px-4 py-4 font-medium">
+                            {account.fullName}
+                          </td>
+                          <td className="px-4 py-4 text-[var(--color-text-muted)]">
+                            {account.email}
+                          </td>
+                          <td className="px-4 py-4 text-[var(--color-text-muted)]">
+                            {account.phone}
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="rounded-full border border-[var(--color-border-strong)] px-2.5 py-1 text-[10px]">
+                              {roleLabel[account.role]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span
+                              className={
+                                'rounded-full border px-2.5 py-1 text-[10px] ' +
+                                (account.status === 'ACTIVE'
+                                  ? 'border-[var(--color-success-border)] text-[var(--color-success)]'
+                                  : 'border-[var(--color-danger-solid)]/60 text-[var(--color-danger)]')
+                              }
+                            >
+                              {statusLabel[account.status]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-xs text-[var(--color-text-dim)]">
+                            {formatDateTime(account.createdAt)}
+                          </td>
+                          <td className="px-4 py-4">
+                            {isCurrentAccount ? (
+                              <span className="text-xs text-[var(--color-text-dim)]">
+                                Tài khoản hiện tại
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setStatusTarget(account)}
+                                className={
+                                  'rounded-md border px-3 py-2 text-xs ' +
+                                  (account.status === 'ACTIVE'
+                                    ? 'border-[var(--color-danger-solid)] text-[var(--color-danger)]'
+                                    : 'border-[var(--color-success-border)] text-[var(--color-success)]')
+                                }
+                              >
+                                {account.status === 'ACTIVE'
+                                  ? 'Khóa tài khoản'
+                                  : 'Mở khóa'}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="px-4 py-16 text-center text-[var(--color-text-muted)]"
                       >
                         Không tìm thấy người dùng nào.
@@ -319,8 +397,7 @@ export default function AdminUsersPage() {
             {pagination && pagination.totalItems > 0 && (
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-[var(--color-text-dim)]">
-                  Trang {pagination.page} /{' '}
-                  {pagination.totalPages} ·{' '}
+                  Trang {pagination.page} / {pagination.totalPages} ·{' '}
                   {pagination.totalItems} người dùng
                 </p>
 
@@ -413,25 +490,70 @@ export default function AdminUsersPage() {
         {createdAdmin && (
           <div className="mt-5 rounded-md border border-[var(--color-success-border)] bg-[var(--color-success-bg)]/15 px-4 py-3 text-sm text-[var(--color-success)]">
             <p>
-              Đã tạo Admin{' '}
-              <strong>{createdAdmin.fullName}</strong> thành
-              công.
+              Đã tạo Admin <strong>{createdAdmin.fullName}</strong> thành công.
             </p>
-
-            <p className="mt-1 text-xs">
-              Email: {createdAdmin.email}
-            </p>
+            <p className="mt-1 text-xs">Email: {createdAdmin.email}</p>
           </div>
         )}
 
         <div className="mt-6 flex justify-end">
           <Button type="submit" disabled={formLoading}>
-            {formLoading
-              ? 'Đang tạo tài khoản...'
-              : 'Tạo Admin'}
+            {formLoading ? 'Đang tạo tài khoản...' : 'Tạo Admin'}
           </Button>
         </div>
       </form>
+
+      {statusTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="user-status-title"
+        >
+          <div className="w-full max-w-md rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+            <h2 id="user-status-title" className="font-display text-2xl">
+              {statusTarget.status === 'ACTIVE'
+                ? 'Khóa tài khoản'
+                : 'Mở khóa tài khoản'}
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-[var(--color-text-muted)]">
+              {statusTarget.status === 'ACTIVE'
+                ? 'Sau khi khóa, tài khoản này không thể đăng nhập hoặc sử dụng chức năng cần xác thực.'
+                : 'Tài khoản sẽ có thể đăng nhập và sử dụng hệ thống trở lại.'}
+            </p>
+            <p className="mt-3 text-sm font-semibold">
+              {statusTarget.fullName} · {statusTarget.email}
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={statusLoading}
+                onClick={() => setStatusTarget(null)}
+                className="rounded-md border border-[var(--color-border)] px-5 py-2.5 text-sm disabled:opacity-50"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                disabled={statusLoading}
+                onClick={() => void changeUserStatus()}
+                className={
+                  'rounded-md px-5 py-2.5 text-sm font-semibold disabled:opacity-50 ' +
+                  (statusTarget.status === 'ACTIVE'
+                    ? 'bg-[var(--color-danger-solid)] text-white'
+                    : 'bg-[var(--color-primary)] text-[#0F1B14]')
+                }
+              >
+                {statusLoading
+                  ? 'Đang xử lý...'
+                  : statusTarget.status === 'ACTIVE'
+                    ? 'Xác nhận khóa'
+                    : 'Xác nhận mở khóa'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

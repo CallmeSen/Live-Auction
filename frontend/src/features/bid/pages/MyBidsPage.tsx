@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { bidService } from '../../../services/bidService';
-import type { BidStatus, MyBidListItemResponse } from '../../../interfaces/bid';
+import type {
+  MyBidListItemResponse,
+  MyBidOutcome,
+} from '../../../interfaces/bid';
 import { getApiErrorMessage } from '../../../services/apiError';
+import { bidService } from '../../../services/bidService';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { formatDateTime } from '../../../utils/formatDate';
 
-type BidFilter = 'ALL' | BidStatus;
+type BidFilter = 'ALL' | 'ACTIVE' | 'WON' | 'LOST';
 
-const statusStyle: Record<
-  BidStatus,
+const outcomeStyle: Record<
+  MyBidOutcome,
   { label: string; className: string }
 > = {
-  WINNING: {
+  LEADING: {
     label: 'Đang dẫn đầu',
     className:
       'bg-[var(--color-success-bg)]/20 text-[var(--color-success)] border-[var(--color-success-border)]/30',
@@ -22,8 +25,13 @@ const statusStyle: Record<
     className:
       'bg-[var(--color-danger-solid)]/10 text-[var(--color-danger)] border-[var(--color-danger-solid)]/30',
   },
-  CANCELLED: {
-    label: 'Đã hủy',
+  WON: {
+    label: 'Đã thắng',
+    className:
+      'bg-[var(--color-primary)]/15 text-[var(--color-primary)] border-[var(--color-primary)]/40',
+  },
+  LOST: {
+    label: 'Không thắng',
     className:
       'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border-strong)]',
   },
@@ -31,10 +39,25 @@ const statusStyle: Record<
 
 const filters: Array<{ value: BidFilter; label: string }> = [
   { value: 'ALL', label: 'Tất cả' },
-  { value: 'WINNING', label: 'Đang dẫn đầu' },
-  { value: 'OUTBID', label: 'Đã bị vượt' },
-  { value: 'CANCELLED', label: 'Đã hủy' },
+  { value: 'ACTIVE', label: 'Đang tham gia' },
+  { value: 'WON', label: 'Đã thắng' },
+  { value: 'LOST', label: 'Không thắng' },
 ];
+
+const isInFilter = (
+  bid: MyBidListItemResponse,
+  filter: BidFilter,
+) => {
+  if (filter === 'ALL') {
+    return true;
+  }
+
+  if (filter === 'ACTIVE') {
+    return bid.outcome === 'LEADING' || bid.outcome === 'OUTBID';
+  }
+
+  return bid.outcome === filter;
+};
 
 export default function MyBidsPage() {
   const [bids, setBids] = useState<MyBidListItemResponse[]>([]);
@@ -61,7 +84,7 @@ export default function MyBidsPage() {
           setError(
             getApiErrorMessage(
               loadError,
-              'Không thể tải lịch sử trả giá.',
+              'Không thể tải danh sách vật phẩm đã trả giá.',
             ),
           );
         }
@@ -80,17 +103,12 @@ export default function MyBidsPage() {
   }, []);
 
   const filteredBids = useMemo(
-    () =>
-      selectedFilter === 'ALL'
-        ? bids
-        : bids.filter((bid) => bid.status === selectedFilter),
+    () => bids.filter((bid) => isInFilter(bid, selectedFilter)),
     [bids, selectedFilter],
   );
 
-  const countByStatus = (status: BidFilter) =>
-    status === 'ALL'
-      ? bids.length
-      : bids.filter((bid) => bid.status === status).length;
+  const countByFilter = (filter: BidFilter) =>
+    bids.filter((bid) => isInFilter(bid, filter)).length;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
@@ -99,11 +117,11 @@ export default function MyBidsPage() {
       </span>
 
       <h1 className="mt-2 font-display text-4xl">
-        Lượt trả giá của tôi
+        Vật phẩm tôi đã trả giá
       </h1>
 
       <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-        Theo dõi các vật phẩm bạn đã tham gia trả giá.
+        Mỗi vật phẩm chỉ hiển thị một lần với giá cao nhất bạn đã đặt.
       </p>
 
       <div className="mt-8 flex gap-2 overflow-x-auto">
@@ -113,18 +131,18 @@ export default function MyBidsPage() {
             key={filter.value}
             onClick={() => setSelectedFilter(filter.value)}
             className={`whitespace-nowrap rounded-full border px-4 py-2 text-xs ${selectedFilter === filter.value
-                ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-bg)]'
-                : 'border-[var(--color-border-strong)] text-[var(--color-text-muted)]'
-              }`}
+              ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-bg)]'
+              : 'border-[var(--color-border-strong)] text-[var(--color-text-muted)]'
+            }`}
           >
-            {filter.label} {countByStatus(filter.value)}
+            {filter.label} {countByFilter(filter.value)}
           </button>
         ))}
       </div>
 
       {loading && (
         <p className="mt-8 text-sm text-[var(--color-text-muted)]">
-          Đang tải lịch sử trả giá...
+          Đang tải danh sách vật phẩm...
         </p>
       )}
 
@@ -137,7 +155,7 @@ export default function MyBidsPage() {
       {!loading && !error && filteredBids.length === 0 && (
         <div className="mt-8 rounded-xl border border-dashed border-[var(--color-border-strong)] py-16 text-center">
           <p className="font-display text-xl">
-            Chưa có lượt trả giá nào
+            Chưa có vật phẩm phù hợp
           </p>
 
           <Link
@@ -151,19 +169,22 @@ export default function MyBidsPage() {
 
       <div className="mt-6 space-y-4">
         {filteredBids.map((bid) => {
-          const status = statusStyle[bid.status];
+          const outcome = outcomeStyle[bid.outcome];
+          const displayedPrice =
+            bid.itemFinalPrice ?? bid.itemCurrentPrice;
+          const canBidAgain = bid.outcome === 'OUTBID';
 
           return (
             <article
-              key={bid.id}
+              key={bid.itemId}
               className="grid gap-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 sm:grid-cols-[1fr_auto] sm:items-center"
             >
               <div>
                 <div className="flex flex-wrap items-center gap-3">
                   <span
-                    className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-wider ${status.className}`}
+                    className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-wider ${outcome.className}`}
                   >
-                    {status.label}
+                    {outcome.label}
                   </span>
 
                   <span className="rounded-full border border-[var(--color-border-strong)] px-3 py-1 text-[10px] text-[var(--color-text-soft)]">
@@ -171,7 +192,7 @@ export default function MyBidsPage() {
                   </span>
 
                   <span className="text-xs text-[var(--color-text-dim)]">
-                    {formatDateTime(bid.createdAt)}
+                    Lần trả gần nhất: {formatDateTime(bid.createdAt)}
                   </span>
                 </div>
 
@@ -185,16 +206,18 @@ export default function MyBidsPage() {
 
                 <div className="mt-3 flex flex-wrap gap-6 text-xs text-[var(--color-text-muted)]">
                   <span>
-                    Giá của bạn
+                    Giá cao nhất của bạn
                     <strong className="ml-1 font-medium text-[var(--color-text)]">
                       {formatCurrency(Number(bid.amount))}
                     </strong>
                   </span>
 
                   <span>
-                    Giá hiện tại
+                    {bid.outcome === 'WON' || bid.outcome === 'LOST'
+                      ? 'Giá chốt'
+                      : 'Giá hiện tại'}
                     <strong className="ml-1 font-medium text-[var(--color-primary)]">
-                      {formatCurrency(Number(bid.itemCurrentPrice))}
+                      {formatCurrency(Number(displayedPrice))}
                     </strong>
                   </span>
                 </div>
@@ -202,14 +225,12 @@ export default function MyBidsPage() {
 
               <Link
                 to={`/auction-items/${bid.itemId}`}
-                className={`rounded-md px-4 py-2.5 text-center text-sm font-semibold transition ${bid.status === 'OUTBID'
-                    ? 'bg-[var(--color-primary)] text-[var(--color-bg)] hover:bg-[var(--color-primary-hover)]'
-                    : 'border border-[var(--color-border-strong)] text-[var(--color-text)] hover:border-[var(--color-primary)]'
-                  }`}
+                className={`rounded-md px-4 py-2.5 text-center text-sm font-semibold transition ${canBidAgain
+                  ? 'bg-[var(--color-primary)] text-[var(--color-bg)] hover:bg-[var(--color-primary-hover)]'
+                  : 'border border-[var(--color-border-strong)] text-[var(--color-text)] hover:border-[var(--color-primary)]'
+                }`}
               >
-                {bid.status === 'OUTBID'
-                  ? 'Đặt giá lại'
-                  : 'Xem vật phẩm'}
+                {canBidAgain ? 'Đặt giá lại' : 'Xem vật phẩm'}
               </Link>
             </article>
           );

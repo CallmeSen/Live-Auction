@@ -66,6 +66,7 @@ export interface AuctionItemBidResponse {
 export interface AuctionItemDetailResponse {
   id: string;
   sessionId: string;
+  categoryId: string | null;
   title: string;
   description: string | null;
   startingPrice: string;
@@ -77,10 +78,20 @@ export interface AuctionItemDetailResponse {
   bids: AuctionItemBidResponse[];
 }
 
+export interface UpdateAuctionItemRequest {
+  categoryId?: string | null;
+  title?: string;
+  description?: string | null;
+  startingPrice?: number;
+}
+
+export interface DeleteAuctionItemResponse {
+  id: string;
+}
+
 export interface UploadAuctionItemImageRequest {
   file: File;
   isPrimary?: boolean;
-  sortOrder?: number;
 }
 
 export interface UploadAuctionItemImageResponse {
@@ -90,4 +101,13 @@ export interface UploadAuctionItemImageResponse {
   isPrimary: boolean;
   sortOrder: number;
   createdAt: string;
+}
+
+export interface UploadAuctionItemImagesRequest {
+  files: File[];
+  primaryIndex?: number;
+}
+
+export interface UploadAuctionItemImagesResponse {
+  images: UploadAuctionItemImageResponse[];
 }

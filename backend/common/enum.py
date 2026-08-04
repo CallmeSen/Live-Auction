@@ -34,6 +34,13 @@ class BidStatus(str, Enum):
     OUTBID = "OUTBID"
     CANCELLED = "CANCELLED"
 
+
+class MyBidOutcome(str, Enum):
+    LEADING = "LEADING"
+    OUTBID = "OUTBID"
+    WON = "WON"
+    LOST = "LOST"
+
 class NotificationType(str, Enum):
     BID = "BID"
     AUCTION = "AUCTION"

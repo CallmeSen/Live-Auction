@@ -10,6 +10,10 @@ from pydantic import (
     model_validator,
 )
 
+from app.utils.datetime_utils import (
+    to_vietnam_naive,
+    vietnam_now_naive,
+)
 from common.enum import AuctionItemStatus, AuctionSessionStatus
 
 
@@ -27,6 +31,15 @@ class CreateAuctionSessionRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_times(self) -> Self:
+        self.start_time = to_vietnam_naive(self.start_time)
+        self.end_time = to_vietnam_naive(self.end_time)
+        current_time = vietnam_now_naive()
+
+        if self.start_time <= current_time:
+            raise ValueError(
+                "startTime must be later than the current time"
+            )
+
         if self.start_time >= self.end_time:
             raise ValueError("startTime must be before endTime")
 
@@ -73,6 +86,10 @@ class AuctionSessionListItem(BaseModel):
     end_time: datetime = Field(serialization_alias="endTime")
     status: AuctionSessionStatus
     seller_name: str = Field(serialization_alias="sellerName")
+    primary_image_url: str | None = Field(
+        default=None,
+        serialization_alias="primaryImageUrl",
+    )
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -199,3 +216,29 @@ class RejectAuctionSessionResponse(BaseModel):
     code: str
     message: str
     data: RejectAuctionSessionData
+
+class CancelAuctionSessionRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=500)
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        str_strip_whitespace=True,
+    )
+
+
+class CancelAuctionSessionData(BaseModel):
+    id: uuid.UUID
+    status: AuctionSessionStatus
+    cancelled_at: datetime = Field(serialization_alias="cancelledAt")
+    reason: str | None
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class CancelAuctionSessionResponse(BaseModel):
+    status: int
+    code: str
+    message: str
+    data: CancelAuctionSessionData

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import BidForm from '../../../components/auction/BidForm';
 import AuctionChatBox from '../../../components/auction-chat/AuctionChatBox';
 import AuthRequiredModal from '../../../components/common/AuthRequiredModal';
@@ -9,8 +10,10 @@ import type {
   AuctionItemDetailResponse,
   AuctionItemStatus,
 } from '../../../interfaces/auctionItem';
+import type { AuctionSessionStatus } from '../../../interfaces/auctionSession';
 import { bidService } from '../../../services/bidService';
 import { getApiErrorMessage } from '../../../services/apiError';
+import { resolveBackendAssetUrl } from '../../../utils/assetUrl';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import {
   formatDateTime,
@@ -18,25 +21,50 @@ import {
 } from '../../../utils/formatDate';
 import useAuctionItemRealtime from '../../auction-items/hooks/useAuctionItemRealtime';
 
-const itemStatusLabel: Record<AuctionItemStatus, string> = {
-  DRAFT: 'Nháp',
-  READY: 'Sẵn sàng',
-  OPEN: 'Đang mở',
-  SOLD: 'Đã bán',
-  UNSOLD: 'Sắp bán',
-  CANCELLED: 'Đã huỷ',
-};
+const VALID_ITEM_STATUSES: AuctionItemStatus[] = [
+  'SOLD',
+  'UNSOLD',
+  'CANCELLED',
+];
 
-function getItemStatusLabel(status: string): string {
-  if (status in itemStatusLabel) {
-    return itemStatusLabel[status as AuctionItemStatus];
+function normalizeItemStatus(
+  status: string | null | undefined,
+): AuctionItemStatus | null {
+  if (
+    status &&
+    VALID_ITEM_STATUSES.includes(status as AuctionItemStatus)
+  ) {
+    return status as AuctionItemStatus;
   }
 
-  return itemStatusLabel.UNSOLD;
+  return null;
 }
 
-function isItemBiddableStatus(status: string): boolean {
-  return status === 'OPEN' || status === 'UNSOLD';
+function getItemStatusLabel(
+  itemStatus: AuctionItemStatus,
+  sessionStatus: AuctionSessionStatus,
+): string {
+  if (itemStatus === 'SOLD') {
+    return 'Đã bán';
+  }
+
+  if (itemStatus === 'CANCELLED') {
+    return 'Đã hủy';
+  }
+
+  if (itemStatus === 'UNSOLD' && sessionStatus === 'ACTIVE') {
+    return 'Đang đấu giá';
+  }
+
+  if (itemStatus === 'UNSOLD' && sessionStatus === 'ENDED') {
+    return 'Không bán được';
+  }
+
+  return 'Sắp đấu giá';
+}
+
+function isItemBiddableStatus(status: AuctionItemStatus): boolean {
+  return status === 'UNSOLD';
 }
 
 export default function AuctionDetailPage() {
@@ -182,27 +210,43 @@ export default function AuctionDetailPage() {
     realtimeMinIncrement ?? item.session.minIncrement,
   );
 
-  const effectiveItemStatus = realtimeItemStatus ?? item.status;
+  const effectiveItemStatus =
+    normalizeItemStatus(realtimeItemStatus) ?? item.status;
 
-  const isSessionActive =
-    item.session.status === 'ACTIVE' || effectiveItemStatus === 'OPEN';
+  const isSessionActive = item.session.status === 'ACTIVE';
 
-  const isOwner = user?.id === item.seller.id;
+  const isSessionSeller = user?.id === item.session.sellerId;
 
   const canBid =
     user?.status === 'ACTIVE' &&
     isSessionActive &&
     isItemBiddableStatus(effectiveItemStatus) &&
-    !isOwner;
+    !isSessionSeller;
 
   const auctionIsOpen =
-    isSessionActive &&
-    isItemBiddableStatus(effectiveItemStatus);
+    isSessionActive && isItemBiddableStatus(effectiveItemStatus);
 
   const displayableImages = item.images.filter(
     (image): image is typeof image & { imageUrl: string } =>
-      Boolean(image.imageUrl), 
+      Boolean(image.imageUrl),
   );
+
+  const selectedImageIndex = Math.max(
+    displayableImages.findIndex(
+      (image) => image.imageUrl === selectedImage,
+    ),
+    0,
+  );
+
+  const selectRelativeImage = (offset: number) => {
+    if (displayableImages.length < 2) return;
+
+    const nextIndex =
+      (selectedImageIndex + offset + displayableImages.length) %
+      displayableImages.length;
+
+    setSelectedImage(displayableImages[nextIndex].imageUrl);
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8 sm:py-12">
@@ -215,13 +259,41 @@ export default function AuctionDetailPage() {
 
       <div className="mt-7 grid gap-10 lg:grid-cols-[1.15fr_0.85fr]">
         <div>
-          <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+          <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
             {selectedImage ? (
-              <img
-                src={selectedImage}
-                alt={item.title}
-                className="aspect-[4/3] w-full object-cover"
-              />
+              <>
+                <img
+                  src={resolveBackendAssetUrl(selectedImage) ?? undefined}
+                  alt={item.title}
+                  className="aspect-[4/3] w-full object-cover"
+                />
+
+                {displayableImages.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Xem ảnh trước"
+                      onClick={() => selectRelativeImage(-1)}
+                      className="absolute left-3 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-black/55 p-2 text-white transition hover:bg-black/75"
+                    >
+                      <ChevronLeft size={22} />
+                    </button>
+
+                    <button
+                      type="button"
+                      aria-label="Xem ảnh tiếp theo"
+                      onClick={() => selectRelativeImage(1)}
+                      className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-black/55 p-2 text-white transition hover:bg-black/75"
+                    >
+                      <ChevronRight size={22} />
+                    </button>
+
+                    <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
+                      {selectedImageIndex + 1}/{displayableImages.length}
+                    </span>
+                  </>
+                )}
+              </>
             ) : (
               <div className="flex aspect-[4/3] items-center justify-center text-sm text-[var(--color-text-dim)]">
                 Vật phẩm chưa có hình ảnh
@@ -230,7 +302,7 @@ export default function AuctionDetailPage() {
           </div>
 
           {displayableImages.length > 0 && (
-            <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
               {displayableImages.map((image, index) => (
                 <button
                   type="button"
@@ -243,7 +315,7 @@ export default function AuctionDetailPage() {
                   }`}
                 >
                   <img
-                    src={image.imageUrl}
+                    src={resolveBackendAssetUrl(image.imageUrl) ?? undefined}
                     alt={`${item.title} ảnh ${index + 1}`}
                     className="aspect-[4/3] w-full object-cover"
                   />
@@ -281,7 +353,10 @@ export default function AuctionDetailPage() {
               </div>
 
               <span className="rounded-full border border-[var(--color-border-strong)] px-3 py-1 text-xs text-[var(--color-primary)]">
-                {getItemStatusLabel(effectiveItemStatus)}
+                {getItemStatusLabel(
+                  effectiveItemStatus,
+                  item.session.status,
+                )}
               </span>
             </div>
           </div>
@@ -372,12 +447,36 @@ export default function AuctionDetailPage() {
               />
             )}
 
-            {isOwner && (
+            {isSessionSeller && auctionIsOpen && (
               <div className="rounded-xl border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 p-5 text-sm text-[var(--color-primary-hover)]">
-                Đây là vật phẩm do bạn đăng. Bạn không thể tự
-                trả giá vật phẩm của mình.
+                Bạn là người tổ chức phiên đấu giá này nên không thể
+                trả giá.
               </div>
             )}
+
+            {user &&
+              effectiveItemStatus === 'SOLD' && (
+                <div className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-alt)] p-5 text-sm text-[var(--color-text-soft)]">
+                  Vật phẩm đã được bán. Không thể tiếp tục trả giá.
+                </div>
+              )}
+
+            {user &&
+              effectiveItemStatus === 'CANCELLED' && (
+                <div className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-alt)] p-5 text-sm text-[var(--color-text-soft)]">
+                  Vật phẩm đã bị hủy khỏi phiên đấu giá.
+                </div>
+              )}
+
+            {user &&
+              effectiveItemStatus === 'UNSOLD' &&
+              !isSessionActive && (
+                <div className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-alt)] p-5 text-sm text-[var(--color-text-soft)]">
+                  {item.session.status === 'ENDED'
+                    ? 'Phiên đấu giá đã kết thúc. Vật phẩm chưa có người mua.'
+                    : 'Phiên đấu giá chưa mở hoặc đã bị hủy.'}
+                </div>
+              )}
 
           </div>
         </div>

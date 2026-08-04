@@ -288,6 +288,14 @@ class AuctionItemRepository:
 
         return item
 
+    async def delete(
+        self,
+        db: AsyncSession,
+        item: AuctionItem,
+    ) -> None:
+        await db.delete(item)
+        await db.flush()
+
     async def get_next_sort_order(
         self,
         db: AsyncSession,

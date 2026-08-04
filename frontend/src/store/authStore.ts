@@ -7,29 +7,12 @@ import type {
 
 const TOKEN_KEY = 'accessToken';
 const USER_KEY = 'authUser';
-const PROFILE_OVERRIDES_KEY = 'profileOverrides';
 export const AUTH_CHANGED_EVENT = 'live-auction-auth-changed';
 
 const emitAuthChanged = () => window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 type ProfileUpdate = {
   fullName: string;
   phone: string;
-};
-
-const getProfileOverrides = (): Record<string, ProfileUpdate> => {
-  try {
-    return JSON.parse(
-      localStorage.getItem(PROFILE_OVERRIDES_KEY) ?? '{}',
-    ) as Record<string, ProfileUpdate>;
-  } catch {
-    return {};
-  }
-};
-
-const applyProfileOverride = (user: AuthUser): AuthUser => {
-  const profile = getProfileOverrides()[user.id];
-
-  return profile ? { ...user, ...profile } : user;
 };
 
 const normalizeRole = (role: string): UserRole => role === 'ADMIN' ? 'ADMIN' : 'USER';
@@ -60,11 +43,11 @@ export const getCurrentUser = (): AuthUser | null => {
   try {
     const stored = JSON.parse(localStorage.getItem(USER_KEY) ?? 'null') as (AuthUser & { role: string; status: string }) | null;
     if (!stored) return null;
-    const user: AuthUser = applyProfileOverride({
+    const user: AuthUser = {
       ...stored,
       role: normalizeRole(stored.role),
       status: normalizeStatus(stored.status),
-    });
+    };
     localStorage.setItem(USER_KEY, JSON.stringify(user));
     return user;
   } catch {
@@ -88,16 +71,6 @@ export const updateCurrentUserProfile = (
     ...normalizedProfile,
   };
 
-  const profileOverrides = getProfileOverrides();
-
-  localStorage.setItem(
-    PROFILE_OVERRIDES_KEY,
-    JSON.stringify({
-      ...profileOverrides,
-      [updatedUser.id]: normalizedProfile,
-    }),
-  );
-
   localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
   emitAuthChanged();
 
@@ -111,6 +84,7 @@ export const logoutSession = () => {
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem('demoAuthUser');
   localStorage.removeItem('demoRegisteredUsers');
+  localStorage.removeItem('profileOverrides');
   emitAuthChanged();
 };
 

@@ -7,6 +7,7 @@ import type {
   AuctionSessionStatus,
 } from '../../../interfaces/auctionSession';
 import { getApiErrorMessage } from '../../../services/apiError';
+import { resolveBackendAssetUrl } from '../../../utils/assetUrl';
 import {
   formatDateTime,
   getTimeLeft,
@@ -17,17 +18,23 @@ const PAGE_SIZE = 6;
 type StatusFilter = AuctionSessionStatus | 'ALL';
 
 const statusLabel: Record<AuctionSessionStatus, string> = {
+  PENDING_APPROVAL: 'Chờ duyệt',
   SCHEDULED: 'Sắp diễn ra',
   ACTIVE: 'Đang diễn ra',
+  REJECTED: 'Đã từ chối',
   ENDED: 'Đã kết thúc',
   CANCELLED: 'Đã hủy',
 };
 
 const statusTone: Record<AuctionSessionStatus, string> = {
+  PENDING_APPROVAL:
+    'border-[var(--color-primary)]/50 text-[var(--color-primary)]',
   SCHEDULED:
     'border-[var(--color-primary)]/50 text-[var(--color-primary)]',
   ACTIVE:
     'border-[var(--color-success-border)] text-[var(--color-success)]',
+  REJECTED:
+    'border-[var(--color-danger-solid)]/50 text-[var(--color-danger)]',
   ENDED:
     'border-[var(--color-border-strong)] text-[var(--color-text-muted)]',
   CANCELLED:
@@ -185,7 +192,20 @@ export default function AuctionListPage() {
               to={`/auction-sessions/${featured.id}`}
               className="group relative flex min-h-[360px] flex-col justify-end overflow-hidden rounded-[1.5rem] border border-[var(--color-border-strong)] bg-[var(--color-surface-alt)] p-7 sm:p-9"
             >
+              {featured.primaryImageUrl && (
+                <img
+                  src={
+                    resolveBackendAssetUrl(
+                      featured.primaryImageUrl,
+                    ) ?? undefined
+                  }
+                  alt={featured.title}
+                  className="absolute inset-0 h-full w-full object-cover opacity-60 transition duration-500 group-hover:scale-105"
+                />
+              )}
+
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(201,162,39,0.2),transparent_38%)]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface-alt)] via-[var(--color-surface-alt)]/65 to-transparent" />
 
               <div className="relative">
                 <span
@@ -326,6 +346,23 @@ export default function AuctionListPage() {
                     #{session.id.slice(0, 8)}
                   </span>
                 </div>
+
+                {session.primaryImageUrl ? (
+                  <img
+                    src={
+                      resolveBackendAssetUrl(
+                        session.primaryImageUrl,
+                      ) ?? undefined
+                    }
+                    alt={session.title}
+                    className="mt-5 h-44 w-full rounded-lg object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="mt-5 flex h-44 items-center justify-center rounded-lg border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-alt)] text-xs text-[var(--color-text-dim)]">
+                    Chưa có hình ảnh
+                  </div>
+                )}
 
                 <h3 className="mt-5 font-display text-2xl">
                   {session.title}

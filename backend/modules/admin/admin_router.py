@@ -20,6 +20,8 @@ from modules.auction_sessions.session_repository import (
 )
 from modules.auction_sessions.session_schema import (
     ApproveAuctionSessionResponse,
+    CancelAuctionSessionRequest,
+    CancelAuctionSessionResponse,
     ListAuctionSessionsResponse,
     RejectAuctionSessionRequest,
     RejectAuctionSessionResponse,
@@ -217,6 +219,52 @@ async def create_admin_user(
     )
 
 
+
+@router.get(
+    "/auction-sessions",
+    status_code=status.HTTP_200_OK,
+    response_model=ListAuctionSessionsResponse,
+)
+async def list_admin_auction_sessions(
+    db: DatabaseSession,
+    _current_admin: CurrentAdminUser,
+    session_service: AuctionSessionServiceDependency,
+    page: Annotated[int, Query(ge=1)] = 1,
+    size: Annotated[int, Query(ge=1, le=100)] = 10,
+    status_filter: Annotated[
+        AuctionSessionStatus | None,
+        Query(alias="status"),
+    ] = None,
+    keyword: Annotated[str | None, Query(max_length=255)] = None,
+    category_id: Annotated[
+        uuid.UUID | None,
+        Query(alias="categoryId"),
+    ] = None,
+) -> ListAuctionSessionsResponse:
+    normalized_keyword = keyword.strip() if keyword else None
+
+    if normalized_keyword == "":
+        normalized_keyword = None
+
+    data = await session_service.list_sessions(
+        db=db,
+        filters=SessionListFilters(
+            page=page,
+            size=size,
+            status=status_filter,
+            keyword=normalized_keyword,
+            category_id=category_id,
+        ),
+    )
+
+    return ListAuctionSessionsResponse(
+        status=status.HTTP_200_OK,
+        code=1000,
+        message="Get admin auction sessions successfully",
+        data=data,
+    )
+
+
 @router.get(
     "/auction-sessions/pending",
     status_code=status.HTTP_200_OK,
@@ -229,6 +277,10 @@ async def list_pending_auction_sessions(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=100)] = 10,
     keyword: Annotated[str | None, Query(max_length=255)] = None,
+    category_id: Annotated[
+        uuid.UUID | None,
+        Query(alias="categoryId"),
+    ] = None,
 ) -> ListAuctionSessionsResponse:
     normalized_keyword = keyword.strip() if keyword else None
 
@@ -242,6 +294,7 @@ async def list_pending_auction_sessions(
             size=size,
             status=AuctionSessionStatus.PENDING_APPROVAL,
             keyword=normalized_keyword,
+            category_id=category_id,
         ),
     )
 
@@ -299,5 +352,31 @@ async def reject_auction_session(
         status=status.HTTP_200_OK,
         code="SESSION_REJECTED",
         message="Auction session rejected successfully",
+        data=data,
+    )
+
+
+@router.patch(
+    "/auction-sessions/{session_id}/cancel",
+    status_code=status.HTTP_200_OK,
+    response_model=CancelAuctionSessionResponse,
+)
+async def cancel_auction_session(
+    session_id: uuid.UUID,
+    request: CancelAuctionSessionRequest,
+    db: DatabaseSession,
+    _current_admin: CurrentAdminUser,
+    session_service: AuctionSessionServiceDependency,
+) -> CancelAuctionSessionResponse:
+    data = await session_service.cancel_session(
+        db=db,
+        session_id=session_id,
+        reason=request.reason,
+    )
+
+    return CancelAuctionSessionResponse(
+        status=status.HTTP_200_OK,
+        code="SESSION_CANCELLED",
+        message="Auction session cancelled successfully",
         data=data,
     )

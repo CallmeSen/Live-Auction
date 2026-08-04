@@ -85,6 +85,10 @@ async def list_auction_sessions(
         Query(alias="status"),
     ] = None,
     keyword: Annotated[str | None, Query(max_length=255)] = None,
+    category_id: Annotated[
+        uuid.UUID | None,
+        Query(alias="categoryId"),
+    ] = None,
 ) -> ListAuctionSessionsResponse:
     normalized_keyword = keyword.strip() if keyword else None
 
@@ -98,6 +102,11 @@ async def list_auction_sessions(
             size=size,
             status=status_filter,
             keyword=normalized_keyword,
+            category_id=category_id,
+            excluded_statuses=(
+                AuctionSessionStatus.PENDING_APPROVAL,
+                AuctionSessionStatus.REJECTED,
+            ),
         ),
     )
 
@@ -125,6 +134,10 @@ async def get_mine_auction_sessions(
         Query(alias="status"),
     ] = None,
     keyword: Annotated[str | None, Query(max_length=255)] = None,
+    category_id: Annotated[
+        uuid.UUID | None,
+        Query(alias="categoryId"),
+    ] = None,
 ) -> ListAuctionSessionsResponse:
     normalized_keyword = keyword.strip() if keyword else None
 
@@ -138,6 +151,7 @@ async def get_mine_auction_sessions(
             size=size,
             status=status_filter,
             keyword=normalized_keyword,
+            category_id=category_id,
             seller_id=seller_id,
         ),
     )

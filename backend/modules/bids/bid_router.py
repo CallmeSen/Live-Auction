@@ -12,7 +12,8 @@ from app.core.dependencies import (
 )
 from app.dependencies.realtime_dependencies import get_publish_bid_placed_use_case
 from app.models.user_model import User
-from common.enum import BidStatus
+from common.enum import MyBidOutcome
+from modules.auction_sessions.session_repository import AuctionSessionRepository
 from modules.auction_items.item_repository import AuctionItemRepository
 from modules.bids.bid_repository import BidRepository, MyBidListFilters
 from modules.bids.bid_schema import (
@@ -45,6 +46,7 @@ def get_bid_service() -> BidService:
     return BidService(
         bid_repository=BidRepository(),
         item_repository=AuctionItemRepository(),
+        session_repository=AuctionSessionRepository(),
         notification_service=NotificationService(
             notification_repository=NotificationRepository(),
             notification_preference_repository=NotificationPreferenceRepository(),
@@ -88,9 +90,9 @@ async def list_my_bids(
         int,
         Query(alias="pageSize", ge=1, le=100),
     ] = 20,
-    status_filter: Annotated[
-        BidStatus | None,
-        Query(alias="status"),
+    outcome_filter: Annotated[
+        MyBidOutcome | None,
+        Query(alias="outcome"),
     ] = None,
 ) -> ListMyBidsResponse:
     data = await bid_service.list_my_bids(
@@ -99,7 +101,7 @@ async def list_my_bids(
             bidder_id=bidder_id,
             page=page,
             page_size=page_size,
-            status=status_filter,
+            outcome=outcome_filter,
         ),
     )
 

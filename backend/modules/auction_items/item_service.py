@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
 from app.core.storage import StorageService
+from app.utils.datetime_utils import vietnam_now_naive
 from common.enum import AuctionItemStatus, AuctionSessionStatus
 from app.models.image_model import ItemImage
 from app.models.item_model import AuctionItem
@@ -25,6 +26,7 @@ from modules.auction_items.item_schema import (
     AuctionItemSellerData,
     AuctionItemSessionData,
     CreateAuctionItemRequest,
+    UpdateAuctionItemRequest,
 )
 from modules.auction_sessions.session_repository import (
     AuctionSessionRepository,
@@ -37,6 +39,7 @@ ALLOWED_IMAGE_CONTENT_TYPES = {
     "image/png",
     "image/webp",
 }
+MAX_IMAGES_PER_ITEM = 5
 
 
 class AuctionItemService:
@@ -52,11 +55,27 @@ class AuctionItemService:
         self.category_repository = category_repository
         self.storage_service = storage_service
 
+    async def _synchronize_session_statuses(
+        self,
+        db: AsyncSession,
+    ) -> None:
+        changed_count = (
+            await self.session_repository.synchronize_time_based_statuses(
+                db=db,
+                current_time=vietnam_now_naive(),
+            )
+        )
+
+        if changed_count > 0:
+            await db.commit()
+
     async def list_items(
         self,
         db: AsyncSession,
         filters: ItemListFilters,
     ) -> AuctionItemListData:
+        await self._synchronize_session_statuses(db)
+
         rows, total = await self.item_repository.list_items(
             db=db,
             filters=filters,
@@ -138,6 +157,8 @@ class AuctionItemService:
         db: AsyncSession,
         item_id: uuid.UUID,
     ) -> AuctionItemDetailData:
+        await self._synchronize_session_statuses(db)
+
         item = await self.item_repository.find_detail_by_id(
             db=db,
             item_id=item_id,
@@ -166,6 +187,7 @@ class AuctionItemService:
         return AuctionItemDetailData(
             id=item.id,
             session_id=item.session_id,
+            category_id=item.category_id,
             title=item.title,
             description=item.description,
             starting_price=item.starting_price,
@@ -227,11 +249,14 @@ class AuctionItemService:
                 message="You are not the owner of this auction session",
             )
 
-        if session.status != AuctionSessionStatus.SCHEDULED:
+        if session.status != AuctionSessionStatus.PENDING_APPROVAL:
             raise AppException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                code="SESSION_NOT_SCHEDULED",
-                message="Items can only be added to a scheduled auction session",
+                status_code=status.HTTP_409_CONFLICT,
+                code="SESSION_ITEMS_LOCKED",
+                message=(
+                    "Items can only be added while the auction "
+                    "session is pending approval"
+                ),
             )
 
         if request.category_id is not None:
@@ -255,7 +280,7 @@ class AuctionItemService:
             description=request.description,
             starting_price=request.starting_price,
             current_price=request.starting_price,
-            status=AuctionItemStatus.UNSOLD,
+            status=AuctionItemStatus.READY,
         )
 
         try:
@@ -276,6 +301,132 @@ class AuctionItemService:
                 message="Unable to create auction item",
             ) from exception
 
+        except Exception:
+            await db.rollback()
+            raise
+
+    async def update_item(
+        self,
+        db: AsyncSession,
+        item_id: uuid.UUID,
+        seller_id: uuid.UUID,
+        request: UpdateAuctionItemRequest,
+    ) -> AuctionItem:
+        item = await self.item_repository.find_by_id_with_session(
+            db=db,
+            item_id=item_id,
+        )
+
+        if item is None:
+            raise AppException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                code="ITEM_NOT_FOUND",
+                message="Auction item not found",
+            )
+
+        if item.seller_id != seller_id:
+            raise AppException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                code="FORBIDDEN",
+                message="You are not the owner of this auction item",
+            )
+
+        if item.session.status != AuctionSessionStatus.PENDING_APPROVAL:
+            raise AppException(
+                status_code=status.HTTP_409_CONFLICT,
+                code="SESSION_ITEMS_LOCKED",
+                message=(
+                    "Items can only be updated while the auction "
+                    "session is pending approval"
+                ),
+            )
+
+        provided_fields = request.model_fields_set
+
+        if (
+            "category_id" in provided_fields
+            and request.category_id is not None
+        ):
+            category = await self.category_repository.find_by_id(
+                db=db,
+                category_id=request.category_id,
+            )
+            if category is None:
+                raise AppException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    code="CATEGORY_NOT_FOUND",
+                    message="Category not found",
+                )
+
+        if "category_id" in provided_fields:
+            item.category_id = request.category_id
+        if "title" in provided_fields and request.title is not None:
+            item.title = request.title
+        if "description" in provided_fields:
+            item.description = request.description
+        if (
+            "starting_price" in provided_fields
+            and request.starting_price is not None
+        ):
+            item.starting_price = request.starting_price
+            item.current_price = request.starting_price
+
+        try:
+            await db.flush()
+            await db.commit()
+            await db.refresh(item)
+            return item
+        except IntegrityError as exception:
+            await db.rollback()
+            raise AppException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                code="UPDATE_ITEM_FAILED",
+                message="Unable to update auction item",
+            ) from exception
+        except Exception:
+            await db.rollback()
+            raise
+
+    async def delete_item(
+        self,
+        db: AsyncSession,
+        item_id: uuid.UUID,
+        seller_id: uuid.UUID,
+    ) -> uuid.UUID:
+        item = await self.item_repository.find_by_id_with_session(
+            db=db,
+            item_id=item_id,
+        )
+
+        if item is None:
+            raise AppException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                code="ITEM_NOT_FOUND",
+                message="Auction item not found",
+            )
+
+        if item.seller_id != seller_id:
+            raise AppException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                code="FORBIDDEN",
+                message="You are not the owner of this auction item",
+            )
+
+        if item.session.status != AuctionSessionStatus.PENDING_APPROVAL:
+            raise AppException(
+                status_code=status.HTTP_409_CONFLICT,
+                code="SESSION_ITEMS_LOCKED",
+                message=(
+                    "Items can only be deleted while the auction "
+                    "session is pending approval"
+                ),
+            )
+
+        deleted_id = item.id
+        try:
+            await self.item_repository.delete(db=db, item=item)
+            await db.commit()
+            return deleted_id
         except Exception:
             await db.rollback()
             raise
@@ -316,16 +467,20 @@ class AuctionItemService:
                 message="You are not the owner of this auction item",
             )
 
-        if item.session.status not in (
-            AuctionSessionStatus.PENDING_APPROVAL,
-            AuctionSessionStatus.SCHEDULED,
-        ):
+        if len(item.images) >= MAX_IMAGES_PER_ITEM:
             raise AppException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                code="SESSION_NOT_EDITABLE",
+                code="IMAGE_LIMIT_EXCEEDED",
+                message="Each auction item can have at most 5 images",
+            )
+
+        if item.session.status != AuctionSessionStatus.PENDING_APPROVAL:
+            raise AppException(
+                status_code=status.HTTP_409_CONFLICT,
+                code="SESSION_ITEMS_LOCKED",
                 message=(
-                    "Images can only be uploaded before the auction "
-                    "session starts"
+                    "Images can only be uploaded while the auction "
+                    "session is pending approval"
                 ),
             )
 
@@ -336,7 +491,9 @@ class AuctionItemService:
                 content_type=content_type,
             )
 
-            if is_primary:
+            should_be_primary = is_primary or len(item.images) == 0
+
+            if should_be_primary:
                 await self.item_repository.unset_primary_images(
                     db=db,
                     item_id=item_id,
@@ -350,7 +507,7 @@ class AuctionItemService:
             image = ItemImage(
                 item_id=item_id,
                 image_url=image_url,
-                is_primary=is_primary,
+                is_primary=should_be_primary,
                 sort_order=sort_order,
             )
 
