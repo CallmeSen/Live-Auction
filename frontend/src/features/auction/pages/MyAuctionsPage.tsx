@@ -1,238 +1,257 @@
-import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { auctionSessionService } from '../../../services/auctionSessionService';
-import type {
-  AuctionSessionListItemResponse,
-  AuctionSessionStatus,
-} from '../../../interfaces/auctionSession';
-import { getApiErrorMessage } from '../../../services/apiError';
-import { formatDateTime } from '../../../utils/formatDate';
+import { useEffect, useRef, useState } from 'react';
+import { CalendarClock, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import type { CatalogApi } from '../../../services/serverless/catalogApi';
+import { ServerlessApiError } from '../../../services/serverless/contracts';
+import type { AuctionSession } from '../../../services/serverless/mappers';
+import { useCatalogApi } from '../../../services/serverless/useCatalogApi';
 
-const statusLabel: Record<AuctionSessionStatus, string> = {
-  SCHEDULED: 'Chờ duyệt',
-  ACTIVE: 'Đang diễn ra',
-  ENDED: 'Đã kết thúc',
-  CANCELLED: 'Đã hủy',
+const PAGE_SIZE = 12;
+const BROWSER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
+  || 'Múi giờ cục bộ';
+
+type MyAuctionsPageProps = {
+  catalogApi?: CatalogApi;
 };
 
-const statusTone: Record<AuctionSessionStatus, string> = {
-  SCHEDULED:
-    'border-[var(--color-primary)]/50 text-[var(--color-primary)]',
-  ACTIVE:
-    'border-[var(--color-success-border)] text-[var(--color-success)]',
-  ENDED:
-    'border-[var(--color-border-strong)] text-[var(--color-text-muted)]',
-  CANCELLED:
-    'border-[var(--color-danger-solid)]/50 text-[var(--color-danger)]',
-};
-
-export default function MyAuctionsPage() {
-  const location = useLocation();
-
-  const [items, setItems] = useState<
-    AuctionSessionListItemResponse[]
-  >([]);
-  const [total, setTotal] = useState(0);
+export default function MyAuctionsPage({ catalogApi }: MyAuctionsPageProps) {
+  const api = useCatalogApi(catalogApi);
+  const [sessions, setSessions] = useState<AuctionSession[]>([]);
+  const [cursorStack, setCursorStack] = useState<Array<string | undefined>>([
+    undefined,
+  ]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [scheduleValues, setScheduleValues] = useState<Record<string, string>>({});
+  const [schedulingId, setSchedulingId] = useState<string | null>(null);
+  const scheduleInFlight = useRef(new Set<string>());
+  const cursor = cursorStack[cursorStack.length - 1];
 
   useEffect(() => {
-    let cancelled = false;
-
-    const loadSessions = async () => {
-      try {
-        setLoading(true);
-        setError('');
-
-        const result = await auctionSessionService.getMySessions({
-          page: 1,
-          size: 100,
-        });
-
-        if (!cancelled) {
-          setItems(result.items);
-          setTotal(result.total);
-        }
-      } catch (requestError) {
-        if (!cancelled) {
-          setError(
-            getApiErrorMessage(
-              requestError,
-              'Không thể tải các phiên đấu giá của bạn.',
-            ),
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadSessions();
-
+    let active = true;
+    void api.listMySessions({
+      pageSize: PAGE_SIZE,
+      ...(cursor === undefined ? {} : { cursor }),
+    }).then(
+      (result) => {
+        if (!active) return;
+        setSessions(result.items);
+        setNextCursor(result.nextCursor);
+        setLoading(false);
+      },
+      () => {
+        if (!active) return;
+        setLoadError(true);
+        setLoading(false);
+      },
+    );
     return () => {
-      cancelled = true;
+      active = false;
     };
-  }, []);
+  }, [api, cursor, retryKey]);
 
-  const activeCount = items.filter(
-    (item) => item.status === 'ACTIVE',
-  ).length;
+  const schedule = async (session: AuctionSession, nowMs: number) => {
+    if (scheduleInFlight.current.has(session.id)) return;
+    const rawStartTime = scheduleValues[session.id] ?? '';
+    const date = new Date(rawStartTime);
+    if (!rawStartTime || Number.isNaN(date.getTime()) || date.getTime() <= nowMs) {
+      setActionError('Thời gian bắt đầu phải ở tương lai.');
+      return;
+    }
 
-  const scheduledCount = items.filter(
-    (item) => item.status === 'SCHEDULED',
-  ).length;
-
-  const endedCount = items.filter(
-    (item) => item.status === 'ENDED',
-  ).length;
-
-  const created =
-    (location.state as { created?: boolean } | null)?.created ??
-    false;
+    setActionError('');
+    scheduleInFlight.current.add(session.id);
+    setSchedulingId(session.id);
+    try {
+      const result = await api.scheduleSession(session.id, {
+        start_time: Math.floor(date.getTime() / 1000),
+      });
+      setSessions((current) => current.map((item) => (
+        item.id === session.id
+          ? { ...item, status: result.status, startTime: result.startTime }
+          : item
+      )));
+    } catch (error) {
+      const code = error instanceof ServerlessApiError ? ` (${error.code})` : '';
+      setActionError(`Không thể lập lịch phiên.${code}`);
+    } finally {
+      scheduleInFlight.current.delete(session.id);
+      setSchedulingId(null);
+    }
+  };
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-10 sm:py-14">
+    <main className="mx-auto max-w-7xl px-6 py-10 sm:py-14">
       <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">
-            Kênh bán của thành viên
-          </span>
-
-          <h1 className="mt-2 font-display text-4xl">
-            Phiên đấu giá của tôi
-          </h1>
-
-          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            Theo dõi các phiên đấu giá bạn đã tạo.
+          <p className="font-mono-tag text-xs uppercase text-[var(--color-primary)]">
+            Kênh người bán
           </p>
+          <h1 className="mt-2 font-display text-4xl">Phiên đấu giá của tôi</h1>
         </div>
-
         <Link
           to="/auctions/create"
-          className="rounded-md bg-[var(--color-primary)] px-5 py-3 text-center text-sm font-semibold text-[var(--color-bg)]"
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-[var(--color-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-bg)]"
         >
-          ＋ Tạo phiên mới
+          <Plus aria-hidden="true" size={17} />
+          Tạo phiên mới
         </Link>
       </div>
 
-      {created && (
-        <p className="mt-6 rounded-xl border border-[var(--color-success-border)]/40 bg-[var(--color-success-bg)]/15 px-5 py-4 text-sm text-[var(--color-success)]">
-          Đã tạo phiên đấu giá thành công.
-        </p>
+      {actionError && (
+        <div role="alert" className="mt-7 border-y border-[var(--color-danger-solid)]/60 py-4 text-sm text-[var(--color-danger)]">
+          {actionError}
+        </div>
       )}
-
-      <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          [total, 'Tổng phiên'],
-          [activeCount, 'Đang diễn ra'],
-          [scheduledCount, 'Sắp diễn ra'],
-          [endedCount, 'Đã kết thúc'],
-        ].map(([value, label]) => (
-          <div
-            key={label}
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"
-          >
-            <p className="font-display text-2xl text-[var(--color-text)]">
-              {value}
-            </p>
-
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              {label}
-            </p>
-          </div>
-        ))}
-      </div>
 
       {loading && (
-        <div className="mt-7 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-center">
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Đang tải các phiên đấu giá...
-          </p>
+        <div role="status" className="py-20 text-center text-sm text-[var(--color-text-muted)]">
+          Đang tải phiên của bạn...
         </div>
       )}
 
-      {!loading && error && (
-        <div className="mt-7 rounded-xl border border-[var(--color-danger-solid)]/60 px-5 py-4 text-sm text-[var(--color-danger)]">
-          {error}
+      {!loading && loadError && (
+        <div role="alert" className="mt-8 border-y border-[var(--color-danger-solid)]/60 py-10 text-center">
+          <p className="text-sm text-[var(--color-danger)]">Không thể tải danh sách phiên của bạn.</p>
+          <button
+            type="button"
+            onClick={() => {
+              setLoading(true);
+              setLoadError(false);
+              setRetryKey((value) => value + 1);
+            }}
+            className="mt-4 rounded-md border border-[var(--color-border-strong)] px-4 py-2 text-sm"
+          >
+            Thử lại
+          </button>
         </div>
       )}
 
-      {!loading && !error && (
-        <div className="mt-7 space-y-4">
-          {items.length > 0 ? (
-            items.map((session) => (
-              <article
-                key={session.id}
-                className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"
-              >
-                <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`rounded-full border px-2.5 py-1 text-[10px] ${statusTone[session.status]
-                          }`}
-                      >
-                        {statusLabel[session.status]}
-                      </span>
+      {!loading && !loadError && sessions.length === 0 && (
+        <div className="mt-8 border-y border-dashed border-[var(--color-border-strong)] py-16 text-center">
+          <p className="font-display text-xl">Bạn chưa tạo phiên đấu giá nào.</p>
+        </div>
+      )}
 
-                      <span className="text-xs text-[var(--color-text-dim)]">
-                        #{session.id.slice(0, 8)}
-                      </span>
-                    </div>
-
-                    <h2 className="mt-3 font-display text-2xl">
-                      {session.title}
-                    </h2>
-
-                    <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">
-                      {session.description ||
-                        'Phiên đấu giá chưa có mô tả.'}
-                    </p>
-
-                    <div className="mt-4 grid gap-3 text-xs text-[var(--color-text-muted)] sm:grid-cols-2">
-                      <span>
-                        Bắt đầu
-                        <strong className="mt-1 block text-[var(--color-text)]">
-                          {formatDateTime(session.startTime)}
-                        </strong>
-                      </span>
-
-                      <span>
-                        Kết thúc
-                        <strong className="mt-1 block text-[var(--color-text)]">
-                          {formatDateTime(session.endTime)}
-                        </strong>
-                      </span>
-                    </div>
-                  </div>
-
+      {!loading && !loadError && sessions.length > 0 && (
+        <div className="mt-8 space-y-5">
+          {sessions.map((session) => (
+            <article
+              key={session.id}
+              className="grid gap-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 lg:grid-cols-[1fr_0.8fr]"
+            >
+              <div>
+                <div className="flex flex-wrap items-center gap-3 text-xs">
+                  <span className="rounded-full border border-[var(--color-border-strong)] px-3 py-1">
+                    {session.status}
+                  </span>
+                  <span className="text-[var(--color-text-muted)]">
+                    {session.itemCount} vật phẩm
+                  </span>
+                </div>
+                <h2 className="mt-5 font-display text-2xl">{session.title}</h2>
+                <p className="mt-3 text-sm leading-6 text-[var(--color-text-muted)]">
+                  {session.description || 'Phiên chưa có mô tả.'}
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3">
                   <Link
-                    to={`/auction-sessions/${session.id}`}
-                    className="rounded-md border border-[var(--color-border-strong)] px-5 py-2.5 text-center text-sm text-[var(--color-text)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                    to={`/auction-sessions/${encodeURIComponent(session.id)}`}
+                    className="rounded-md border border-[var(--color-border-strong)] px-4 py-2 text-sm"
                   >
                     Xem chi tiết
                   </Link>
+                  {session.status === 'DRAFT' && (
+                    <Link
+                      to={`/auction-sessions/${encodeURIComponent(session.id)}/items/create`}
+                      className="rounded-md border border-[var(--color-primary)]/50 px-4 py-2 text-sm text-[var(--color-primary)]"
+                    >
+                      Thêm vật phẩm
+                    </Link>
+                  )}
                 </div>
-              </article>
-            ))
-          ) : (
-            <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] py-16 text-center">
-              <p className="font-display text-xl">
-                Bạn chưa tạo phiên đấu giá nào
-              </p>
+              </div>
 
-              <Link
-                to="/auctions/create"
-                className="mt-3 inline-block text-sm text-[var(--color-primary)]"
-              >
-                Tạo phiên đấu giá đầu tiên
-              </Link>
-            </div>
-          )}
+              {session.status === 'DRAFT' && session.itemCount > 0 ? (
+                <div className="border-t border-[var(--color-border)] pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                  <label className="block text-sm">
+                    <span className="text-[var(--color-text-muted)]">Thời gian bắt đầu</span>
+                    <input
+                      aria-label="Thời gian bắt đầu"
+                      type="datetime-local"
+                      value={scheduleValues[session.id] ?? ''}
+                      onChange={(event) => setScheduleValues((current) => ({
+                        ...current,
+                        [session.id]: event.target.value,
+                      }))}
+                      className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3"
+                    />
+                    <span className="mt-2 block text-xs text-[var(--color-text-dim)]">
+                      Múi giờ: {BROWSER_TIME_ZONE}
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={schedulingId === session.id}
+                    onClick={() => void schedule(session, Date.now())}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--color-primary)] px-4 py-3 text-sm font-semibold text-[var(--color-bg)] disabled:opacity-50"
+                  >
+                    <CalendarClock aria-hidden="true" size={17} />
+                    {schedulingId === session.id ? 'Đang lập lịch...' : 'Lập lịch'}
+                  </button>
+                </div>
+              ) : session.status === 'DRAFT' ? (
+                <p className="self-center text-sm text-[var(--color-text-muted)]">
+                  Hãy thêm ít nhất một vật phẩm trước khi lập lịch.
+                </p>
+              ) : (
+                <p className="self-center text-sm text-[var(--color-text-muted)]">
+                  Bắt đầu: {session.startTime
+                    ? new Date(session.startTime * 1000).toLocaleString('vi-VN')
+                    : 'Chưa có thời gian'}
+                </p>
+              )}
+            </article>
+          ))}
         </div>
       )}
-    </div>
+
+      {!loading && !loadError && (cursorStack.length > 1 || nextCursor !== null) && (
+        <nav aria-label="Phân trang" className="mt-9 flex justify-center gap-3">
+          <button
+            type="button"
+            disabled={cursorStack.length === 1}
+            onClick={() => {
+              setLoading(true);
+              setLoadError(false);
+              setCursorStack((current) => current.slice(0, -1));
+            }}
+            className="rounded-md border border-[var(--color-border-strong)] px-4 py-2 text-sm disabled:opacity-40"
+          >
+            Trang trước
+          </button>
+          <button
+            type="button"
+            disabled={nextCursor === null}
+            onClick={() => {
+              if (nextCursor !== null) {
+                if (cursorStack.includes(nextCursor)) {
+                  setActionError('Phản hồi phân trang không hợp lệ.');
+                  return;
+                }
+                setLoading(true);
+                setLoadError(false);
+                setCursorStack((current) => [...current, nextCursor]);
+              }
+            }}
+            className="rounded-md border border-[var(--color-border-strong)] px-4 py-2 text-sm disabled:opacity-40"
+          >
+            Trang sau
+          </button>
+        </nav>
+      )}
+    </main>
   );
 }
