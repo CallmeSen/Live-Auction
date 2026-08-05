@@ -2,13 +2,7 @@ import re
 import uuid
 from datetime import datetime
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    EmailStr,
-    Field,
-    field_validator,
-)
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.utils.password import validate_admin_password
 from common.enum import UserRole, UserStatus
@@ -17,17 +11,10 @@ from common.enum import UserRole, UserStatus
 class CreateAdminUserRequest(BaseModel):
     email: EmailStr = Field(max_length=255)
     password: str = Field(max_length=72)
-    full_name: str = Field(
-        alias="fullName",
-        min_length=2,
-        max_length=255,
-    )
+    full_name: str = Field(alias="fullName", min_length=2, max_length=255)
     phone: str = Field(max_length=30)
 
-    model_config = ConfigDict(
-        populate_by_name=True,
-        str_strip_whitespace=True,
-    )
+    model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
 
     @field_validator("email")
     @classmethod
@@ -38,7 +25,6 @@ class CreateAdminUserRequest(BaseModel):
     @classmethod
     def validate_password(cls, password: str) -> str:
         validate_admin_password(password)
-
         return password
 
     @field_validator("full_name")
@@ -46,23 +32,14 @@ class CreateAdminUserRequest(BaseModel):
     def validate_full_name(cls, full_name: str) -> str:
         if not full_name:
             raise ValueError("Full name must not be blank")
-
         return full_name
 
     @field_validator("phone")
     @classmethod
     def validate_phone(cls, phone: str) -> str:
-        if not phone:
-            raise ValueError("Phone is required")
-
         normalized_phone = re.sub(r"[\s-]", "", phone)
-
         if not re.fullmatch(r"\+?\d{9,15}", normalized_phone):
-            raise ValueError(
-                "Phone must contain 9 to 15 digits "
-                "and may start with +"
-            )
-
+            raise ValueError("Phone must contain 9 to 15 digits and may start with +")
         return normalized_phone
 
 
@@ -73,12 +50,10 @@ class CreateAdminUserData(BaseModel):
     phone: str
     role: UserRole
     status: UserStatus
+    is_primary_admin: bool = Field(serialization_alias="isPrimaryAdmin")
     created_at: datetime = Field(serialization_alias="createdAt")
 
-    model_config = ConfigDict(
-        from_attributes=True,
-        populate_by_name=True,
-    )
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class CreateAdminUserResponse(BaseModel):
@@ -86,3 +61,28 @@ class CreateAdminUserResponse(BaseModel):
     code: str
     message: str
     data: CreateAdminUserData
+
+
+class ResetAdminPasswordRequest(BaseModel):
+    new_password: str = Field(alias="newPassword", max_length=72)
+    model_config = ConfigDict(populate_by_name=True)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password(cls, password: str) -> str:
+        validate_admin_password(password)
+        return password
+
+
+class ResetAdminPasswordData(BaseModel):
+    id: uuid.UUID
+    email: EmailStr
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class ResetAdminPasswordResponse(BaseModel):
+    status: int
+    code: str
+    message: str
+    data: ResetAdminPasswordData

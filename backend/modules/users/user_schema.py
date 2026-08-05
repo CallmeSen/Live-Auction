@@ -27,6 +27,7 @@ class AdminUserListItem(BaseModel):
     phone: str
     role: UserRole
     status: UserStatus
+    is_primary_admin: bool = Field(serialization_alias="isPrimaryAdmin")
     created_at: datetime = Field(serialization_alias="createdAt")
     updated_at: datetime = Field(serialization_alias="updatedAt")
 
@@ -80,6 +81,7 @@ class UpdateUserStatusData(BaseModel):
     phone: str
     role: UserRole
     status: UserStatus
+    is_primary_admin: bool = Field(serialization_alias="isPrimaryAdmin")
     updated_at: datetime = Field(serialization_alias="updatedAt")
 
     model_config = ConfigDict(
@@ -102,6 +104,7 @@ class UserProfileData(BaseModel):
     phone: str
     role: UserRole
     status: UserStatus
+    is_primary_admin: bool = Field(serialization_alias="isPrimaryAdmin")
     created_at: datetime = Field(serialization_alias="createdAt")
     updated_at: datetime = Field(serialization_alias="updatedAt")
 

@@ -12,6 +12,9 @@ from modules.admin.admin_schema import (
     CreateAdminUserData,
     CreateAdminUserRequest,
     CreateAdminUserResponse,
+    ResetAdminPasswordData,
+    ResetAdminPasswordRequest,
+    ResetAdminPasswordResponse,
 )
 from modules.admin.admin_service import AdminService
 from modules.auction_sessions.session_repository import (
@@ -203,12 +206,13 @@ async def update_user_status(
 async def create_admin_user(
     request: CreateAdminUserRequest,
     db: DatabaseSession,
-    _current_admin: CurrentAdminUser,
+    current_admin: CurrentAdminUser,
     admin_service: AdminServiceDependency,
 ) -> CreateAdminUserResponse:
     user = await admin_service.create_admin_user(
         db=db,
         request=request,
+        current_admin=current_admin,
     )
 
     return CreateAdminUserResponse(
@@ -218,6 +222,31 @@ async def create_admin_user(
         data=CreateAdminUserData.model_validate(user),
     )
 
+
+@router.patch(
+    "/users/{user_id}/password",
+    status_code=status.HTTP_200_OK,
+    response_model=ResetAdminPasswordResponse,
+)
+async def reset_admin_password(
+    user_id: uuid.UUID,
+    request: ResetAdminPasswordRequest,
+    db: DatabaseSession,
+    current_admin: CurrentAdminUser,
+    admin_service: AdminServiceDependency,
+) -> ResetAdminPasswordResponse:
+    user = await admin_service.reset_admin_password(
+        db=db,
+        user_id=user_id,
+        new_password=request.new_password,
+        current_admin=current_admin,
+    )
+    return ResetAdminPasswordResponse(
+        status=status.HTTP_200_OK,
+        code="ADMIN_PASSWORD_RESET",
+        message="Administrator password reset successfully",
+        data=ResetAdminPasswordData.model_validate(user),
+    )
 
 
 @router.get(
