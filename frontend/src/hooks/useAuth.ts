@@ -27,6 +27,7 @@ export default function useAuth() {
         phone: activeProfile.phone,
         role: session.role === 'ADMIN' ? 'ADMIN' : 'USER',
         status: 'ACTIVE',
+        isPrimaryAdmin: false,
       }
     : null;
 
@@ -47,6 +48,7 @@ export default function useAuth() {
       phone: nextProfile.phone,
       role: session.role === 'ADMIN' ? 'ADMIN' : 'USER',
       status: 'ACTIVE',
+      isPrimaryAdmin: false,
     };
   }, [session]);
 

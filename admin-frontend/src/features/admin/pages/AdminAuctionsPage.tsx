@@ -17,18 +17,20 @@ const statusLabel: Record<AuctionSessionStatus, string> = {
   ACTIVE: 'Đang diễn ra',
   ENDED: 'Đã kết thúc',
   CANCELLED: 'Đã hủy',
+  PENDING_APPROVAL: 'Chờ duyệt',
+  REJECTED: 'Đã từ chối',
 };
 
 const statusOptions: Array<{
   value: AuctionSessionStatus | '';
   label: string;
 }> = [
-  { value: '', label: 'Tất cả' },
-  { value: 'SCHEDULED', label: 'Chờ duyệt' },
-  { value: 'ACTIVE', label: 'Đang diễn ra' },
-  { value: 'ENDED', label: 'Đã kết thúc' },
-  { value: 'CANCELLED', label: 'Đã hủy' },
-];
+    { value: '', label: 'Tất cả' },
+    { value: 'SCHEDULED', label: 'Chờ duyệt' },
+    { value: 'ACTIVE', label: 'Đang diễn ra' },
+    { value: 'ENDED', label: 'Đã kết thúc' },
+    { value: 'CANCELLED', label: 'Đã hủy' },
+  ];
 
 export default function AdminAuctionsPage() {
   const [sessions, setSessions] = useState<
