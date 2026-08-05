@@ -42,3 +42,5 @@ venv/
 ./frontend/dist/
 
 .cursorignore
+./admin-frontend/node_modules/
+./admin-frontend/dist/
