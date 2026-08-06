@@ -86,22 +86,23 @@ locals {
   stage3_cors_allowed_methods = "GET,POST,PUT,OPTIONS"
 
   stage3_routes = {
-    "/api/v1/auction-sessions"                       = { GET = "query_service", POST = "session_service" }
-    "/api/v1/auction-sessions/mine"                  = { GET = "query_service" }
-    "/api/v1/auction-sessions/{session_id}"          = { GET = "query_service" }
-    "/api/v1/auction-sessions/{session_id}/rules"    = { PUT = "session_service" }
-    "/api/v1/auction-sessions/{session_id}/items"    = { POST = "item_service" }
-    "/api/v1/auction-sessions/{session_id}/schedule" = { POST = "admin_command" }
-    "/api/v1/auction-items"                          = { GET = "query_service" }
-    "/api/v1/auction-items/{item_id}"                = { GET = "query_service" }
-    "/api/v1/auction-items/{item_id}/images/presign" = { POST = "item_service" }
-    "/api/v1/bids/my"                                = { GET = "query_service" }
-    "/api/v1/admin/items/{item_id}/pause"            = { POST = "admin_command" }
-    "/api/v1/admin/items/{item_id}/resume"           = { POST = "admin_command" }
-    "/api/v1/admin/items/{item_id}/approve"          = { POST = "admin_command" }
-    "/api/v1/admin/items/{item_id}/close"            = { POST = "admin_command" }
-    "/api/v1/admin/items/{item_id}/cancel"           = { POST = "admin_command" }
-  }
+  "/api/v1/auction-sessions"                       = { GET = "query_service", POST = "session_service" }
+  "/api/v1/auction-sessions/mine"                  = { GET = "query_service" }
+  "/api/v1/auction-sessions/{session_id}"          = { GET = "query_service" }
+  "/api/v1/auction-sessions/{session_id}/rules"    = { PUT = "session_service" }
+  "/api/v1/auction-sessions/{session_id}/items"    = { POST = "item_service" }
+  "/api/v1/auction-sessions/{session_id}/schedule" = { POST = "admin_command" }
+  "/api/v1/auction-items"                          = { GET = "query_service" }
+  "/api/v1/auction-items/{item_id}"                = { GET = "query_service" }
+  "/api/v1/auction-items/{item_id}/images/presign" = { POST = "item_service" }
+  "/api/v1/bids/my"                                = { GET = "query_service" }
+  "/api/v1/admin/items/{item_id}/pause"            = { POST = "admin_command" }
+  "/api/v1/admin/items/{item_id}/resume"           = { POST = "admin_command" }
+  "/api/v1/admin/items/{item_id}/approve"          = { POST = "admin_command" }
+  "/api/v1/admin/items/{item_id}/close"            = { POST = "admin_command" }
+  "/api/v1/admin/items/{item_id}/cancel"           = { POST = "admin_command" }
+  "/api/v1/users/me"                               = { GET = "query_service" }
+}
 
   stage3_operations = flatten([
     for path, methods in local.stage3_routes : [

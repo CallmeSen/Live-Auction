@@ -573,6 +573,50 @@ def _optional_text(parameters: Mapping[str, Any], name: str) -> str | None:
         raise _invalid_query()
     return value.strip()
 
+def _current_user_profile(identity: RequestIdentity) -> dict[str, Any]:
+    claims = identity.claims
+
+    email = claims.get("email")
+    if not isinstance(email, str):
+        email = ""
+
+    full_name = claims.get("name")
+    if not isinstance(full_name, str) or not full_name.strip():
+        full_name = claims.get("cognito:username")
+
+    if not isinstance(full_name, str) or not full_name.strip():
+        full_name = email
+
+    phone = claims.get("phone_number")
+    if not isinstance(phone, str):
+        phone = ""
+
+    role = "ADMIN" if "ADMIN" in identity.groups else "USER"
+
+    return {
+        "id": identity.sub,
+        "email": email,
+        "fullName": full_name,
+        "phone": phone,
+        "role": role,
+        "status": "ACTIVE",
+        "isPrimaryAdmin": False,
+        "createdAt": None,
+        "updatedAt": None,
+    }
+
+
+@app.get("/api/v1/users/me")
+def get_current_user_profile() -> Response:
+    identity = identity_from_event(app.current_event.raw_event)
+    data = _current_user_profile(identity)
+
+    return _response(
+        200,
+        "USER_PROFILE_FOUND",
+        "User profile retrieved successfully",
+        data,
+    )
 
 @app.get("/api/v1/auction-sessions")
 def list_sessions() -> Response:

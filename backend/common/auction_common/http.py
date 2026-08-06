@@ -45,6 +45,7 @@ class Conflict(ServiceError):
 class RequestIdentity:
     sub: str
     groups: frozenset[str]
+    claims: Mapping[str, Any]
 
 
 def _groups(value: Any) -> frozenset[str]:
@@ -75,7 +76,10 @@ def identity_from_event(event: Any) -> RequestIdentity:
     if not isinstance(claimed_sub, str) or not claimed_sub.strip():
         raise Unauthorized()
     sub = claimed_sub.strip()
-    return RequestIdentity(sub=sub, groups=_groups(claims.get("cognito:groups")))
+    return RequestIdentity(
+    sub=sub,
+    groups=_groups(claims.get("cognito:groups")),
+    claims=dict(claims),)
 
 
 def require_group(identity: RequestIdentity, *allowed: str) -> None:
