@@ -37,6 +37,7 @@ from auction_common.http import (
     ServiceError,
     identity_from_event,
     json_response,
+    request_origin_from_event,
     require_group,
 )
 from auction_common.models import CreateItemRequest, PresignImageRequest
@@ -74,6 +75,11 @@ def _catalog_table():
 
 
 @lru_cache(maxsize=1)
+def _category_table():
+    return _configured_table(get_config().T_CATEGORY_CATALOG)
+
+
+@lru_cache(maxsize=1)
 def _s3_client():
     return boto3.client("s3")
 
@@ -84,7 +90,15 @@ def _response(
     message: str,
     data: Any = None,
 ) -> Response:
-    proxy_response = json_response(status_code, code, message, data)
+    proxy_response = json_response(
+        status_code,
+        code,
+        message,
+        data,
+        request_origin=request_origin_from_event(
+            getattr(getattr(app, "current_event", None), "raw_event", {})
+        ),
+    )
     return Response(
         status_code=status_code,
         content_type="application/json",
@@ -130,6 +144,8 @@ def _create_item(
     catalog,
     item_id: str,
     now: int,
+    *,
+    category_table=None,
 ) -> dict[str, Any]:
     require_group(identity, "USER")
     response = catalog.get_item(
@@ -153,6 +169,16 @@ def _create_item(
     )
     if rules_response.get("Item") is None:
         raise BadRequest("RULES_REQUIRED", "Session rules are required")
+
+    if body.category_id is not None and category_table is not None:
+        category = category_table.get_item(
+            Key={"category_id": body.category_id},
+        ).get("Item")
+        if category is None or category.get("status") != "ACTIVE":
+            raise BadRequest(
+                "CATEGORY_NOT_ACTIVE",
+                "Category is not available for new items",
+            )
 
     item = {
         **item_key(session_id, body.sequence_number, item_id),
@@ -429,6 +455,7 @@ def create_item(session_id: str) -> Response:
         _catalog_table(),
         item_id=str(uuid.uuid4()),
         now=int(time.time()),
+        category_table=_category_table() if body.category_id is not None else None,
     )
     return _response(201, "ITEM_CREATED", "Item created", data)
 

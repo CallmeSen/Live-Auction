@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import base64
 import json
+import os
+import re
 from collections.abc import Mapping
 from decimal import Decimal
 from functools import lru_cache
@@ -8,7 +11,7 @@ from typing import Any
 
 import boto3
 from aws_lambda_powertools import Logger
-from aws_lambda_powertools.event_handler import APIGatewayRestResolver, Response
+from aws_lambda_powertools.event_handler import APIGatewayRestResolver, CORSConfig, Response
 from aws_lambda_powertools.event_handler.exceptions import (
     NotFoundError as ResolverNotFoundError,
 )
@@ -29,9 +32,39 @@ from auction_common.http import (
     ServiceError,
     identity_from_event,
     json_response,
+    request_origin_from_event,
     require_group,
 )
-app = APIGatewayRestResolver()
+
+
+def _cors_config() -> CORSConfig:
+    raw_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "").strip()
+    origins: list[str] = []
+    if raw_origins:
+        try:
+            parsed = json.loads(raw_origins)
+        except json.JSONDecodeError:
+            parsed = []
+        if isinstance(parsed, list):
+            origins = [
+                origin.strip()
+                for origin in parsed
+                if isinstance(origin, str)
+                and origin.strip()
+                and origin.strip() not in {"*", "null"}
+            ]
+    if not origins:
+        fallback = os.environ.get("CORS_ALLOWED_ORIGIN", "").strip()
+        if fallback and fallback not in {"*", "null"}:
+            origins = [fallback]
+    if not origins:
+        origins = ["http://localhost:5173"]
+
+    return CORSConfig(allow_origin=origins[0], extra_origins=origins[1:])
+
+
+app = APIGatewayRestResolver(cors=_cors_config())
+app._cors_methods.update({"GET", "POST", "PUT", "PATCH", "OPTIONS"})
 logger = Logger(service="query-service")
 
 _SESSION_PRIVATE_STATUS = "DRAFT"
@@ -130,6 +163,16 @@ _BASE_CURSOR_FIELDS = frozenset({"pk", "sk"})
 _INVALID_QUERY_MESSAGE = "Query parameters are invalid"
 _MAX_SESSION_ITEM_QUERY_PAGES = 100
 _MAX_FILTER_QUERY_BATCHES = 10
+_CATEGORY_PUBLIC_FIELDS = (
+    "category_id",
+    "name",
+    "slug",
+    "status",
+    "created_at",
+    "updated_at",
+)
+_MAX_CATEGORY_QUERY_PAGES = 100
+_SAFE_SEGMENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}\Z")
 
 
 @lru_cache(maxsize=1)
@@ -147,13 +190,26 @@ def _events_table():
     return boto3.resource("dynamodb").Table(get_config().T_EVENTS)
 
 
+@lru_cache(maxsize=1)
+def _category_table():
+    return boto3.resource("dynamodb").Table(get_config().T_CATEGORY_CATALOG)
+
+
 def _response(
     status_code: int,
     code: str,
     message: str,
     data: Any = None,
 ) -> Response:
-    proxy_response = json_response(status_code, code, message, data)
+    proxy_response = json_response(
+        status_code,
+        code,
+        message,
+        data,
+        request_origin=request_origin_from_event(
+            getattr(getattr(app, "current_event", None), "raw_event", {})
+        ),
+    )
     return Response(
         status_code=status_code,
         content_type="application/json",
@@ -228,6 +284,89 @@ def _pagination_result(
             context,
         ),
     }
+
+
+def _category_view(item: Mapping[str, Any]) -> dict[str, Any]:
+    return _project(item, _CATEGORY_PUBLIC_FIELDS)
+
+
+def _encode_category_cursor(key: Mapping[str, Any] | None) -> str | None:
+    if key is None:
+        return None
+    payload = {"kind": "categories", "key": dict(key)}
+    encoded = base64.urlsafe_b64encode(
+        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
+    )
+    return encoded.rstrip(b"=").decode("ascii")
+
+
+def _decode_category_cursor(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value:
+        raise _invalid_cursor()
+    try:
+        padded = value + "=" * (-len(value) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+    except (ValueError, TypeError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise _invalid_cursor() from error
+    key = payload.get("key") if isinstance(payload, dict) else None
+    if not isinstance(payload, dict) or payload.get("kind") != "categories":
+        raise _invalid_cursor()
+    if not isinstance(key, dict) or set(key) != {"category_id", "status", "created_at"}:
+        raise _invalid_cursor()
+    if (
+        not isinstance(key["category_id"], str)
+        or key["status"] != "ACTIVE"
+        or type(key["created_at"]) is not int
+    ):
+        raise _invalid_cursor()
+    return key
+
+
+def _list_categories(
+    categories,
+    *,
+    page_size: int,
+    cursor: str | None,
+) -> dict[str, Any]:
+    _validate_page_size(page_size)
+    start_key = _decode_category_cursor(cursor)
+    query: dict[str, Any] = {
+        "IndexName": "status-index",
+        "KeyConditionExpression": "#status = :active",
+        "ExpressionAttributeNames": {"#status": "status"},
+        "ExpressionAttributeValues": {":active": "ACTIVE"},
+        "Limit": page_size,
+        "ScanIndexForward": False,
+    }
+    if start_key is not None:
+        query["ExclusiveStartKey"] = start_key
+    response = categories.query(**query)
+    return {
+        "items": [
+            _category_view(item)
+            for item in response.get("Items", [])
+            if item.get("status") == "ACTIVE"
+        ],
+        "next_token": _encode_category_cursor(response.get("LastEvaluatedKey")),
+    }
+
+
+def _category_id(value: Any) -> str:
+    if not isinstance(value, str) or _SAFE_SEGMENT.fullmatch(value) is None:
+        raise BadRequest("INVALID_CATEGORY_ID", "Category identifier is invalid")
+    return value
+
+
+def _get_category(categories, category_id: str) -> dict[str, Any]:
+    category = categories.get_item(
+        Key={"category_id": _category_id(category_id)},
+        ConsistentRead=True,
+    ).get("Item")
+    if category is None or category.get("status") != "ACTIVE":
+        raise NotFound("CATEGORY_NOT_FOUND", "Category was not found")
+    return _category_view(category)
 
 
 def _list_sessions(
@@ -617,6 +756,27 @@ def get_current_user_profile() -> Response:
         "User profile retrieved successfully",
         data,
     )
+
+@app.get("/api/v1/categories")
+def list_categories() -> Response:
+    parameters = _query_parameters()
+    data = _list_categories(
+        _category_table(),
+        page_size=_page_size(parameters),
+        cursor=parameters.get("paginationToken"),
+    )
+    return _response(200, "CATEGORIES_LISTED", "Categories listed", data)
+
+
+@app.get("/api/v1/categories/<category_id>")
+def get_category(category_id: str) -> Response:
+    return _response(
+        200,
+        "CATEGORY_FOUND",
+        "Category found",
+        _get_category(_category_table(), category_id),
+    )
+
 
 @app.get("/api/v1/auction-sessions")
 def list_sessions() -> Response:

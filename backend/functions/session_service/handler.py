@@ -28,6 +28,7 @@ from auction_common.http import (
     ServiceError,
     identity_from_event,
     json_response,
+    request_origin_from_event,
     require_group,
 )
 from auction_common.models import ControlPlaneRules, CreateSessionRequest
@@ -61,7 +62,15 @@ def _response(
     message: str,
     data: Any = None,
 ) -> Response:
-    proxy_response = json_response(status_code, code, message, data)
+    proxy_response = json_response(
+        status_code,
+        code,
+        message,
+        data,
+        request_origin=request_origin_from_event(
+            getattr(getattr(app, "current_event", None), "raw_event", {})
+        ),
+    )
     return Response(
         status_code=status_code,
         content_type="application/json",
@@ -106,6 +115,7 @@ def _create_session(
         "title": body.title,
         "description": body.description,
         "status": "DRAFT",
+        "review_status": "PENDING",
         "version": 1,
         "item_count": 0,
         "gsi1pk": f"SELLER#{identity.sub}",

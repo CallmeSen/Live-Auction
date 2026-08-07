@@ -136,8 +136,40 @@ def test_json_response_adds_configured_browser_cors_headers(monkeypatch):
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "https://auction.example.com",
         "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Api-Key",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,OPTIONS",
     }
+
+
+def test_json_response_reflects_only_the_requested_allowed_origin(monkeypatch):
+    monkeypatch.setenv(
+        "CORS_ALLOWED_ORIGINS",
+        '["https://auction.example.com","https://admin.example.com"]',
+    )
+
+    response = json_response(
+        200,
+        "OK",
+        "Request succeeded",
+        request_origin="https://admin.example.com",
+    )
+
+    assert response["headers"]["Access-Control-Allow-Origin"] == "https://admin.example.com"
+
+
+def test_json_response_does_not_reflect_an_unlisted_origin(monkeypatch):
+    monkeypatch.setenv(
+        "CORS_ALLOWED_ORIGINS",
+        '["https://auction.example.com","https://admin.example.com"]',
+    )
+
+    response = json_response(
+        200,
+        "OK",
+        "Request succeeded",
+        request_origin="https://evil.example.com",
+    )
+
+    assert response["headers"].get("Access-Control-Allow-Origin") == "https://auction.example.com"
 
 
 @pytest.mark.parametrize(

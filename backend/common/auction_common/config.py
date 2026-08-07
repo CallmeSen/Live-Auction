@@ -13,6 +13,8 @@ class Config:
     T_CONN: str
     T_ALIAS: str
     T_IDEMPOTENCY: str
+    T_CATEGORY_CATALOG: str
+    T_ADMIN_AUDIT_EVENTS: str
     BID_QUEUE_URL: str
     WS_ENDPOINT: str
     BROADCAST_FN: str
@@ -24,6 +26,8 @@ class Config:
     SCHEDULER_DLQ_ARN: str
     ADMIN_COMMAND_ARN: str
     MAX_MEDIA_BYTES: int
+    COGNITO_USER_POOL_ID: str
+    BOOTSTRAP_ADMIN_SUB: str
 
     @classmethod
     def from_environment(cls) -> "Config":
@@ -42,6 +46,8 @@ class Config:
             T_CONN=os.environ.get("TBL_WS_CONN", ""),
             T_ALIAS=os.environ.get("TBL_ALIASES", ""),
             T_IDEMPOTENCY=os.environ.get("TBL_IDEMPOTENCY", ""),
+            T_CATEGORY_CATALOG=os.environ.get("TBL_CATEGORY_CATALOG", ""),
+            T_ADMIN_AUDIT_EVENTS=os.environ.get("TBL_ADMIN_AUDIT_EVENTS", ""),
             BID_QUEUE_URL=os.environ.get("BID_QUEUE_URL", ""),
             WS_ENDPOINT=os.environ.get("WS_MGMT_ENDPOINT", ""),
             BROADCAST_FN=os.environ.get("BROADCAST_FN_NAME", ""),
@@ -53,6 +59,8 @@ class Config:
             SCHEDULER_DLQ_ARN=os.environ.get("SCHEDULER_DLQ_ARN", ""),
             ADMIN_COMMAND_ARN=os.environ.get("ADMIN_COMMAND_ARN", ""),
             MAX_MEDIA_BYTES=int(os.environ.get("MAX_MEDIA_BYTES", "5242880")),
+            COGNITO_USER_POOL_ID=os.environ.get("COGNITO_USER_POOL_ID", ""),
+            BOOTSTRAP_ADMIN_SUB=os.environ.get("BOOTSTRAP_ADMIN_SUB", ""),
         )
 
 

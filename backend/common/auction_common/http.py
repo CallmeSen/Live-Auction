@@ -22,8 +22,12 @@ class Unauthorized(ServiceError):
 
 
 class Forbidden(ServiceError):
-    def __init__(self, message: str = "Permission denied"):
-        super().__init__(403, "FORBIDDEN", message)
+    def __init__(
+        self,
+        message: str = "Permission denied",
+        code: str = "FORBIDDEN",
+    ):
+        super().__init__(403, code, message)
 
 
 class BadRequest(ServiceError):
@@ -82,6 +86,18 @@ def identity_from_event(event: Any) -> RequestIdentity:
     claims=dict(claims),)
 
 
+def request_origin_from_event(event: Any) -> str | None:
+    if not isinstance(event, Mapping):
+        return None
+    headers = event.get("headers")
+    if not isinstance(headers, Mapping):
+        return None
+    for name, value in headers.items():
+        if isinstance(name, str) and name.lower() == "origin" and isinstance(value, str):
+            return value.strip() or None
+    return None
+
+
 def require_group(identity: RequestIdentity, *allowed: str) -> None:
     if "ADMIN" not in identity.groups and identity.groups.isdisjoint(allowed):
         raise Forbidden()
@@ -92,36 +108,63 @@ def json_response(
     code: str,
     message: str,
     data: Any = None,
+    request_origin: str | None = None,
 ) -> dict[str, Any]:
     headers = {"Content-Type": "application/json"}
-    allowed_origin = os.environ.get("CORS_ALLOWED_ORIGIN", "").strip()
-    try:
-        parsed_origin = urlsplit(allowed_origin)
-        valid_origin = (
-            allowed_origin not in {"", "*", "null"}
-            and "\r" not in allowed_origin
-            and "\n" not in allowed_origin
-            and parsed_origin.scheme in {"http", "https"}
-            and bool(parsed_origin.hostname)
-            and parsed_origin.username is None
-            and parsed_origin.password is None
-            and parsed_origin.path == ""
-            and parsed_origin.query == ""
-            and parsed_origin.fragment == ""
-        )
-        if parsed_origin.port is not None and not 1 <= parsed_origin.port <= 65535:
-            valid_origin = False
-    except ValueError:
-        valid_origin = False
+    configured_origins: list[str] = []
+    raw_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "").strip()
+    if raw_origins:
+        try:
+            parsed_origins = json.loads(raw_origins)
+        except json.JSONDecodeError:
+            parsed_origins = []
+        if isinstance(parsed_origins, list):
+            configured_origins = [
+                origin.strip()
+                for origin in parsed_origins
+                if isinstance(origin, str) and origin.strip()
+            ]
+    if not configured_origins:
+        configured_origins = [os.environ.get("CORS_ALLOWED_ORIGIN", "").strip()]
 
-    if valid_origin:
+    def valid_origin(value: str) -> bool:
+        try:
+            parsed_origin = urlsplit(value)
+            valid = (
+                value not in {"", "*", "null"}
+                and "\r" not in value
+                and "\n" not in value
+                and parsed_origin.scheme in {"http", "https"}
+                and bool(parsed_origin.hostname)
+                and parsed_origin.username is None
+                and parsed_origin.password is None
+                and parsed_origin.path == ""
+                and parsed_origin.query == ""
+                and parsed_origin.fragment == ""
+            )
+            if parsed_origin.port is not None and not 1 <= parsed_origin.port <= 65535:
+                valid = False
+            return valid
+        except ValueError:
+            return False
+
+    allowed_origin = next(
+        (
+            candidate
+            for candidate in configured_origins
+            if candidate == request_origin and valid_origin(candidate)
+        ),
+        next((candidate for candidate in configured_origins if valid_origin(candidate)), ""),
+    )
+
+    if valid_origin(allowed_origin):
         headers.update(
             {
                 "Access-Control-Allow-Origin": allowed_origin,
                 "Access-Control-Allow-Headers": (
                     "Content-Type,Authorization,X-Api-Key"
                 ),
-                "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+                "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,OPTIONS",
             }
         )
 

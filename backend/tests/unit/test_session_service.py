@@ -99,7 +99,7 @@ def assert_cors_headers(response):
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "https://auction.example.com",
         "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Api-Key",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,OPTIONS",
     }
 
 
@@ -129,6 +129,7 @@ def test_create_session_uses_trusted_identity_and_writes_complete_item():
                 "title": "Evening sale",
                 "description": "Fine art",
                 "status": "DRAFT",
+                "review_status": "PENDING",
                 "version": 1,
                 "item_count": 0,
                 "gsi1pk": "SELLER#trusted-sub",

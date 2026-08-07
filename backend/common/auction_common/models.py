@@ -93,3 +93,42 @@ class PresignImageRequest(BaseModel):
 
 class ScheduleSessionRequest(BaseModel):
     start_time: int = Field(strict=True, gt=0)
+
+
+class AdminUserStatusRequest(BaseModel):
+    status: Literal["ACTIVE", "BANNED"]
+
+
+class AdminAccountCreateRequest(BaseModel):
+    email: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=3, max_length=254),
+    ]
+    full_name: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=200),
+    ]
+    phone: str | None = Field(default=None, max_length=32)
+
+
+class AdminCategoryCreateRequest(BaseModel):
+    name: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=150),
+    ]
+    slug: str | None = Field(default=None, max_length=150)
+
+
+class AdminCategoryUpdateRequest(BaseModel):
+    name: Annotated[
+        str | None,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=150),
+    ] = None
+    slug: str | None = Field(default=None, max_length=150)
+    status: Literal["ACTIVE", "INACTIVE"] | None = None
+
+    @model_validator(mode="after")
+    def has_change(self):
+        if self.name is None and self.slug is None and self.status is None:
+            raise ValueError("At least one category field is required")
+        return self

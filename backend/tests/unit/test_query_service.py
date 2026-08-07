@@ -125,6 +125,80 @@ def item_record(item_id="i1", sequence=1, **overrides):
     return value
 
 
+def test_public_categories_query_active_index(monkeypatch):
+    categories = FakeTable(
+        query_responses=[
+            {
+                "Items": [
+                    {
+                        "category_id": "cat-1",
+                        "name": "Fine Art",
+                        "slug": "fine-art",
+                        "status": "ACTIVE",
+                        "created_at": 100,
+                        "updated_at": 100,
+                    }
+                ],
+                "LastEvaluatedKey": None,
+            }
+        ]
+    )
+    monkeypatch.setattr(service, "_category_table", lambda: categories)
+
+    response = service.handler(
+        rest_event("GET", "/api/v1/categories", query={"pageSize": "10"}),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    assert response_body(response)["data"] == {
+        "items": [
+            {
+                "category_id": "cat-1",
+                "name": "Fine Art",
+                "slug": "fine-art",
+                "status": "ACTIVE",
+                "created_at": 100,
+                "updated_at": 100,
+            }
+        ],
+        "next_token": None,
+    }
+    assert categories.query_calls[0]["IndexName"] == "status-index"
+    assert categories.query_calls[0]["ExpressionAttributeValues"] == {
+        ":active": "ACTIVE"
+    }
+
+
+def test_public_category_detail_hides_inactive_category(monkeypatch):
+    categories = FakeTable(
+        get_responses=[
+            {
+                "Item": {
+                    "category_id": "cat-1",
+                    "name": "Fine Art",
+                    "slug": "fine-art",
+                    "status": "ACTIVE",
+                    "created_at": 100,
+                    "updated_at": 100,
+                }
+            }
+        ]
+    )
+    monkeypatch.setattr(service, "_category_table", lambda: categories)
+
+    response = service.handler(
+        rest_event("GET", "/api/v1/categories/cat-1"),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    assert response_body(response)["data"]["slug"] == "fine-art"
+    assert categories.get_calls == [
+        {"Key": {"category_id": "cat-1"}, "ConsistentRead": True}
+    ]
+
+
 def lookup_record(**overrides):
     value = {
         **item_lookup_key("i1"),
@@ -137,7 +211,7 @@ def lookup_record(**overrides):
     return value
 
 
-def rest_event(method, path, query=None, sub=None, groups=None, body=None):
+def rest_event(method, path, query=None, sub=None, groups=None, body=None, origin=None):
     request_context = {}
     if sub is not None:
         request_context = {
@@ -148,10 +222,13 @@ def rest_event(method, path, query=None, sub=None, groups=None, body=None):
                 }
             }
         }
+    headers = {"Content-Type": "application/json"}
+    if origin is not None:
+        headers["Origin"] = origin
     return {
         "httpMethod": method,
         "path": path,
-        "headers": {"Content-Type": "application/json"},
+        "headers": headers,
         "multiValueHeaders": {},
         "queryStringParameters": query,
         "multiValueQueryStringParameters": None,
@@ -176,7 +253,7 @@ def assert_cors_headers(response):
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "https://auction.example.com",
         "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Api-Key",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,OPTIONS",
     }
 
 
@@ -1347,6 +1424,38 @@ def test_public_list_route_does_not_require_lambda_identity(monkeypatch):
     assert response["statusCode"] == 200
     assert response_body(response)["code"] == "SESSIONS_LISTED"
     assert catalog.query_calls[0]["Limit"] == 1
+
+
+def test_unmatched_options_reflects_configured_origin(monkeypatch):
+    monkeypatch.setenv(
+        "CORS_ALLOWED_ORIGINS",
+        json.dumps(
+            [
+                "https://d1bt4phb59xk5x.cloudfront.net",
+                "https://d109et9edc4f35.cloudfront.net",
+            ]
+        ),
+    )
+    service.app._cors = service._cors_config()
+    service.app._cors_methods.update({"GET", "POST", "PUT", "PATCH", "OPTIONS"})
+
+    response = service.handler(
+        rest_event(
+            "OPTIONS",
+            "/api/v1/admin/dashboard",
+            origin="https://d109et9edc4f35.cloudfront.net",
+        ),
+        None,
+    )
+
+    assert response["statusCode"] == 204
+    assert response["multiValueHeaders"]["Access-Control-Allow-Origin"][-1] == (
+        "https://d109et9edc4f35.cloudfront.net"
+    )
+    assert response["multiValueHeaders"]["Access-Control-Allow-Methods"][-1] == (
+        "GET,OPTIONS,PATCH,POST,PUT"
+    )
+
 
 
 def test_actual_handler_keeps_cors_headers_on_success_and_service_error(monkeypatch):

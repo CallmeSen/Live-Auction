@@ -22,6 +22,10 @@ OPTIONAL_ENV = (
     "SCHEDULER_DLQ_ARN",
     "ADMIN_COMMAND_ARN",
     "MAX_MEDIA_BYTES",
+    "COGNITO_USER_POOL_ID",
+    "BOOTSTRAP_ADMIN_SUB",
+    "TBL_CATEGORY_CATALOG",
+    "TBL_ADMIN_AUDIT_EVENTS",
 )
 
 
@@ -61,6 +65,10 @@ def test_config_loads_required_tables_and_stage_one_defaults(monkeypatch):
     assert config.SCHEDULER_DLQ_ARN == ""
     assert config.ADMIN_COMMAND_ARN == ""
     assert config.MAX_MEDIA_BYTES == 5 * 1024 * 1024
+    assert config.COGNITO_USER_POOL_ID == ""
+    assert config.BOOTSTRAP_ADMIN_SUB == ""
+    assert config.T_CATEGORY_CATALOG == ""
+    assert config.T_ADMIN_AUDIT_EVENTS == ""
 
 
 def test_config_loads_optional_integration_values(monkeypatch):
@@ -76,6 +84,8 @@ def test_config_loads_optional_integration_values(monkeypatch):
     monkeypatch.setenv("SCHEDULER_DLQ_ARN", "arn:aws:sqs:region:123:dlq")
     monkeypatch.setenv("ADMIN_COMMAND_ARN", "arn:aws:lambda:region:123:function:admin")
     monkeypatch.setenv("MAX_MEDIA_BYTES", "1048576")
+    monkeypatch.setenv("TBL_CATEGORY_CATALOG", "categories")
+    monkeypatch.setenv("TBL_ADMIN_AUDIT_EVENTS", "audit")
 
     config = get_config()
 
@@ -89,3 +99,5 @@ def test_config_loads_optional_integration_values(monkeypatch):
     assert config.SCHEDULER_DLQ_ARN == "arn:aws:sqs:region:123:dlq"
     assert config.ADMIN_COMMAND_ARN == "arn:aws:lambda:region:123:function:admin"
     assert config.MAX_MEDIA_BYTES == 1_048_576
+    assert config.T_CATEGORY_CATALOG == "categories"
+    assert config.T_ADMIN_AUDIT_EVENTS == "audit"

@@ -113,6 +113,16 @@ class FakeCatalog:
             raise self.update_error
 
 
+class FakeCategoryTable:
+    def __init__(self, category=None):
+        self.category = category
+        self.get_calls = []
+
+    def get_item(self, **kwargs):
+        self.get_calls.append(kwargs)
+        return {"Item": self.category} if self.category is not None else {}
+
+
 class FakeS3:
     def __init__(self, error=None, result=None):
         self.error = error
@@ -247,7 +257,7 @@ def assert_cors_headers(response):
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "https://auction.example.com",
         "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Api-Key",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,OPTIONS",
     }
 
 
@@ -369,6 +379,33 @@ def test_create_item_requires_rules_before_mutation():
 
     assert caught.value.code == "RULES_REQUIRED"
     assert catalog.meta.client.transact_calls == []
+
+
+def test_create_item_rejects_inactive_category_before_mutation():
+    catalog = FakeCatalog(session=session(), rules={**rules_key("s1")})
+    categories = FakeCategoryTable(
+        {
+            "category_id": "prints",
+            "name": "Prints",
+            "slug": "prints",
+            "status": "INACTIVE",
+        }
+    )
+
+    with pytest.raises(BadRequest) as caught:
+        service._create_item(
+            identity(),
+            "s1",
+            item_request(category_id="prints"),
+            catalog,
+            "i1",
+            1_700_000_000,
+            category_table=categories,
+        )
+
+    assert caught.value.code == "CATEGORY_NOT_ACTIVE"
+    assert catalog.meta.client.transact_calls == []
+    assert categories.get_calls == [{"Key": {"category_id": "prints"}}]
 
 
 def test_create_item_writes_exact_five_key_transaction_and_complete_item():

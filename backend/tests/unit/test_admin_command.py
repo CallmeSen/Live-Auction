@@ -21,6 +21,7 @@ from auction_common.http import (
     NotFound,
     RequestIdentity,
 )
+from auction_common.models import AdminCategoryCreateRequest, AdminCategoryUpdateRequest
 from functions.admin_command import handler as service
 
 
@@ -129,6 +130,8 @@ class FakeTable:
         self.get_calls = []
         self.query_calls = []
         self.update_calls = []
+        self.scan_calls = []
+        self.put_calls = []
         self.update_errors = list(update_errors or [])
 
     @staticmethod
@@ -152,6 +155,20 @@ class FakeTable:
             error = self.update_errors.pop(0)
             if error is not None:
                 raise error
+        return {}
+
+    def scan(self, **kwargs):
+        self.scan_calls.append(kwargs)
+        return {"Items": list(self.records.values())}
+
+    def put_item(self, **kwargs):
+        self.put_calls.append(kwargs)
+        item = kwargs["Item"]
+        key = {"category_id": item["category_id"]} if "category_id" in item else {
+            "pk": item["pk"],
+            "sk": item["sk"],
+        }
+        self.records[self._key(key)] = item
         return {}
 
 
@@ -330,7 +347,7 @@ def assert_cors_headers(response):
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "https://auction.example.com",
         "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Api-Key",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,OPTIONS",
     }
 
 
@@ -1468,6 +1485,167 @@ def test_operator_transition_matrix_rejects_unapproved_transition(command, befor
     assert caught.value.code == "INVALID_ITEM_TRANSITION"
 
 
+@pytest.mark.parametrize(
+    ("command", "status", "review_status", "active_item_id", "expected"),
+    [
+        (
+            "approve",
+            "DRAFT",
+            "PENDING",
+            None,
+            {"status": "DRAFT", "review_status": "APPROVED"},
+        ),
+        (
+            "approve",
+            "SCHEDULED",
+            "PENDING",
+            None,
+            {"status": "SCHEDULED", "review_status": "APPROVED"},
+        ),
+        (
+            "reject",
+            "DRAFT",
+            "PENDING",
+            None,
+            {"status": "DRAFT", "review_status": "REJECTED"},
+        ),
+        (
+            "reject",
+            "SCHEDULED",
+            "PENDING",
+            None,
+            {"status": "CANCELLED", "review_status": "REJECTED"},
+        ),
+        (
+            "cancel",
+            "SCHEDULED",
+            "APPROVED",
+            None,
+            {"status": "CANCELLED", "review_status": "APPROVED"},
+        ),
+        (
+            "close",
+            "LIVE",
+            "APPROVED",
+            None,
+            {"status": "COMPLETED", "review_status": "APPROVED"},
+        ),
+    ],
+)
+def test_admin_session_transition_matrix_is_explicit(
+    command, status, review_status, active_item_id, expected
+):
+    assert service._admin_session_transition(
+        command,
+        status,
+        review_status,
+        active_item_id=active_item_id,
+    ) == expected
+
+
+@pytest.mark.parametrize(
+    ("command", "status", "review_status", "active_item_id", "error_code"),
+    [
+        ("approve", "LIVE", "APPROVED", "i1", "INVALID_SESSION_TRANSITION"),
+        ("reject", "LIVE", "APPROVED", "i1", "INVALID_SESSION_TRANSITION"),
+        ("cancel", "LIVE", "APPROVED", "i1", "SESSION_ACTIVE_ITEM"),
+        ("close", "LIVE", "APPROVED", "i1", "SESSION_ACTIVE_ITEM"),
+        ("cancel", "COMPLETED", "APPROVED", None, "INVALID_SESSION_TRANSITION"),
+    ],
+)
+def test_admin_session_transition_matrix_rejects_unsafe_transition(
+    command, status, review_status, active_item_id, error_code
+):
+    with pytest.raises(Conflict) as caught:
+        service._admin_session_transition(
+            command,
+            status,
+            review_status,
+            active_item_id=active_item_id,
+        )
+    assert caught.value.code == error_code
+
+
+def test_admin_session_list_is_bounded_and_uses_review_filter():
+    session_record = session(
+        status="DRAFT",
+        review_status="PENDING",
+        title="Pending session",
+        item_count=2,
+    )
+    table = FakeTable(
+        "catalog",
+        query_responses=[{"Items": [session_record], "LastEvaluatedKey": None}],
+    )
+    query = {"pageSize": "10", "reviewStatus": "PENDING"}
+
+    result = service._list_admin_sessions(table, query)
+
+    assert result["items"] == [
+        {
+            "session_id": "s1",
+            "title": "Pending session",
+            "status": "DRAFT",
+            "review_status": "PENDING",
+            "item_count": 2,
+            "start_time": 1_700_000_100,
+            "seller_sub": "seller-sub",
+            "version": 4,
+        }
+    ]
+    assert result["next_token"] is None
+    assert table.query_calls[0]["IndexName"] == "gsi2"
+    assert table.query_calls[0]["ExpressionAttributeNames"]["#review_status"] == "review_status"
+
+
+def test_admin_session_approve_uses_version_condition_and_writes_review_state(
+    monkeypatch, fake_config
+):
+    session_record = session(status="DRAFT", review_status="PENDING")
+    table = FakeTable("catalog", records=key_map((session_key("s1"), session_record)))
+    monkeypatch.setattr(service, "get_config", lambda: fake_config)
+
+    result = service._admin_mutate_session(
+        admin(),
+        "s1",
+        "approve",
+        table,
+        FakeScheduler(),
+        fake_config,
+        now=1_700_000_200,
+    )
+
+    assert result["status"] == "DRAFT"
+    assert result["review_status"] == "APPROVED"
+    update = table.update_calls[0]
+    assert update["ConditionExpression"] == "#status = :source_status AND version = :expected_version"
+    assert update["ExpressionAttributeValues"][":source_status"] == "DRAFT"
+    assert update["ExpressionAttributeValues"][":expected_version"] == 4
+
+
+def test_admin_session_reject_scheduled_cancels_start_schedule(monkeypatch, fake_config):
+    session_record = session(status="SCHEDULED", review_status="PENDING")
+    table = FakeTable("catalog", records=key_map((session_key("s1"), session_record)))
+    scheduler = FakeScheduler()
+    monkeypatch.setattr(service, "get_config", lambda: fake_config)
+
+    result = service._admin_mutate_session(
+        admin(),
+        "s1",
+        "reject",
+        table,
+        scheduler,
+        fake_config,
+        now=1_700_000_200,
+    )
+
+    assert result["status"] == "CANCELLED"
+    assert result["review_status"] == "REJECTED"
+    assert scheduler.delete_calls == [
+        {"Name": "start-session-s1", "GroupName": "la-lifecycle"}
+    ]
+
+
 def operation_tables(status, state_value=None, query_items=None):
     current = dynamo_round_trip(catalog_item(status=status))
     if state_value is not None:
@@ -1503,11 +1681,15 @@ def operation_tables(status, state_value=None, query_items=None):
     return client, catalog, state_table, FakeTable("events", client=client)
 
 
-def test_pause_stores_remaining_seconds_writes_one_event_and_deletes_schedule(fake_config):
+def test_pause_stores_remaining_seconds_writes_one_event_and_deletes_schedule(
+    monkeypatch, fake_config
+):
     client, catalog, state_table, events = operation_tables(
         "LIVE", active_state(end_time=1_700_000_060)
     )
     scheduler = FakeScheduler()
+    audits = []
+    monkeypatch.setattr(service, "_write_audit", audits.append)
 
     result = service._pause_item(
         admin(),
@@ -1536,13 +1718,20 @@ def test_pause_stores_remaining_seconds_writes_one_event_and_deletes_schedule(fa
     assert scheduler.delete_calls == [
         {"Name": "close-item-i1-1700000060", "GroupName": "la-lifecycle"}
     ]
+    assert audits[0]["action"] == "ITEM_PAUSED"
+    assert audits[0]["resource_type"] == "ITEM"
+    assert audits[0]["resource_id"] == "i1"
 
 
-def test_resume_sets_new_end_writes_one_event_and_schedules_close(fake_config):
+def test_resume_sets_new_end_writes_one_event_and_schedules_close(
+    monkeypatch, fake_config
+):
     client, catalog, state_table, events = operation_tables(
         "PAUSED", active_state(status="PAUSED", remaining_seconds=45)
     )
     scheduler = FakeScheduler()
+    audits = []
+    monkeypatch.setattr(service, "_write_audit", audits.append)
 
     result = service._resume_item(
         admin(),
@@ -1562,6 +1751,9 @@ def test_resume_sets_new_end_writes_one_event_and_schedules_close(fake_config):
     assert state_values[":end_time"] == 1_700_000_045
     assert decode_item(transaction[2]["Put"]["Item"])["event_type"] == "ITEM_RESUMED"
     assert scheduler.create_calls[0]["Name"] == "close-item-i1-1700000045"
+    assert audits[0]["action"] == "ITEM_RESUMED"
+    assert audits[0]["resource_type"] == "ITEM"
+    assert audits[0]["resource_id"] == "i1"
 
 
 def test_approve_retains_winner_and_final_price(fake_config):
@@ -2511,6 +2703,38 @@ def test_actual_handler_keeps_cors_headers_on_success_and_service_error(
     assert_cors_headers(service_error)
 
 
+def test_service_error_logs_safe_diagnostic_context(monkeypatch):
+    logs = []
+    event = rest_event(
+        "POST",
+        "/api/v1/admin/items/i1/pause",
+        {},
+        groups="SELLER",
+    )
+    event["requestContext"]["requestId"] = "safe-request-id"
+    monkeypatch.setattr(
+        service.logger,
+        "info",
+        lambda message, **kwargs: logs.append((message, kwargs)),
+    )
+
+    response = service.handler(event, None)
+
+    assert response["statusCode"] == 403
+    assert logs == [
+        (
+            "Admin command rejected",
+            {
+                "extra": {
+                    "error_code": "FORBIDDEN",
+                    "status_code": 403,
+                    "request_id": "safe-request-id",
+                }
+            },
+        )
+    ]
+
+
 @pytest.mark.parametrize("command", ["pause", "resume", "approve", "close", "cancel"])
 def test_all_admin_routes_are_registered_and_enforce_admin(monkeypatch, command):
     response = service.handler(
@@ -2692,3 +2916,573 @@ def test_admin_handler_imports_from_isolated_function_package(tmp_path):
 
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "APIGatewayRestResolver"
+
+
+class FakeCognito:
+    def __init__(self):
+        self.users = {
+            "user-sub": {
+                "Username": "user-sub",
+                "Attributes": [
+                    {"Name": "sub", "Value": "user-sub"},
+                    {"Name": "email", "Value": "user@example.test"},
+                    {"Name": "name", "Value": "User Example"},
+                    {"Name": "phone_number", "Value": "+61000000000"},
+                ],
+                "UserStatus": "CONFIRMED",
+                "Enabled": True,
+                "UserCreateDate": "2026-08-01T00:00:00Z",
+                "UserLastModifiedDate": "2026-08-02T00:00:00Z",
+            }
+        }
+        self.groups = {"user-sub": ["USER"]}
+        self.calls = []
+
+    def list_users(self, **kwargs):
+        self.calls.append(("list_users", kwargs))
+        return {"Users": list(self.users.values())}
+
+    def admin_get_user(self, **kwargs):
+        self.calls.append(("admin_get_user", kwargs))
+        return self.users[kwargs["Username"]]
+
+    def admin_list_groups_for_user(self, **kwargs):
+        self.calls.append(("admin_list_groups_for_user", kwargs))
+        return {"Groups": [{"GroupName": group} for group in self.groups[kwargs["Username"]]]}
+
+    def admin_disable_user(self, **kwargs):
+        self.calls.append(("admin_disable_user", kwargs))
+        self.users[kwargs["Username"]]["Enabled"] = False
+        return {}
+
+    def admin_enable_user(self, **kwargs):
+        self.calls.append(("admin_enable_user", kwargs))
+        self.users[kwargs["Username"]]["Enabled"] = True
+        return {}
+
+    def admin_create_user(self, **kwargs):
+        self.calls.append(("admin_create_user", kwargs))
+        if kwargs.get("MessageAction") == "RESEND":
+            user = next(
+                user
+                for user in self.users.values()
+                if any(
+                    attribute.get("Name") == "email"
+                    and attribute.get("Value") == kwargs["Username"]
+                    for attribute in user.get("Attributes", [])
+                )
+            )
+            user["UserStatus"] = "FORCE_CHANGE_PASSWORD"
+            return {"User": user}
+        sub = "created-admin-sub"
+        self.users[sub] = {
+            "Username": sub,
+            "Attributes": [
+                {"Name": "sub", "Value": sub},
+                {"Name": "email", "Value": kwargs["Username"]},
+                {"Name": "name", "Value": kwargs["UserAttributes"][1]["Value"]},
+            ],
+            "UserStatus": "FORCE_CHANGE_PASSWORD",
+            "Enabled": True,
+            "UserCreateDate": "2026-08-06T00:00:00Z",
+            "UserLastModifiedDate": "2026-08-06T00:00:00Z",
+        }
+        self.groups[sub] = []
+        return {"User": self.users[sub], "TemporaryPassword": "must-not-return"}
+
+    def admin_add_user_to_group(self, **kwargs):
+        self.calls.append(("admin_add_user_to_group", kwargs))
+        self.groups.setdefault(kwargs["Username"], []).append(kwargs["GroupName"])
+        return {}
+
+    def admin_reset_user_password(self, **kwargs):
+        self.calls.append(("admin_reset_user_password", kwargs))
+        self.users[kwargs["Username"]]["UserStatus"] = "FORCE_CHANGE_PASSWORD"
+        return {"CodeDeliveryDetails": {"DeliveryMedium": "EMAIL"}}
+
+
+def test_admin_user_mapping_accepts_admin_get_user_attribute_shape(
+    monkeypatch, fake_config
+):
+    cognito = FakeCognito()
+    fake_config.COGNITO_USER_POOL_ID = "ap-southeast-1_pool"
+    fake_config.BOOTSTRAP_ADMIN_SUB = "bootstrap-sub"
+    raw_user = copy.deepcopy(cognito.users["user-sub"])
+    raw_user["UserAttributes"] = raw_user.pop("Attributes")
+    monkeypatch.setattr(service, "_cognito_client", lambda: cognito, raising=False)
+    monkeypatch.setattr(service, "get_config", lambda: fake_config)
+
+    mapped = service._admin_user_from_cognito(raw_user)
+
+    assert mapped["email"] == "user@example.test"
+    assert mapped["full_name"] == "User Example"
+    assert mapped["phone"] == "+61000000000"
+
+
+def test_admin_user_routes_list_and_disable_user(monkeypatch, fake_config):
+    cognito = FakeCognito()
+    fake_config.COGNITO_USER_POOL_ID = "ap-southeast-1_pool"
+    fake_config.BOOTSTRAP_ADMIN_SUB = "bootstrap-sub"
+    monkeypatch.setattr(service, "_cognito_client", lambda: cognito, raising=False)
+    monkeypatch.setattr(service, "get_config", lambda: fake_config)
+    monkeypatch.setenv("CORS_ALLOWED_ORIGIN", "https://auction.example.com")
+
+    listed = service.handler(
+        rest_event("GET", "/api/v1/admin/users", sub="admin-sub", groups="ADMIN"),
+        None,
+    )
+    disabled = service.handler(
+        rest_event(
+            "PATCH",
+            "/api/v1/admin/users/user-sub/status",
+            {"status": "BANNED"},
+            sub="admin-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+
+    assert listed["statusCode"] == 200
+    assert response_body(listed)["data"] == {
+        "items": [
+            {
+                "sub": "user-sub",
+                "email": "user@example.test",
+                "full_name": "User Example",
+                "phone": "+61000000000",
+                "role": "USER",
+                "status": "ACTIVE",
+                "enabled": True,
+                "cognito_status": "CONFIRMED",
+                "is_primary_admin": False,
+                "created_at": "2026-08-01T00:00:00Z",
+                "updated_at": "2026-08-02T00:00:00Z",
+            }
+        ],
+        "next_token": None,
+    }
+    assert disabled["statusCode"] == 200
+    assert response_body(disabled)["data"]["status"] == "BANNED"
+    assert any(name == "admin_disable_user" for name, _ in cognito.calls)
+
+
+@pytest.mark.parametrize("target_sub", ["admin-sub", "bootstrap-sub"])
+def test_admin_user_status_cannot_disable_actor_or_bootstrap_admin(
+    monkeypatch, fake_config, target_sub
+):
+    cognito = FakeCognito()
+    fake_config.COGNITO_USER_POOL_ID = "ap-southeast-1_pool"
+    fake_config.BOOTSTRAP_ADMIN_SUB = "bootstrap-sub"
+    monkeypatch.setattr(service, "_cognito_client", lambda: cognito, raising=False)
+    monkeypatch.setattr(service, "get_config", lambda: fake_config)
+
+    response = service.handler(
+        rest_event(
+            "PATCH",
+            f"/api/v1/admin/users/{target_sub}/status",
+            {"status": "BANNED"},
+            sub="admin-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+
+    assert response["statusCode"] == 403
+    assert response_body(response)["code"] == "FORBIDDEN"
+    assert not any(name == "admin_disable_user" for name, _ in cognito.calls)
+
+
+def test_admin_user_status_is_idempotent_and_audited(monkeypatch, fake_config):
+    cognito = FakeCognito()
+    fake_config.COGNITO_USER_POOL_ID = "ap-southeast-1_pool"
+    fake_config.BOOTSTRAP_ADMIN_SUB = "bootstrap-sub"
+    audits = []
+    monkeypatch.setattr(service, "_cognito_client", lambda: cognito, raising=False)
+    monkeypatch.setattr(service, "get_config", lambda: fake_config)
+    monkeypatch.setattr(service, "_write_audit", lambda event: audits.append(event))
+
+    unchanged = service.handler(
+        rest_event(
+            "PATCH",
+            "/api/v1/admin/users/user-sub/status",
+            {"status": "ACTIVE"},
+            sub="admin-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+    assert unchanged["statusCode"] == 409
+    assert response_body(unchanged)["code"] == "USER_STATUS_UNCHANGED"
+    assert not any(name == "admin_enable_user" for name, _ in cognito.calls)
+
+    disabled = service.handler(
+        rest_event(
+            "PATCH",
+            "/api/v1/admin/users/user-sub/status",
+            {"status": "BANNED"},
+            sub="admin-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+    assert disabled["statusCode"] == 200
+    assert audits[0]["action"] == "USER_STATUS_UPDATED"
+    assert audits[0]["resource_type"] == "USER"
+
+
+def test_admin_account_lifecycle_is_bootstrap_only_and_redacts_temporary_password(
+    monkeypatch, fake_config
+):
+    cognito = FakeCognito()
+    fake_config.COGNITO_USER_POOL_ID = "ap-southeast-1_pool"
+    fake_config.BOOTSTRAP_ADMIN_SUB = "bootstrap-sub"
+    fake_config.T_ADMIN_AUDIT_EVENTS = ""
+    monkeypatch.setattr(service, "_cognito_client", lambda: cognito, raising=False)
+    monkeypatch.setattr(service, "get_config", lambda: fake_config)
+
+    denied = service.handler(
+        rest_event(
+            "POST",
+            "/api/v1/admin/admin-accounts",
+            {
+                "email": "new-admin@example.test",
+                "full_name": "New Admin",
+            },
+            sub="admin-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+    assert denied["statusCode"] == 403
+    assert response_body(denied)["code"] == "PRIMARY_ADMIN_REQUIRED"
+
+    created = service.handler(
+        rest_event(
+            "POST",
+            "/api/v1/admin/admin-accounts",
+            {
+                "email": "new-admin@example.test",
+                "full_name": "New Admin",
+            },
+            sub="bootstrap-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+    assert created["statusCode"] == 201
+    created_data = response_body(created)["data"]
+    assert created_data["role"] == "ADMIN"
+    assert "TemporaryPassword" not in created["body"]
+    assert any(name == "admin_create_user" for name, _ in cognito.calls)
+    assert any(name == "admin_add_user_to_group" for name, _ in cognito.calls)
+
+    reset = service.handler(
+        rest_event(
+            "POST",
+            f"/api/v1/admin/admin-accounts/{created_data['sub']}/reset-invitation",
+            {},
+            sub="bootstrap-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+    assert reset["statusCode"] == 200
+    resend_calls = [
+        kwargs
+        for name, kwargs in cognito.calls
+        if name == "admin_create_user" and kwargs.get("MessageAction") == "RESEND"
+    ]
+    assert len(resend_calls) == 1
+    assert resend_calls[0]["Username"] == "new-admin@example.test"
+    assert resend_calls[0]["DesiredDeliveryMediums"] == ["EMAIL"]
+    assert not any(name == "admin_reset_user_password" for name, _ in cognito.calls)
+
+    disabled = service.handler(
+        rest_event(
+            "PATCH",
+            f"/api/v1/admin/admin-accounts/{created_data['sub']}/status",
+            {"status": "BANNED"},
+            sub="bootstrap-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+    assert disabled["statusCode"] == 200
+    assert response_body(disabled)["data"]["status"] == "BANNED"
+
+
+def test_admin_invitation_reset_retries_transient_cognito_propagation(
+    monkeypatch, fake_config
+):
+    cognito = FakeCognito()
+    fake_config.COGNITO_USER_POOL_ID = "ap-southeast-1_pool"
+    fake_config.BOOTSTRAP_ADMIN_SUB = "bootstrap-sub"
+    fake_config.T_ADMIN_AUDIT_EVENTS = ""
+    audits = []
+    sleeps = []
+    resend_attempts = 0
+    original_create = cognito.admin_create_user
+
+    def create_with_transient_propagation_error(**kwargs):
+        nonlocal resend_attempts
+        if kwargs.get("MessageAction") == "RESEND":
+            resend_attempts += 1
+            if resend_attempts < 3:
+                raise client_error("UsernameExistsException", "AdminCreateUser")
+        return original_create(**kwargs)
+
+    monkeypatch.setattr(cognito, "admin_create_user", create_with_transient_propagation_error)
+    monkeypatch.setattr(service, "_cognito_client", lambda: cognito, raising=False)
+    monkeypatch.setattr(service, "_write_audit", lambda event: audits.append(event))
+    monkeypatch.setattr(service.time, "sleep", sleeps.append)
+    monkeypatch.setattr(service, "get_config", lambda: fake_config)
+
+    created = service.handler(
+        rest_event(
+            "POST",
+            "/api/v1/admin/admin-accounts",
+            {"email": "new-admin@example.test", "full_name": "New Admin"},
+            sub="bootstrap-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+    created_sub = response_body(created)["data"]["sub"]
+
+    reset = service.handler(
+        rest_event(
+            "POST",
+            f"/api/v1/admin/admin-accounts/{created_sub}/reset-invitation",
+            {},
+            sub="bootstrap-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+
+    assert reset["statusCode"] == 200
+    assert resend_attempts == 3
+    assert sleeps == [0.25, 0.5]
+    assert [event["action"] for event in audits].count("ADMIN_INVITATION_RESET") == 1
+
+
+def test_admin_audit_events_are_listed_without_internal_keys(monkeypatch, fake_config):
+    table = FakeTable(
+        "audit-events",
+        query_responses=[
+            {
+                "Items": [
+                    {
+                        "pk": "AUDIT",
+                        "sk": "1700000000000#event-1",
+                        "event_id": "event-1",
+                        "actor_sub": "admin-sub",
+                        "action": "CATEGORY_CREATED",
+                        "resource_type": "CATEGORY",
+                        "resource_id": "cat-1",
+                        "resource_key": "CATEGORY#cat-1",
+                        "outcome": "SUCCESS",
+                        "request_id": "request-1",
+                        "timestamp": 1_700_000_000,
+                        "reason": {"category_id": "cat-1"},
+                        "password": "must-not-return",
+                    }
+                ],
+                "LastEvaluatedKey": None,
+            }
+        ],
+    )
+    fake_config.T_ADMIN_AUDIT_EVENTS = "audit-events"
+    monkeypatch.setattr(service, "_audit_table", lambda: table)
+    monkeypatch.setattr(service, "get_config", lambda: fake_config)
+
+    response = service.handler(
+        rest_event(
+            "GET",
+            "/api/v1/admin/audit-events",
+            sub="admin-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    event = response_body(response)["data"]["items"][0]
+    assert event["event_id"] == "event-1"
+    assert "pk" not in event
+    assert "sk" not in event
+    assert "password" not in response["body"]
+    assert table.query_calls[0]["ExpressionAttributeValues"] == {":pk": "AUDIT"}
+
+
+def test_category_helpers_normalize_name_and_slug():
+    assert service._normalize_category_name("  Fine Art  ") == "Fine Art"
+    assert service._normalize_category_slug(None, "Fine Art") == "fine-art"
+    assert service._normalize_category_slug("  old-slug  ") == "old-slug"
+
+
+def category_record(category_id="cat-1", **overrides):
+    return {
+        "category_id": category_id,
+        "name": "Fine Art",
+        "slug": "fine-art",
+        "status": "ACTIVE",
+        "created_at": 100,
+        "updated_at": 100,
+        **overrides,
+    }
+
+
+def test_create_category_generates_id_and_audits(monkeypatch):
+    table = FakeTable("categories")
+    audits = []
+    monkeypatch.setattr(service, "_write_audit", lambda event: audits.append(event))
+
+    created = service._create_category(
+        admin("bootstrap-sub"),
+        AdminCategoryCreateRequest(name="  Fine Art  "),
+        table,
+        now=100,
+    )
+
+    assert created["name"] == "Fine Art"
+    assert created["slug"] == "fine-art"
+    assert created["status"] == "ACTIVE"
+    assert len(created["category_id"]) == 32
+    assert audits[0]["action"] == "CATEGORY_CREATED"
+
+
+def test_create_category_rejects_duplicate_name_or_slug():
+    table = FakeTable(
+        "categories",
+        records={FakeTable._key({"category_id": "cat-1"}): category_record()},
+    )
+
+    with pytest.raises(Conflict) as caught:
+        service._create_category(
+            admin(),
+            AdminCategoryCreateRequest(name="fine art"),
+            table,
+            now=100,
+        )
+
+    assert caught.value.code == "CATEGORY_NAME_EXISTS"
+
+
+def test_update_category_archive_is_soft_and_audited(monkeypatch):
+    table = FakeTable(
+        "categories",
+        records={FakeTable._key({"category_id": "cat-1"}): category_record()},
+    )
+    audits = []
+    monkeypatch.setattr(service, "_write_audit", lambda event: audits.append(event))
+
+    updated = service._update_category(
+        admin(),
+        "cat-1",
+        AdminCategoryUpdateRequest(status="INACTIVE"),
+        table,
+        now=200,
+    )
+
+    assert updated["status"] == "INACTIVE"
+    assert updated["updated_at"] == 200
+    assert table.put_calls[0]["ConditionExpression"] == "attribute_exists(category_id)"
+    assert audits[0]["action"] == "CATEGORY_ARCHIVED"
+
+
+def test_admin_category_routes_create_list_update_and_archive(
+    monkeypatch, fake_config
+):
+    table = FakeTable("categories")
+    fake_config.T_CATEGORY_CATALOG = "categories"
+    fake_config.T_ADMIN_AUDIT_EVENTS = ""
+    monkeypatch.setattr(service, "_category_table", lambda: table)
+    monkeypatch.setattr(service, "get_config", lambda: fake_config)
+
+    created = service.handler(
+        rest_event(
+            "POST",
+            "/api/v1/admin/categories",
+            {"name": "Fine Art"},
+            sub="admin-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+    assert created["statusCode"] == 201
+    category = response_body(created)["data"]
+
+    listed = service.handler(
+        rest_event(
+            "GET",
+            "/api/v1/admin/categories",
+            sub="admin-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+    assert response_body(listed)["data"]["items"][0]["category_id"] == category[
+        "category_id"
+    ]
+
+    updated = service.handler(
+        rest_event(
+            "PATCH",
+            f"/api/v1/admin/categories/{category['category_id']}",
+            {"name": "Fine Jewelry"},
+            sub="admin-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+    assert response_body(updated)["data"]["name"] == "Fine Jewelry"
+
+    archived = service.handler(
+        rest_event(
+            "POST",
+            f"/api/v1/admin/categories/{category['category_id']}/archive",
+            {},
+            sub="admin-sub",
+            groups="ADMIN",
+        ),
+        None,
+    )
+    assert response_body(archived)["data"]["status"] == "INACTIVE"
+
+
+@pytest.mark.parametrize("value", ["", "bad slug", "UPPER", "a/../b"])
+def test_category_slug_helper_rejects_unsafe_values(value):
+    with pytest.raises(BadRequest) as caught:
+        service._normalize_category_slug(value)
+    assert caught.value.code == "INVALID_CATEGORY_SLUG"
+
+
+def test_bootstrap_admin_guard_rejects_non_bootstrap_admin(monkeypatch, fake_config):
+    fake_config.BOOTSTRAP_ADMIN_SUB = "bootstrap-sub"
+    monkeypatch.setattr(service, "get_config", lambda: fake_config)
+
+    with pytest.raises(Forbidden) as caught:
+        service._require_bootstrap_admin(admin("other-admin"))
+
+    assert caught.value.code == "PRIMARY_ADMIN_REQUIRED"
+
+
+def test_audit_event_contains_safe_fields_only(fake_config):
+    fake_config.BOOTSTRAP_ADMIN_SUB = "bootstrap-sub"
+
+    event = service._audit_event(
+        admin("bootstrap-sub"),
+        action="ADMIN_INVITED",
+        resource_type="ADMIN",
+        resource_id="fixture-admin",
+        request_id="request-1",
+        now=1_700_000_000,
+        reason={"email": "admin@example.test", "password": "must-not-store"},
+    )
+
+    assert event["actor_sub"] == "bootstrap-sub"
+    assert event["resource_key"] == "ADMIN#fixture-admin"
+    assert event["request_id"] == "request-1"
+    assert "password" not in event
+    assert "must-not-store" not in json.dumps(event)
