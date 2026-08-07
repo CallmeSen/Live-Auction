@@ -1,513 +1,249 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type {
-  AuctionSessionListItemResponse,
-  AuctionSessionStatus,
-} from '../../../interfaces/auctionSession';
-import type { CategoryResponse } from '../../../interfaces/category';
-import { auctionSessionService } from '../../../services/auctionSessionService';
-import { categoryService } from '../../../services/categoryService';
+import {
+  catalogApi,
+  type AdminItem,
+  type AdminItemStatus,
+  type AdminSession,
+  type AdminSessionReviewStatus,
+  type AdminSessionStatus,
+} from '../../../services/serverless/catalogApi';
 import { getApiErrorMessage } from '../../../services/apiError';
-import { formatDateTime } from '../../../utils/formatDate';
+import { formatCurrency } from '../../../utils/formatCurrency';
 
-const PAGE_SIZE = 10;
-
-const statusLabel: Record<AuctionSessionStatus, string> = {
-  SCHEDULED: 'Chờ duyệt',
-  ACTIVE: 'Đang diễn ra',
-  ENDED: 'Đã kết thúc',
+const statusLabel: Record<AdminItemStatus, string> = {
+  WAITING: 'Đang chờ',
+  LIVE: 'Đang live',
+  PAUSED: 'Tạm dừng',
+  PENDING_ADMIN_APPROVAL: 'Chờ duyệt',
+  SOLD: 'Đã bán',
+  UNSOLD: 'Không bán',
   CANCELLED: 'Đã hủy',
-  PENDING_APPROVAL: 'Chờ duyệt',
-  REJECTED: 'Đã từ chối',
 };
 
-const statusOptions: Array<{
-  value: AuctionSessionStatus | '';
-  label: string;
-}> = [
-    { value: '', label: 'Tất cả' },
-    { value: 'SCHEDULED', label: 'Chờ duyệt' },
-    { value: 'ACTIVE', label: 'Đang diễn ra' },
-    { value: 'ENDED', label: 'Đã kết thúc' },
-    { value: 'CANCELLED', label: 'Đã hủy' },
-  ];
+const statusOptions: Array<{ value: AdminItemStatus | ''; label: string }> = [
+  { value: '', label: 'Tất cả trạng thái' },
+  { value: 'PENDING_ADMIN_APPROVAL', label: 'Chờ duyệt' },
+  { value: 'LIVE', label: 'Đang live' },
+  { value: 'PAUSED', label: 'Tạm dừng' },
+  { value: 'SOLD', label: 'Đã bán' },
+  { value: 'CANCELLED', label: 'Đã hủy' },
+];
+
+const commandLabels = {
+  approve: 'Duyệt',
+  pause: 'Tạm dừng',
+  resume: 'Tiếp tục',
+  close: 'Đóng',
+  cancel: 'Hủy',
+} as const;
+
+const sessionCommandLabels = {
+  approve: 'Duyệt phiên',
+  reject: 'Từ chối',
+  cancel: 'Hủy phiên',
+  close: 'Đóng phiên',
+} as const;
+
+const sessionStatusLabels: Record<AdminSessionStatus, string> = {
+  DRAFT: 'Nháp', SCHEDULED: 'Đã lên lịch', LIVE: 'Đang live', COMPLETED: 'Hoàn tất', CANCELLED: 'Đã hủy',
+};
 
 export default function AdminAuctionsPage() {
-  const [sessions, setSessions] = useState<
-    AuctionSessionListItemResponse[]
-  >([]);
-  const [categories, setCategories] = useState<CategoryResponse[]>([]);
-  const [draftKeyword, setDraftKeyword] = useState('');
+  const [sessions, setSessions] = useState<AdminSession[]>([]);
+  const [sessionStatus, setSessionStatus] = useState<AdminSessionStatus | ''>('');
+  const [reviewStatus, setReviewStatus] = useState<AdminSessionReviewStatus | ''>('PENDING');
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [sessionPageToken, setSessionPageToken] = useState<string | undefined>();
+  const [sessionNextToken, setSessionNextToken] = useState<string | null>(null);
+  const [items, setItems] = useState<AdminItem[]>([]);
+  const [statusFilter, setStatusFilter] = useState<AdminItemStatus | ''>('PENDING_ADMIN_APPROVAL');
   const [keyword, setKeyword] = useState('');
-  const [statusFilter, setStatusFilter] =
-    useState<AuctionSessionStatus | ''>('SCHEDULED');
-  const [categoryId, setCategoryId] = useState('');
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [reloadKey, setReloadKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [rejectTarget, setRejectTarget] =
-    useState<AuctionSessionListItemResponse | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-  const [cancelTarget, setCancelTarget] =
-    useState<AuctionSessionListItemResponse | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+  const [itemCursor, setItemCursor] = useState<string | undefined>();
+  const [itemNextCursor, setItemNextCursor] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const loadCategories = async () => {
-      try {
-        const result = await categoryService.getCategories({
-          page: 1,
-          size: 100,
-          status: 'ACTIVE',
-        });
-
-        if (!cancelled) {
-          setCategories(result.items);
-        }
-      } catch {
-        if (!cancelled) {
-          setCategories([]);
-        }
-      }
-    };
-
-    void loadCategories();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadSessions = async () => {
+    let active = true;
+    const load = async () => {
       try {
         setLoading(true);
         setError('');
-
-        const result = await auctionSessionService.getAdminSessions({
-          page,
-          size: PAGE_SIZE,
+        const result = await catalogApi.listItems({
           status: statusFilter || undefined,
-          keyword: keyword || undefined,
-          categoryId: categoryId || undefined,
+          pageSize: 100,
+          cursor: itemCursor,
         });
-
-        if (!cancelled) {
-          setSessions(result.items);
-          setTotal(result.total);
+        if (active) {
+          setItems(result.items);
+          setItemNextCursor(result.nextCursor);
         }
       } catch (requestError) {
-        if (!cancelled) {
-          setError(
-            getApiErrorMessage(
-              requestError,
-              'Không thể tải danh sách phiên đấu giá.',
-            ),
-          );
-        }
+        if (active) setError(getApiErrorMessage(requestError, 'Không thể tải danh sách vật phẩm.'));
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     };
+    void load();
+    return () => { active = false; };
+  }, [itemCursor, reloadKey, statusFilter]);
 
-    void loadSessions();
-
-    return () => {
-      cancelled = true;
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        setSessionLoading(true);
+        const result = await catalogApi.listAdminSessions({
+          status: sessionStatus || undefined,
+          reviewStatus: reviewStatus || undefined,
+          pageSize: 60,
+          paginationToken: sessionPageToken,
+        });
+        if (active) {
+          setSessions(result.items);
+          setSessionNextToken(result.nextCursor);
+        }
+      } catch (requestError) {
+        if (active) setError(getApiErrorMessage(requestError, 'Không thể tải danh sách phiên.'));
+      } finally {
+        if (active) setSessionLoading(false);
+      }
     };
-  }, [categoryId, keyword, page, reloadKey, statusFilter]);
+    void load();
+    return () => { active = false; };
+  }, [reloadKey, reviewStatus, sessionPageToken, sessionStatus]);
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const visibleItems = useMemo(() => {
+    const normalized = keyword.trim().toLowerCase();
+    if (!normalized) return items;
+    return items.filter((item) => `${item.name} ${item.description} ${item.id}`.toLowerCase().includes(normalized));
+  }, [items, keyword]);
 
-  const submitSearch = (event: FormEvent) => {
-    event.preventDefault();
-    setPage(1);
-    setKeyword(draftKeyword.trim());
+  const allowedCommands = (item: AdminItem) => {
+    if (item.status === 'PENDING_ADMIN_APPROVAL' || item.status === 'WAITING') return ['approve', 'cancel'] as const;
+    if (item.status === 'LIVE') return ['pause', 'close', 'cancel'] as const;
+    if (item.status === 'PAUSED') return ['resume', 'close', 'cancel'] as const;
+    return [] as const;
   };
 
-  const approveSession = async (sessionId: string) => {
+  const runCommand = async (item: AdminItem, command: keyof typeof commandLabels) => {
+    if (actionId) return;
+    if (!window.confirm(`Xác nhận ${commandLabels[command].toLowerCase()} vật phẩm "${item.name}"?`)) return;
+    setActionId(item.id);
+    setError('');
+    setMessage('');
     try {
-      setActionId(sessionId);
-      setError('');
-      setMessage('');
-      await auctionSessionService.approveSession(sessionId);
-      setMessage('Đã duyệt phiên đấu giá thành công.');
-      setReloadKey((current) => current + 1);
+      await catalogApi.commandItem(item.id, command);
+      setMessage(`Đã ${commandLabels[command].toLowerCase()} vật phẩm.`);
+      setItemCursor(undefined);
+      setReloadKey((value) => value + 1);
     } catch (requestError) {
-      setError(
-        getApiErrorMessage(
-          requestError,
-          'Không thể duyệt phiên đấu giá.',
-        ),
-      );
+      setError(getApiErrorMessage(requestError, 'Không thể thực hiện thao tác vật phẩm.'));
     } finally {
       setActionId('');
     }
   };
 
-  const rejectSession = async () => {
-    if (!rejectTarget) {
-      return;
+  const allowedSessionCommands = (session: AdminSession) => {
+    const commands: Array<keyof typeof sessionCommandLabels> = [];
+    if (session.reviewStatus === 'PENDING' && (session.status === 'DRAFT' || session.status === 'SCHEDULED')) {
+      commands.push('approve', 'reject');
     }
-
-    try {
-      setActionId(rejectTarget.id);
-      setError('');
-      setMessage('');
-      await auctionSessionService.rejectSession(rejectTarget.id, {
-        reason: rejectReason.trim() || null,
-      });
-      setRejectTarget(null);
-      setRejectReason('');
-      setMessage('Đã từ chối phiên đấu giá.');
-      setReloadKey((current) => current + 1);
-    } catch (requestError) {
-      setError(
-        getApiErrorMessage(
-          requestError,
-          'Không thể từ chối phiên đấu giá.',
-        ),
-      );
-    } finally {
-      setActionId('');
-    }
+    if (session.status === 'DRAFT' || session.status === 'SCHEDULED') commands.push('cancel');
+    if (session.status === 'LIVE' && !session.activeItemId) commands.push('close');
+    return commands;
   };
 
-  const cancelSession = async () => {
-    if (!cancelTarget) {
-      return;
-    }
-
+  const runSessionCommand = async (session: AdminSession, command: keyof typeof sessionCommandLabels) => {
+    if (actionId) return;
+    if (!window.confirm(`Xác nhận ${sessionCommandLabels[command].toLowerCase()} "${session.title}"?`)) return;
+    setActionId(session.id);
+    setError('');
+    setMessage('');
     try {
-      setActionId(cancelTarget.id);
-      setError('');
-      setMessage('');
-      await auctionSessionService.cancelSession(cancelTarget.id, {
-        reason: cancelReason.trim() || null,
-      });
-      setCancelTarget(null);
-      setCancelReason('');
-      setMessage('Đã hủy phiên đấu giá.');
-      setReloadKey((current) => current + 1);
+      await catalogApi.commandSession(session.id, command);
+      setMessage(`Đã ${sessionCommandLabels[command].toLowerCase()}.`);
+      setSessionPageToken(undefined);
+      setReloadKey((value) => value + 1);
     } catch (requestError) {
-      setError(
-        getApiErrorMessage(
-          requestError,
-          'Không thể hủy phiên đấu giá.',
-        ),
-      );
+      setError(getApiErrorMessage(requestError, 'Không thể thực hiện thao tác phiên.'));
     } finally {
       setActionId('');
     }
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-10 sm:py-14">
-      <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">
-        Admin · Phiên đấu giá
-      </span>
-
+    <section className="mx-auto max-w-7xl px-6 py-10 sm:py-14">
+      <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">Admin · Vật phẩm</span>
       <div className="mt-2 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
         <div>
-          <h1 className="font-display text-4xl">
-            Quản lý phiên đấu giá
-          </h1>
-          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            Duyệt phiên mới và theo dõi toàn bộ vòng đời phiên đấu giá.
-          </p>
+          <h1 className="font-display text-4xl">Kiểm duyệt vật phẩm</h1>
+          <p className="mt-2 text-sm text-[var(--color-text-muted)]">Đọc catalog và gửi các item command đã có trong Stage 3.</p>
         </div>
-        <p className="text-sm text-[var(--color-text-muted)]">
-          {total} kết quả
-        </p>
+        <p className="text-sm text-[var(--color-text-muted)]">{visibleItems.length} kết quả</p>
       </div>
 
-      <section className="mt-7 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <form
-          onSubmit={submitSearch}
-          className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_auto]"
-        >
-          <input
-            value={draftKeyword}
-            onChange={(event) => setDraftKeyword(event.target.value)}
-            placeholder="Tìm theo tên hoặc mô tả phiên..."
-            className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--color-primary)]"
-          />
-          <select
-            value={categoryId}
-            onChange={(event) => {
-              setCategoryId(event.target.value);
-              setPage(1);
-            }}
-            className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--color-primary)]"
-          >
-            <option value="">Tất cả danh mục</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            className="rounded-md bg-[var(--color-primary)] px-6 py-3 text-sm font-semibold text-[#0F1B14]"
-          >
-            Tìm kiếm
-          </button>
-        </form>
+      <div className="mt-7 grid gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 md:grid-cols-[1fr_220px]">
+        <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm theo tên hoặc mã vật phẩm" className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--color-primary)]" />
+        <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value as AdminItemStatus | ''); setItemCursor(undefined); }} className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--color-primary)]">
+          {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+      </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {statusOptions.map((option) => (
-            <button
-              key={option.value || 'ALL'}
-              type="button"
-              onClick={() => {
-                setStatusFilter(option.value);
-                setPage(1);
-              }}
-              className={
-                'rounded-full border px-4 py-2 text-xs transition ' +
-                (statusFilter === option.value
-                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[#0F1B14]'
-                  : 'border-[var(--color-border-strong)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]')
-              }
-            >
-              {option.label}
-            </button>
-          ))}
+      {error && <p className="mt-5 rounded-lg border border-[var(--color-danger-solid)]/60 p-4 text-sm text-[var(--color-danger)]">{error}</p>}
+      {message && <p className="mt-5 rounded-lg border border-[var(--color-success-border)] p-4 text-sm text-[var(--color-success)]">{message}</p>}
+
+      <section className="mt-7 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div className="flex flex-col gap-3 border-b border-[var(--color-border)] p-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="font-display text-2xl">Kiểm duyệt phiên</h2>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">Duyệt, từ chối hoặc hủy phiên theo lifecycle server.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <select aria-label="Session review status" value={reviewStatus} onChange={(event) => { setReviewStatus(event.target.value as AdminSessionReviewStatus | ''); setSessionPageToken(undefined); }} className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-xs">
+              <option value="">Mọi review status</option><option value="PENDING">Chờ duyệt</option><option value="APPROVED">Đã duyệt</option><option value="REJECTED">Đã từ chối</option>
+            </select>
+            <select aria-label="Session lifecycle status" value={sessionStatus} onChange={(event) => { setSessionStatus(event.target.value as AdminSessionStatus | ''); setSessionPageToken(undefined); }} className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-xs">
+              <option value="">Mọi lifecycle</option>{Object.entries(sessionStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </div>
         </div>
+        {sessionLoading ? <p className="p-8 text-center text-sm text-[var(--color-text-muted)]">Đang tải phiên...</p> : sessions.length === 0 ? <p className="p-8 text-center text-sm text-[var(--color-text-muted)]">Không có phiên phù hợp.</p> : (
+          <div className="divide-y divide-[var(--color-border)]">
+            {sessions.map((session) => <article key={session.id} className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0 flex-1"><Link to={`/auction-sessions/${session.id}`} className="text-sm font-semibold hover:text-[var(--color-primary)]">{session.title}</Link><p className="mt-2 text-xs text-[var(--color-text-dim)]">{sessionStatusLabels[session.status]} · Review {session.reviewStatus} · {session.itemCount} vật phẩm</p></div>
+              <div className="flex flex-wrap gap-2">{allowedSessionCommands(session).map((command) => <button key={command} type="button" disabled={Boolean(actionId)} onClick={() => void runSessionCommand(session, command)} className="rounded-md border border-[var(--color-border-strong)] px-3 py-2 text-xs hover:border-[var(--color-primary)] disabled:opacity-50">{actionId === session.id ? 'Đang xử lý...' : sessionCommandLabels[command]}</button>)}</div>
+            </article>)}
+          </div>
+        )}
+        <div className="flex justify-end border-t border-[var(--color-border)] p-4">{sessionNextToken && <button type="button" disabled={sessionLoading} onClick={() => setSessionPageToken(sessionNextToken)} className="rounded-md border border-[var(--color-border-strong)] px-3 py-2 text-xs hover:border-[var(--color-primary)] disabled:opacity-50">Next session page</button>}</div>
       </section>
 
-      {message && (
-        <div className="mt-5 rounded-xl border border-[var(--color-success-border)] px-5 py-4 text-sm text-[var(--color-success)]">
-          {message}
-        </div>
-      )}
-
-      {error && (
-        <div className="mt-5 rounded-xl border border-[var(--color-danger-solid)]/60 px-5 py-4 text-sm text-[var(--color-danger)]">
-          {error}
-        </div>
-      )}
-
-      <div className="relative mt-5 min-h-40 space-y-4">
-        {loading && (
-          <div className="absolute inset-0 z-10 flex items-start justify-center rounded-xl bg-[var(--color-bg)]/75 pt-14 text-sm text-[var(--color-text-muted)] backdrop-blur-[1px]">
-            Đang tải danh sách phiên...
-          </div>
-        )}
-
-        {!loading && sessions.length === 0 && (
-          <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] py-16 text-center">
-            <p className="text-sm text-[var(--color-text-muted)]">
-              Không tìm thấy phiên đấu giá phù hợp.
-            </p>
-          </div>
-        )}
-
-        {sessions.map((session) => (
-          <article
-            key={session.id}
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"
-          >
-            <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-[var(--color-border-strong)] px-2.5 py-1 text-[10px] text-[var(--color-primary)]">
-                    {statusLabel[session.status]}
-                  </span>
-                  <span className="text-xs text-[var(--color-text-dim)]">
-                    #{session.id.slice(0, 8)}
-                  </span>
+      <div className="mt-7 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+        {loading ? <p className="p-8 text-center text-sm text-[var(--color-text-muted)]">Đang tải catalog...</p> : visibleItems.length === 0 ? <p className="p-8 text-center text-sm text-[var(--color-text-muted)]">Không có vật phẩm phù hợp.</p> : (
+          <div className="divide-y divide-[var(--color-border)]">
+            {visibleItems.map((item) => (
+              <article key={item.id} className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Link to={`/auction-items/${item.id}`} className="truncate text-sm font-semibold hover:text-[var(--color-primary)]">{item.name}</Link>
+                    <span className="rounded-full border border-[var(--color-border-strong)] px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">{statusLabel[item.status]}</span>
+                  </div>
+                  <p className="mt-2 text-xs text-[var(--color-text-dim)]">{item.id} · Session {item.sessionId} · Giá mở {formatCurrency(Number(item.startPrice))}</p>
                 </div>
-
-                <h2 className="mt-3 font-display text-2xl">
-                  {session.title}
-                </h2>
-                <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                  Người tạo: {session.sellerName}
-                </p>
-                <p className="mt-3 text-xs text-[var(--color-text-dim)]">
-                  {formatDateTime(session.startTime)} →{' '}
-                  {formatDateTime(session.endTime)}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  to={'/auction-sessions/' + session.id}
-                  className="rounded-md border border-[var(--color-border-strong)] px-5 py-2.5 text-center text-sm hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-                >
-                  Xem chi tiết
-                </Link>
-
-                {session.status === 'SCHEDULED' && (
-                  <>
-                    <button
-                      type="button"
-                      disabled={actionId === session.id}
-                      onClick={() => void approveSession(session.id)}
-                      className="rounded-md bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-[#0F1B14] disabled:opacity-50"
-                    >
-                      {actionId === session.id ? 'Đang xử lý...' : 'Duyệt'}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={actionId === session.id}
-                      onClick={() => {
-                        setRejectTarget(session);
-                        setRejectReason('');
-                      }}
-                      className="rounded-md border border-[var(--color-danger-solid)] px-5 py-2.5 text-sm text-[var(--color-danger)] disabled:opacity-50"
-                    >
-                      Từ chối
-                    </button>
-                  </>
-                )}
-
-                {session.status === 'SCHEDULED' && (
-                  <button
-                    type="button"
-                    disabled={actionId === session.id}
-                    onClick={() => {
-                      setCancelTarget(session);
-                      setCancelReason('');
-                    }}
-                    className="rounded-md border border-[var(--color-danger-solid)] px-5 py-2.5 text-sm text-[var(--color-danger)] disabled:opacity-50"
-                  >
-                    Hủy phiên
-                  </button>
-                )}
-              </div>
-            </div>
-          </article>
-        ))}
+                <div className="flex flex-wrap gap-2">
+                  {allowedCommands(item).map((command) => <button key={command} type="button" disabled={Boolean(actionId)} onClick={() => void runCommand(item, command)} className="rounded-md border border-[var(--color-border-strong)] px-3 py-2 text-xs hover:border-[var(--color-primary)] disabled:opacity-50">{actionId === item.id ? 'Đang xử lý...' : commandLabels[command]}</button>)}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
-
-      {!loading && totalPages > 1 && (
-        <div className="mt-7 flex items-center justify-center gap-3">
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-            className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm disabled:opacity-40"
-          >
-            ← Trước
-          </button>
-          <span className="text-sm text-[var(--color-text-muted)]">
-            Trang {page}/{totalPages}
-          </span>
-          <button
-            type="button"
-            disabled={page >= totalPages}
-            onClick={() =>
-              setPage((current) => Math.min(totalPages, current + 1))
-            }
-            className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm disabled:opacity-40"
-          >
-            Sau →
-          </button>
-        </div>
-      )}
-
-      {rejectTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="reject-session-title"
-        >
-          <div className="w-full max-w-lg rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
-            <h2 id="reject-session-title" className="font-display text-2xl">
-              Từ chối phiên đấu giá
-            </h2>
-            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-              {rejectTarget.title}
-            </p>
-            <label className="mt-5 block text-xs uppercase tracking-wider text-[var(--color-text-dim)]">
-              Lý do
-              <textarea
-                value={rejectReason}
-                maxLength={500}
-                onChange={(event) => setRejectReason(event.target.value)}
-                placeholder="Cho người tạo biết lý do cần chỉnh sửa..."
-                className="mt-2 min-h-28 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-sm normal-case tracking-normal outline-none focus:border-[var(--color-primary)]"
-              />
-            </label>
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setRejectTarget(null)}
-                className="rounded-md border border-[var(--color-border)] px-5 py-2.5 text-sm"
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                disabled={actionId === rejectTarget.id}
-                onClick={() => void rejectSession()}
-                className="rounded-md bg-[var(--color-danger-solid)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                Xác nhận từ chối
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {cancelTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="cancel-session-title"
-        >
-          <div className="w-full max-w-lg rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
-            <h2 id="cancel-session-title" className="font-display text-2xl">
-              Hủy phiên đã duyệt
-            </h2>
-            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-              Chỉ phiên sắp diễn ra mới có thể hủy: {cancelTarget.title}
-            </p>
-            <label className="mt-5 block text-xs uppercase tracking-wider text-[var(--color-text-dim)]">
-              Lý do
-              <textarea
-                value={cancelReason}
-                maxLength={500}
-                onChange={(event) => setCancelReason(event.target.value)}
-                placeholder="Cho người tạo biết lý do phiên bị hủy..."
-                className="mt-2 min-h-28 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-sm normal-case tracking-normal outline-none focus:border-[var(--color-primary)]"
-              />
-            </label>
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setCancelTarget(null)}
-                className="rounded-md border border-[var(--color-border)] px-5 py-2.5 text-sm"
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                disabled={actionId === cancelTarget.id}
-                onClick={() => void cancelSession()}
-                className="rounded-md bg-[var(--color-danger-solid)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                Xác nhận hủy phiên
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <div className="mt-5 flex justify-end">{itemNextCursor && <button type="button" disabled={loading} onClick={() => setItemCursor(itemNextCursor)} className="rounded-md border border-[var(--color-border-strong)] px-3 py-2 text-xs hover:border-[var(--color-primary)] disabled:opacity-50">Next item page</button>}</div>
+    </section>
   );
 }

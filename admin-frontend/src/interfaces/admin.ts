@@ -1,4 +1,4 @@
-import type { AuthUserRole, AuthUserStatus } from './auth';
+import type { AuthUserRole, AuthUserStatus } from './authRoles';
 export interface CreateAdminUserRequest { email: string; password: string; fullName: string; phone: string; }
 export interface CreateAdminUserResponse { id: string; email: string; fullName: string; phone: string; role: AuthUserRole; status: AuthUserStatus; isPrimaryAdmin: boolean; createdAt: string; }
 export interface UpdateAdminUserStatusRequest { status: AuthUserStatus; }

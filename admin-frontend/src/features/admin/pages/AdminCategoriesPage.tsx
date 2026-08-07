@@ -1,495 +1,165 @@
-import { useEffect, useState } from 'react';
-import { categoryService } from '../../../services/categoryService';
-import type { CategoryResponse, CategoryStatus } from '../../../interfaces/category';
+import { FormEvent, useEffect, useState } from 'react';
+import Button from '../../../components/common/Button';
+import Input from '../../../components/common/Input';
+import Loading from '../../../components/common/Loading';
 import { getApiErrorMessage } from '../../../services/apiError';
+import {
+  adminApi,
+  type AdminCategory,
+  type AdminCategoryStatus,
+} from '../../../services/serverless/adminApi';
 
-const toSlug = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '');
+type CategoryForm = { name: string; slug: string };
 
-const formatDate = (value: string) =>
-  new Date(value).toLocaleString('vi-VN');
+const emptyForm: CategoryForm = { name: '', slug: '' };
 
 export default function AdminCategoriesPage() {
-  const [categories, setCategories] = useState<CategoryResponse[]>([]);
-  const [name, setName] = useState('');
+  const [categories, setCategories] = useState<AdminCategory[]>([]);
+  const [status, setStatus] = useState<AdminCategoryStatus | ''>('');
+  const [keyword, setKeyword] = useState('');
+  const [form, setForm] = useState<CategoryForm>(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState('');
+  const [nextToken, setNextToken] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
-  const [detailCategory, setDetailCategory] =
-    useState<CategoryResponse | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState('');
-
-  const [editingCategory, setEditingCategory] =
-    useState<CategoryResponse | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editSlug, setEditSlug] = useState('');
-  const [editStatus, setEditStatus] =
-    useState<CategoryStatus>('ACTIVE');
-  const [editSaving, setEditSaving] = useState(false);
-  const [editError, setEditError] = useState('');
+  const loadCategories = async (paginationToken?: string) => {
+    setLoading(true);
+    try {
+      const page = await adminApi.listAdminCategories({
+        pageSize: 100,
+        ...(status ? { status } : {}),
+        ...(keyword.trim() ? { keyword: keyword.trim() } : {}),
+        ...(paginationToken ? { paginationToken } : {}),
+      });
+      setCategories(page.items);
+      setNextToken(page.next_token);
+      setError('');
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'Unable to load categories.'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let cancelled = false;
+    const timer = window.setTimeout(() => { void loadCategories(); }, 0);
+    return () => window.clearTimeout(timer);
+    // Filters are intentionally submitted through the form to avoid request storms.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
-    const loadCategories = async () => {
-      try {
-        const data = await categoryService.getCategories({
-          page: 1,
-          size: 100,
-        });
-
-        if (!cancelled) {
-          setCategories(data.items);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            getApiErrorMessage(
-              loadError,
-              'Không thể tải danh sách danh mục.',
-            ),
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadCategories();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const addCategory = async (event: React.FormEvent) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const normalizedName = name.trim();
-
-    if (normalizedName.length < 2) {
-      setError('Tên danh mục phải có ít nhất 2 ký tự.');
-      return;
-    }
-
-    setSaving(true);
+    if (!form.name.trim()) return;
+    setBusyId(editingId ?? 'new');
     setError('');
-
+    setMessage('');
     try {
-      const createdCategory =
-        await categoryService.createCategory({
-          name: normalizedName,
+      const updated = editingId
+        ? await adminApi.updateAdminCategory(editingId, {
+          name: form.name.trim(),
+          ...(form.slug.trim() ? { slug: form.slug.trim() } : {}),
+        })
+        : await adminApi.createAdminCategory({
+          name: form.name.trim(),
+          ...(form.slug.trim() ? { slug: form.slug.trim() } : {}),
         });
-
-      setCategories((current) => [
-        ...current,
-        createdCategory,
-      ]);
-      setName('');
-    } catch (createError) {
-      setError(
-        getApiErrorMessage(
-          createError,
-          'Không thể tạo danh mục.',
-        ),
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const openDetail = async (categoryId: string) => {
-    setDetailCategory(null);
-    setDetailError('');
-    setDetailLoading(true);
-
-    try {
-      const category =
-        await categoryService.getCategoryById(categoryId);
-      setDetailCategory(category);
+      setCategories((current) => editingId
+        ? current.map((category) => category.category_id === updated.category_id ? updated : category)
+        : [updated, ...current]);
+      setForm(emptyForm);
+      setEditingId(null);
+      setMessage(editingId ? 'Category updated.' : 'Category created.');
     } catch (requestError) {
-      setDetailError(
-        getApiErrorMessage(
-          requestError,
-          'Không thể tải chi tiết danh mục.',
-        ),
-      );
+      setError(getApiErrorMessage(requestError, 'Unable to save category.'));
     } finally {
-      setDetailLoading(false);
+      setBusyId('');
     }
   };
 
-  const closeDetail = () => {
-    setDetailCategory(null);
-    setDetailError('');
-  };
-
-  const openEdit = (category: CategoryResponse) => {
-    setEditingCategory(category);
-    setEditName(category.name);
-    setEditSlug(category.slug);
-    setEditStatus(category.status);
-    setEditError('');
-  };
-
-  const closeEdit = () => {
-    setEditingCategory(null);
-    setEditError('');
-  };
-
-  const submitEdit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!editingCategory) return;
-
-    const normalizedName = editName.trim();
-    const normalizedSlug = editSlug.trim() || toSlug(normalizedName);
-
-    if (normalizedName.length < 2) {
-      setEditError('Tên danh mục phải có ít nhất 2 ký tự.');
-      return;
-    }
-
-    setEditSaving(true);
-    setEditError('');
-
-    try {
-      const updatedCategory =
-        await categoryService.updateCategory(
-          editingCategory.id,
-          {
-            name: normalizedName,
-            slug: normalizedSlug,
-            status: editStatus,
-          },
-        );
-
-      setCategories((current) =>
-        current.map((category) =>
-          category.id === updatedCategory.id
-            ? updatedCategory
-            : category,
-        ),
-      );
-      closeEdit();
-    } catch (updateError) {
-      setEditError(
-        getApiErrorMessage(
-          updateError,
-          'Không thể cập nhật danh mục.',
-        ),
-      );
-    } finally {
-      setEditSaving(false);
-    }
-  };
-
-  const toggleCategoryStatus = async (
-    category: CategoryResponse,
-  ) => {
+  const archive = async (category: AdminCategory) => {
+    if (category.status === 'INACTIVE' || busyId) return;
+    if (!window.confirm(`Archive category "${category.name}"? Existing item history will remain readable.`)) return;
+    setBusyId(category.category_id);
     setError('');
-
+    setMessage('');
     try {
-      if (category.status === 'ACTIVE') {
-        const confirmed = window.confirm(
-          `Bạn có chắc muốn vô hiệu hóa danh mục "${category.name}"?`,
-        );
-
-        if (!confirmed) return;
-
-        await categoryService.deleteCategory(category.id);
-
-        setCategories((current) =>
-          current.map((item) =>
-            item.id === category.id
-              ? { ...item, status: 'INACTIVE' }
-              : item,
-          ),
-        );
-        return;
-      }
-
-      const updatedCategory =
-        await categoryService.updateCategory(category.id, {
-          status: 'ACTIVE',
-        });
-
-      setCategories((current) =>
-        current.map((item) =>
-          item.id === updatedCategory.id
-            ? updatedCategory
-            : item,
-        ),
-      );
-    } catch (updateError) {
-      setError(
-        getApiErrorMessage(
-          updateError,
-          'Không thể cập nhật trạng thái danh mục.',
-        ),
-      );
+      const updated = await adminApi.archiveAdminCategory(category.category_id);
+      setCategories((current) => current.map((item) => item.category_id === updated.category_id ? updated : item));
+      setMessage('Category archived.');
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'Unable to archive category.'));
+    } finally {
+      setBusyId('');
     }
+  };
+
+  const startEdit = (category: AdminCategory) => {
+    setEditingId(category.category_id);
+    setForm({ name: category.name, slug: category.slug });
+    setMessage('');
+    setError('');
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10 sm:py-14">
-      <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">
-        Admin · Danh mục
-      </span>
-      <h1 className="mt-2 font-display text-4xl">
-        Quản lý danh mục
-      </h1>
+    <section className="mx-auto max-w-7xl px-6 py-10 sm:py-14">
+      <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">Admin console</span>
+      <div className="mt-2 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
+        <div>
+          <h1 className="font-display text-4xl">Category management</h1>
+          <p className="mt-2 text-sm text-[var(--color-text-muted)]">Create, edit, and archive the catalog taxonomy.</p>
+        </div>
+        <p className="text-sm text-[var(--color-text-muted)]">{categories.length} categories</p>
+      </div>
 
-      <form onSubmit={addCategory} className="mt-7 flex gap-3">
-        <input
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Tên danh mục mới"
-          disabled={saving}
-          className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm outline-none focus:border-[var(--color-primary)] disabled:opacity-60"
-        />
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-md bg-[var(--color-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-bg)] disabled:opacity-60"
-        >
-          {saving ? 'Đang thêm...' : 'Thêm danh mục'}
-        </button>
+      <form className="mt-8 grid gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 lg:grid-cols-[1fr_1fr_12rem_auto] lg:items-end" onSubmit={submit}>
+        <Input label="Name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Fine Art" maxLength={150} />
+        <Input label="Slug (optional)" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} placeholder="fine-art" maxLength={150} />
+        <label className="flex flex-col gap-1.5 text-xs font-mono-tag uppercase tracking-wider text-[var(--color-text-muted)]" htmlFor="category-status">
+          Filter
+          <select id="category-status" value={status} onChange={(event) => setStatus(event.target.value as AdminCategoryStatus | '')} className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-primary)] focus:outline-none">
+            <option value="">All statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+        </label>
+        <Button type="submit" disabled={busyId === 'new' || !form.name.trim()}>{editingId ? 'Update' : 'Create'}</Button>
       </form>
 
-      {error && (
-        <p className="mt-4 rounded-lg border border-[var(--color-danger-border)] p-4 text-sm text-[var(--color-danger)]">
-          {error}
-        </p>
-      )}
+      <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={(event) => { event.preventDefault(); void loadCategories(); }}>
+        <Input label="Search categories" value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Name or slug" />
+        <Button type="submit" variant="secondary" className="sm:self-end">Search</Button>
+        {editingId && <Button type="button" variant="ghost" className="sm:self-end" onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancel edit</Button>}
+      </form>
 
-      {loading && (
-        <p className="mt-6 text-sm text-[var(--color-text-muted)]">
-          Đang tải danh mục...
-        </p>
-      )}
+      {error && <p className="mt-6 rounded-xl border border-[var(--color-danger-solid)]/60 px-5 py-4 text-sm text-[var(--color-danger)]">{error}</p>}
+      {message && <p className="mt-6 rounded-xl border border-[var(--color-success-border)] px-5 py-4 text-sm text-[var(--color-success)]">{message}</p>}
 
-      {!loading && categories.length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-[var(--color-border-strong)] py-14 text-center">
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Chưa có danh mục nào
-          </p>
-        </div>
-      )}
-
-      {!loading && categories.length > 0 && (
-        <div className="mt-6 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
-          {categories.map((category) => (
-            <div
-              key={category.id}
-              className="grid gap-4 border-b border-[var(--color-border)] p-4 last:border-0 sm:grid-cols-[1fr_100px_auto] sm:items-center"
-            >
-              <button
-                type="button"
-                onClick={() => void openDetail(category.id)}
-                className="text-left"
-              >
-                <p className="text-sm hover:underline">
-                  {category.name}
-                </p>
-                <p className="mt-1 font-mono-tag text-[10px] text-[var(--color-text-dim)]">
-                  /{category.slug}
-                </p>
-              </button>
-
-              <span
-                className={`text-xs ${
-                  category.status === 'ACTIVE'
-                    ? 'text-[var(--color-success)]'
-                    : 'text-[var(--color-text-dim)]'
-                }`}
-              >
-                {category.status}
-              </span>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => openEdit(category)}
-                  className="text-xs text-[var(--color-primary)]"
-                >
-                  Sửa
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void toggleCategoryStatus(category)}
-                  className={`text-xs ${
-                    category.status === 'ACTIVE'
-                      ? 'text-[var(--color-danger)]'
-                      : 'text-[var(--color-primary)]'
-                  }`}
-                >
-                  {category.status === 'ACTIVE'
-                    ? 'Vô hiệu hóa'
-                    : 'Kích hoạt'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {(detailLoading || detailCategory || detailError) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-md rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-xl">
-                Chi tiết danh mục
-              </h2>
-              <button
-                type="button"
-                onClick={closeDetail}
-                className="text-sm text-[var(--color-text-muted)]"
-              >
-                Đóng
-              </button>
-            </div>
-
-            {detailLoading && (
-              <p className="mt-4 text-sm text-[var(--color-text-muted)]">
-                Đang tải...
-              </p>
-            )}
-            {detailError && (
-              <p className="mt-4 text-sm text-[var(--color-danger)]">
-                {detailError}
-              </p>
-            )}
-            {detailCategory && !detailLoading && (
-              <dl className="mt-4 space-y-3 text-sm">
-                <div>
-                  <dt className="text-[var(--color-text-dim)]">ID</dt>
-                  <dd className="font-mono-tag text-xs">
-                    {detailCategory.id}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[var(--color-text-dim)]">Tên</dt>
-                  <dd>{detailCategory.name}</dd>
-                </div>
-                <div>
-                  <dt className="text-[var(--color-text-dim)]">Slug</dt>
-                  <dd>/{detailCategory.slug}</dd>
-                </div>
-                <div>
-                  <dt className="text-[var(--color-text-dim)]">
-                    Trạng thái
-                  </dt>
-                  <dd>{detailCategory.status}</dd>
-                </div>
-                <div>
-                  <dt className="text-[var(--color-text-dim)]">
-                    Ngày tạo
-                  </dt>
-                  <dd>{formatDate(detailCategory.createdAt)}</dd>
-                </div>
-              </dl>
-            )}
+      <section className="mt-8 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+        {loading ? <Loading /> : categories.length === 0 ? <p className="px-6 py-16 text-center text-sm text-[var(--color-text-muted)]">No categories found.</p> : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="border-b border-[var(--color-border)] text-xs uppercase tracking-wider text-[var(--color-text-dim)]">
+                <tr><th className="px-5 py-4 font-normal">Category</th><th className="px-5 py-4 font-normal">Slug</th><th className="px-5 py-4 font-normal">Status</th><th className="px-5 py-4 font-normal">Actions</th></tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)]">
+                {categories.map((category) => (
+                  <tr key={category.category_id}>
+                    <td className="px-5 py-4"><p>{category.name}</p><p className="mt-1 text-xs text-[var(--color-text-dim)]">{category.category_id}</p></td>
+                    <td className="px-5 py-4 text-xs text-[var(--color-text-muted)]">{category.slug}</td>
+                    <td className="px-5 py-4"><span className={category.status === 'ACTIVE' ? 'text-[var(--color-success)]' : 'text-[var(--color-text-dim)]'}>{category.status}</span></td>
+                    <td className="px-5 py-4"><div className="flex flex-wrap gap-2"><Button type="button" variant="secondary" onClick={() => startEdit(category)}>Edit</Button><Button type="button" variant="ghost" disabled={category.status === 'INACTIVE' || busyId === category.category_id} onClick={() => void archive(category)}>Archive</Button></div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-      )}
-
-      {editingCategory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <form
-            onSubmit={submitEdit}
-            className="w-full max-w-md rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6"
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-xl">Sửa danh mục</h2>
-              <button
-                type="button"
-                onClick={closeEdit}
-                className="text-sm text-[var(--color-text-muted)]"
-              >
-                Đóng
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-4">
-              <label className="block">
-                <span className="text-xs text-[var(--color-text-dim)]">
-                  Tên danh mục
-                </span>
-                <input
-                  value={editName}
-                  onChange={(event) => setEditName(event.target.value)}
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]"
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-xs text-[var(--color-text-dim)]">
-                  Slug
-                </span>
-                <input
-                  value={editSlug}
-                  onChange={(event) => setEditSlug(event.target.value)}
-                  placeholder="Để trống sẽ tự tạo từ tên"
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]"
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-xs text-[var(--color-text-dim)]">
-                  Trạng thái
-                </span>
-                <select
-                  value={editStatus}
-                  onChange={(event) =>
-                    setEditStatus(event.target.value as CategoryStatus)
-                  }
-                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]"
-                >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                </select>
-              </label>
-            </div>
-
-            {editError && (
-              <p className="mt-3 text-sm text-[var(--color-danger)]">
-                {editError}
-              </p>
-            )}
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={closeEdit}
-                className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm"
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                disabled={editSaving}
-                className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-bg)] disabled:opacity-60"
-              >
-                {editSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-    </div>
+        )}
+      </section>
+      <div className="mt-5 flex justify-end">{nextToken && <Button type="button" variant="secondary" disabled={loading} onClick={() => void loadCategories(nextToken)}>Next page</Button>}</div>
+    </section>
   );
 }

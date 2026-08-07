@@ -1,10 +1,14 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { isAuthenticated } from '../store/authStore';
+import Loading from '../components/common/Loading';
+import useAuth from '../hooks/useAuth';
 
 export default function ProtectedRoute() {
   const location = useLocation();
+  const { status } = useAuth();
 
-  if (!isAuthenticated()) {
+  if (status === 'loading') return <Loading />;
+
+  if (status !== 'authenticated') {
     const from = `${location.pathname}${location.search}`;
 
     return (

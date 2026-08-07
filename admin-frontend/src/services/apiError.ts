@@ -23,6 +23,9 @@ export const getApiErrorMessage = (
   error: unknown,
   fallbackMessage: string,
 ): string => {
+  if (error instanceof Error && error.name === 'ServerlessApiError') {
+    return error.message || fallbackMessage;
+  }
   if (!axios.isAxiosError(error)) return fallbackMessage;
   if (!error.response) return CONNECTION_ERROR;
 

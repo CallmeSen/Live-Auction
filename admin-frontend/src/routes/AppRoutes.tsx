@@ -10,6 +10,7 @@ import AdminUsersPage from '../features/admin/pages/AdminUsersPage';
 import AdminAccountsPage from '../features/admin/pages/AdminAccountsPage';
 import AdminAuctionsPage from '../features/admin/pages/AdminAuctionsPage';
 import AdminCategoriesPage from '../features/admin/pages/AdminCategoriesPage';
+import AdminAuditPage from '../features/admin/pages/AdminAuditPage';
 import AdminProfilePage from '../features/user/pages/ProfilePage';
 import AuctionSessionDetailPage from '../features/auction/pages/AuctionSessionDetailPage';
 import AuctionDetailPage from '../features/auction/pages/AuctionDetailPage';
@@ -23,6 +24,7 @@ export default function AppRoutes() {
       </Route>
       <Route element={<MainLayout />}>
         <Route element={<ProtectedRoute />}>
+          <Route path="/forbidden" element={<AccessDeniedPage />} />
           <Route element={<RoleRoute allowedRoles={['ADMIN']} />}>
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/profile" element={<AdminProfilePage />} />
@@ -30,9 +32,9 @@ export default function AppRoutes() {
             <Route path="/admin/admin-accounts" element={<AdminAccountsPage />} />
             <Route path="/admin/auctions" element={<AdminAuctionsPage />} />
             <Route path="/admin/categories" element={<AdminCategoriesPage />} />
+            <Route path="/admin/audit" element={<AdminAuditPage />} />
             <Route path="/auction-sessions/:id" element={<AuctionSessionDetailPage />} />
             <Route path="/auction-items/:id" element={<AuctionDetailPage />} />
-            <Route path="/forbidden" element={<AccessDeniedPage />} />
           </Route>
         </Route>
       </Route>

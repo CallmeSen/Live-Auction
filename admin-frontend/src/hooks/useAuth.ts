@@ -1,27 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useAuthContext } from '../auth/AuthProvider';
 import type { AuthUser } from '../features/auth/types';
-import { AUTH_CHANGED_EVENT, getCurrentUser, logoutSession, updateCurrentUserProfile, } from '../store/authStore';
 
 export default function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(() => getCurrentUser());
+  const auth = useAuthContext();
+  const user = useMemo<AuthUser | null>(() => auth.session === null ? null : ({
+    id: auth.session.sub,
+    email: auth.session.email,
+    fullName: auth.session.email,
+    role: 'ADMIN',
+    phone: '',
+    status: 'ACTIVE',
+    isPrimaryAdmin: false,
+  }), [auth.session]);
+  const updateProfile = useCallback(
+    (profile: { fullName: string; phone: string }) => {
+      void profile;
+      return user;
+    },
+    [user],
+  );
 
-  useEffect(() => {
-    const sync = () => setUser(getCurrentUser());
-    window.addEventListener(AUTH_CHANGED_EVENT, sync);
-    window.addEventListener('storage', sync);
-    return () => {
-      window.removeEventListener(AUTH_CHANGED_EVENT, sync);
-      window.removeEventListener('storage', sync);
-    };
-  }, []);
-  const logout = () => {
-    logoutSession();
-    setUser(null);
-  };
   return {
     user,
-    authenticated: Boolean(user),
-    updateProfile: updateCurrentUserProfile,
-    logout,
+    session: auth.session,
+    status: auth.status,
+    authenticated: auth.status === 'authenticated',
+    login: auth.login,
+    completeNewPassword: auth.completeNewPassword,
+    getIdToken: auth.getIdToken,
+    updateProfile,
+    logout: auth.logout,
   };
 }

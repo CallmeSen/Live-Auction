@@ -1,12 +1,15 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import type { UserRole } from '../features/auth/types';
-import { getCurrentUser, isAuthenticated } from '../store/authStore';
+import Loading from '../components/common/Loading';
+import useAuth from '../hooks/useAuth';
 
 export default function RoleRoute({ allowedRoles }: { allowedRoles: UserRole[] }) {
   const location = useLocation();
-  const user = getCurrentUser();
+  const { status, user } = useAuth();
 
-  if (!isAuthenticated() || !user) {
+  if (status === 'loading') return <Loading />;
+
+  if (status !== 'authenticated' || !user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 

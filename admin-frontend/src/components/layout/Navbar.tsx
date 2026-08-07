@@ -30,7 +30,8 @@ export default function Navbar() {
           <NavLink to="/admin/users" className={navClass}>Người dùng</NavLink>
           <NavLink to="/admin/auctions" className={navClass}>Kiểm duyệt</NavLink>
           <NavLink to="/admin/categories" className={navClass}>Danh mục</NavLink>
-          {user?.isPrimaryAdmin && <NavLink to="/admin/admin-accounts" className={navClass}>Quản trị viên</NavLink>}
+          <NavLink to="/admin/audit" className={navClass}>Audit</NavLink>
+          <NavLink to="/admin/admin-accounts" className={navClass}>Quản trị viên</NavLink>
         </nav>
         <div className="flex items-center gap-3">
           <Link to="/admin/profile" className="hidden text-right sm:block" aria-label="Mở hồ sơ Admin">

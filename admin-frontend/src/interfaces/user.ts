@@ -1,4 +1,4 @@
-import type { AuthUserRole, AuthUserStatus } from './auth';
+import type { AuthUserRole, AuthUserStatus } from './authRoles';
 
 export type UserSortBy = 'createdAt' | 'email' | 'fullName';
 export type SortOrder = 'asc' | 'desc';
