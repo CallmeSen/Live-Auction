@@ -129,6 +129,7 @@ locals {
     "/api/v1/admin/audit-events"                              = { GET = "admin_command" }
     "/api/v1/categories"                                      = { GET = "query_service" }
     "/api/v1/categories/{category_id}"                        = { GET = "query_service" }
+    "/api/v1/users/me"  = { GET = "query_service" }
   }
 
   stage3_operations = flatten([
