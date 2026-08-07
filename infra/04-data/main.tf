@@ -6,6 +6,8 @@ locals {
     item_bidder_aliases   = "${var.name_prefix}_item_bidder_aliases"
     idempotency           = "${var.name_prefix}_idempotency"
     auction_catalog       = "${var.name_prefix}_auction_catalog"
+    category_catalog      = "${var.name_prefix}_category_catalog"
+    admin_audit_events    = "${var.name_prefix}_admin_audit_events"
   }
 }
 
@@ -196,6 +198,139 @@ resource "aws_dynamodb_table" "auction_catalog" {
       attribute_name = "gsi2sk"
       key_type       = "RANGE"
     }
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
+resource "aws_dynamodb_table" "category_catalog" {
+  count = var.enable_stage3 ? 1 : 0
+
+  name         = local.table_names.category_catalog
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "category_id"
+
+  attribute {
+    name = "category_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "slug"
+    type = "S"
+  }
+
+  attribute {
+    name = "status"
+    type = "S"
+  }
+
+  attribute {
+    name = "created_at"
+    type = "N"
+  }
+
+  global_secondary_index {
+    name            = "slug-index"
+    projection_type = "ALL"
+
+    key_schema {
+      attribute_name = "slug"
+      key_type       = "HASH"
+    }
+  }
+
+  global_secondary_index {
+    name            = "status-index"
+    projection_type = "ALL"
+
+    key_schema {
+      attribute_name = "status"
+      key_type       = "HASH"
+    }
+
+    key_schema {
+      attribute_name = "created_at"
+      key_type       = "RANGE"
+    }
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
+resource "aws_dynamodb_table" "admin_audit_events" {
+  count = var.enable_stage3 ? 1 : 0
+
+  name         = local.table_names.admin_audit_events
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "pk"
+  range_key    = "sk"
+
+  attribute {
+    name = "pk"
+    type = "S"
+  }
+
+  attribute {
+    name = "sk"
+    type = "S"
+  }
+
+  attribute {
+    name = "actor_sub"
+    type = "S"
+  }
+
+  attribute {
+    name = "resource_key"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "actor-index"
+    projection_type = "ALL"
+
+    key_schema {
+      attribute_name = "actor_sub"
+      key_type       = "HASH"
+    }
+
+    key_schema {
+      attribute_name = "sk"
+      key_type       = "RANGE"
+    }
+  }
+
+  global_secondary_index {
+    name            = "resource-index"
+    projection_type = "ALL"
+
+    key_schema {
+      attribute_name = "resource_key"
+      key_type       = "HASH"
+    }
+
+    key_schema {
+      attribute_name = "sk"
+      key_type       = "RANGE"
+    }
+  }
+
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
   }
 
   server_side_encryption {

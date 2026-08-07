@@ -90,6 +90,21 @@ Describe 'Stage 4 edge static infrastructure contract' {
         $main | Should Match 'cached_methods\s*=\s*\[\s*"GET",\s*"HEAD"\s*\]'
     }
 
+    It 'defines an isolated private admin S3 and CloudFront origin' {
+        $main = Read-ModuleFile 'main.tf'
+
+        $main | Should Match 'resource\s+"aws_s3_bucket"\s+"admin_frontend"'
+        $main | Should Match 'resource\s+"aws_s3_bucket_versioning"\s+"admin_frontend"'
+        $main | Should Match 'resource\s+"aws_s3_bucket_server_side_encryption_configuration"\s+"admin_frontend"'
+        $main | Should Match 'resource\s+"aws_s3_bucket_public_access_block"\s+"admin_frontend"'
+        $main | Should Match 'resource\s+"aws_cloudfront_origin_access_control"\s+"admin_frontend"'
+        $main | Should Match 'resource\s+"aws_cloudfront_distribution"\s+"admin_frontend"'
+        $main | Should Match 'origin_access_control_id\s*=\s*aws_cloudfront_origin_access_control\.admin_frontend\.id'
+        $main | Should Match 'origin_id\s*=\s*"admin-frontend-s3"'
+        $main | Should Match 'aws_s3_bucket\.admin_frontend\.arn'
+        $main | Should Match 'aws_cloudfront_distribution\.admin_frontend\.arn'
+    }
+
     It 'scopes the bucket policy to the CloudFront distribution OAC principal' {
         $main = Read-ModuleFile 'main.tf'
 
@@ -110,9 +125,9 @@ Describe 'Stage 4 edge static infrastructure contract' {
         $fallbackCount = ([regex]::Matches($main, 'response_page_path\s*=\s*"/index\.html"')).Count
         $responseCount = ([regex]::Matches($main, 'response_code\s*=\s*200')).Count
         $ttlCount = ([regex]::Matches($main, 'error_caching_min_ttl\s*=\s*0')).Count
-        $fallbackCount | Should Be 2
-        $responseCount | Should Be 2
-        $ttlCount | Should Be 2
+        $fallbackCount | Should Be 4
+        $responseCount | Should Be 4
+        $ttlCount | Should Be 4
     }
 
     It 'exports only finite non-secret handoff outputs' {
@@ -121,13 +136,17 @@ Describe 'Stage 4 edge static infrastructure contract' {
             ForEach-Object { $_.Groups[1].Value } |
             Sort-Object)
 
-        ($names -join '|') | Should Be 'cloudfront_distribution_id|cloudfront_domain_name|cloudfront_origin|frontend_bucket_name'
+        ($names -join '|') | Should Be 'admin_cloudfront_distribution_id|admin_cloudfront_domain_name|admin_cloudfront_origin|admin_frontend_bucket_name|cloudfront_distribution_id|cloudfront_domain_name|cloudfront_origin|frontend_bucket_name'
         $outputs | Should Match 'frontend_bucket_name[\s\S]*value\s*=\s*aws_s3_bucket\.frontend\.bucket'
         $outputs | Should Match 'cloudfront_distribution_id[\s\S]*value\s*=\s*aws_cloudfront_distribution\.frontend\.id'
         $outputs | Should Match 'cloudfront_domain_name[\s\S]*value\s*=\s*aws_cloudfront_distribution\.frontend\.domain_name'
         $outputs | Should Match 'cloudfront_origin[\s\S]*value\s*=\s*"https://\$\{aws_cloudfront_distribution\.frontend\.domain_name\}"'
         $outputs | Should Not Match 'sensitive\s*=\s*true'
         $outputs | Should Not Match '(?i)(secret|token|credential|password|api[_-]?key|access[_-]?key)'
+        $outputs | Should Match 'admin_frontend_bucket_name[\s\S]*value\s*=\s*aws_s3_bucket\.admin_frontend\.bucket'
+        $outputs | Should Match 'admin_cloudfront_distribution_id[\s\S]*value\s*=\s*aws_cloudfront_distribution\.admin_frontend\.id'
+        $outputs | Should Match 'admin_cloudfront_domain_name[\s\S]*value\s*=\s*aws_cloudfront_distribution\.admin_frontend\.domain_name'
+        $outputs | Should Match 'admin_cloudfront_origin[\s\S]*value\s*=\s*"https://\$\{aws_cloudfront_distribution\.admin_frontend\.domain_name\}"'
     }
 
     It 'contains no forbidden edge-adjacent or compute/database resources' {

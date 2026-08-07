@@ -43,6 +43,20 @@ variable "enable_stage3" {
   default = false
 }
 
+variable "bootstrap_admin_sub" {
+  description = "Cognito sub that must remain enabled as the primary admin."
+  type        = string
+  default     = ""
+
+  validation {
+    condition = (
+      var.bootstrap_admin_sub == "" ||
+      can(regex("^[0-9a-fA-F-]{16,128}$", var.bootstrap_admin_sub))
+    )
+    error_message = "bootstrap_admin_sub must be empty or a valid Cognito user sub."
+  }
+}
+
 variable "log_retention_days" {
   type    = number
   default = 14
@@ -77,5 +91,25 @@ variable "stage3_cors_allowed_origin" {
       try(tonumber(regex(":([0-9]{1,5})$", var.stage3_cors_allowed_origin)[0]), 1) <= 65535
     )
     error_message = "stage3_cors_allowed_origin must be one lowercase HTTP or HTTPS origin with valid DNS labels and an optional port from 1 to 65535; paths, userinfo, wildcards, queries, and fragments are not allowed."
+  }
+}
+
+variable "stage3_cors_allowed_admin_origin" {
+  description = "Exact Admin CloudFront origin allowed to read Stage 3 REST responses."
+  type        = string
+  default     = ""
+
+  validation {
+    condition = (
+      var.stage3_cors_allowed_admin_origin == "" || (
+        length(var.stage3_cors_allowed_admin_origin) <= 255 &&
+        can(regex("^https?://[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*(:[0-9]{1,5})?$", var.stage3_cors_allowed_admin_origin)) &&
+        !strcontains(var.stage3_cors_allowed_admin_origin, "*") &&
+        var.stage3_cors_allowed_admin_origin == lower(var.stage3_cors_allowed_admin_origin) &&
+        try(tonumber(regex(":([0-9]{1,5})$", var.stage3_cors_allowed_admin_origin)[0]), 1) >= 1 &&
+        try(tonumber(regex(":([0-9]{1,5})$", var.stage3_cors_allowed_admin_origin)[0]), 1) <= 65535
+      )
+    )
+    error_message = "stage3_cors_allowed_admin_origin must be empty or one lowercase HTTP or HTTPS origin."
   }
 }

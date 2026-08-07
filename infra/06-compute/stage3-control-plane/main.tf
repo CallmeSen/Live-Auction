@@ -24,6 +24,20 @@ data "terraform_remote_state" "messaging" {
   }
 }
 
+data "terraform_remote_state" "identity" {
+  count   = var.enable_stage3 ? 1 : 0
+  backend = "s3"
+
+  config = {
+    bucket         = "la-tfstate-233376973052"
+    key            = "03-identity/terraform.tfstate"
+    region         = "ap-southeast-1"
+    profile        = "la-admin"
+    dynamodb_table = "la-tflock"
+    encrypt        = true
+  }
+}
+
 data "aws_partition" "current" {}
 
 data "aws_caller_identity" "current" {
@@ -37,6 +51,11 @@ data "aws_caller_identity" "current" {
 
 locals {
   metrics_ns = "LiveAuction"
+
+  stage3_cors_allowed_origins = distinct(compact([
+    var.stage3_cors_allowed_origin,
+    var.stage3_cors_allowed_admin_origin,
+  ]))
 
   stage3_functions = {
     session_service = "${var.name_prefix}-session-service"
@@ -152,6 +171,7 @@ resource "aws_lambda_function" "session_service" {
       TBL_ITEM_STATE          = data.terraform_remote_state.data.outputs.item_state_table_name
       TBL_BID_EVENTS          = data.terraform_remote_state.data.outputs.bid_events_table_name
       CORS_ALLOWED_ORIGIN     = var.stage3_cors_allowed_origin
+      CORS_ALLOWED_ORIGINS    = jsonencode(local.stage3_cors_allowed_origins)
       POWERTOOLS_SERVICE_NAME = "session-service"
     }
   }
@@ -192,6 +212,13 @@ data "aws_iam_policy_document" "item_service" {
       "dynamodb:UpdateItem",
     ]
     resources = [data.terraform_remote_state.data.outputs.auction_catalog_table_arn]
+  }
+
+  statement {
+    sid       = "ReadCategories"
+    effect    = "Allow"
+    actions   = ["dynamodb:GetItem"]
+    resources = [data.terraform_remote_state.data.outputs.category_catalog_table_arn]
   }
 
   statement {
@@ -238,7 +265,9 @@ resource "aws_lambda_function" "item_service" {
       TBL_AUCTION_CATALOG     = data.terraform_remote_state.data.outputs.auction_catalog_table_name
       TBL_ITEM_STATE          = data.terraform_remote_state.data.outputs.item_state_table_name
       TBL_BID_EVENTS          = data.terraform_remote_state.data.outputs.bid_events_table_name
+      TBL_CATEGORY_CATALOG    = data.terraform_remote_state.data.outputs.category_catalog_table_name
       CORS_ALLOWED_ORIGIN     = var.stage3_cors_allowed_origin
+      CORS_ALLOWED_ORIGINS    = jsonencode(local.stage3_cors_allowed_origins)
       MEDIA_BUCKET            = data.terraform_remote_state.data.outputs.media_bucket_name
       MAX_MEDIA_BYTES         = tostring(var.max_media_bytes)
       POWERTOOLS_SERVICE_NAME = "item-service"
@@ -300,6 +329,25 @@ data "aws_iam_policy_document" "query_service" {
       "${data.terraform_remote_state.data.outputs.bid_events_table_arn}/index/${data.terraform_remote_state.data.outputs.bidder_events_index_name}",
     ]
   }
+
+  statement {
+    sid     = "QueryCategories"
+    effect  = "Allow"
+    actions = ["dynamodb:Query"]
+    resources = [
+      data.terraform_remote_state.data.outputs.category_catalog_table_arn,
+      "${data.terraform_remote_state.data.outputs.category_catalog_table_arn}/index/${data.terraform_remote_state.data.outputs.category_catalog_status_index_name}",
+    ]
+  }
+
+  statement {
+    sid     = "ReadCategory"
+    effect  = "Allow"
+    actions = ["dynamodb:GetItem"]
+    resources = [
+      data.terraform_remote_state.data.outputs.category_catalog_table_arn,
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "query_service" {
@@ -338,7 +386,9 @@ resource "aws_lambda_function" "query_service" {
       TBL_AUCTION_CATALOG     = data.terraform_remote_state.data.outputs.auction_catalog_table_name
       TBL_ITEM_STATE          = data.terraform_remote_state.data.outputs.item_state_table_name
       TBL_BID_EVENTS          = data.terraform_remote_state.data.outputs.bid_events_table_name
+      TBL_CATEGORY_CATALOG    = data.terraform_remote_state.data.outputs.category_catalog_table_name
       CORS_ALLOWED_ORIGIN     = var.stage3_cors_allowed_origin
+      CORS_ALLOWED_ORIGINS    = jsonencode(local.stage3_cors_allowed_origins)
       POWERTOOLS_SERVICE_NAME = "query-service"
     }
   }
@@ -430,6 +480,50 @@ data "aws_iam_policy_document" "admin_command" {
       values   = ["scheduler.amazonaws.com"]
     }
   }
+
+  statement {
+    sid    = "ManageCognitoUsers"
+    effect = "Allow"
+    actions = [
+      "cognito-idp:AdminDisableUser",
+      "cognito-idp:AdminEnableUser",
+      "cognito-idp:AdminGetUser",
+      "cognito-idp:AdminListGroupsForUser",
+      "cognito-idp:AdminCreateUser",
+      "cognito-idp:AdminAddUserToGroup",
+      "cognito-idp:ListUsers",
+    ]
+    resources = [data.terraform_remote_state.identity[0].outputs.cognito_user_pool_arn]
+  }
+
+  statement {
+    sid    = "ManageAdminCatalog"
+    effect = "Allow"
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+    ]
+    resources = [
+      data.terraform_remote_state.data.outputs.category_catalog_table_arn,
+      "${data.terraform_remote_state.data.outputs.category_catalog_table_arn}/index/${data.terraform_remote_state.data.outputs.category_catalog_slug_index_name}",
+      data.terraform_remote_state.data.outputs.admin_audit_events_table_arn,
+      "${data.terraform_remote_state.data.outputs.admin_audit_events_table_arn}/index/${data.terraform_remote_state.data.outputs.admin_audit_events_actor_index_name}",
+      "${data.terraform_remote_state.data.outputs.admin_audit_events_table_arn}/index/${data.terraform_remote_state.data.outputs.admin_audit_events_resource_index_name}",
+    ]
+  }
+
+  statement {
+    sid     = "QueryCategories"
+    effect  = "Allow"
+    actions = ["dynamodb:Query"]
+    resources = [
+      data.terraform_remote_state.data.outputs.category_catalog_table_arn,
+      "${data.terraform_remote_state.data.outputs.category_catalog_table_arn}/index/${data.terraform_remote_state.data.outputs.category_catalog_status_index_name}",
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "admin_command" {
@@ -463,17 +557,29 @@ resource "aws_lambda_function" "admin_command" {
   memory_size = 512
   timeout     = 60
 
+  lifecycle {
+    precondition {
+      condition     = trimspace(var.bootstrap_admin_sub) != ""
+      error_message = "bootstrap_admin_sub must be configured before enabling the Admin control plane."
+    }
+  }
+
   environment {
     variables = {
       OWNER_REGION                 = var.aws_region
       TBL_AUCTION_CATALOG          = data.terraform_remote_state.data.outputs.auction_catalog_table_name
       TBL_ITEM_STATE               = data.terraform_remote_state.data.outputs.item_state_table_name
       TBL_BID_EVENTS               = data.terraform_remote_state.data.outputs.bid_events_table_name
+      TBL_CATEGORY_CATALOG         = data.terraform_remote_state.data.outputs.category_catalog_table_name
+      TBL_ADMIN_AUDIT_EVENTS       = data.terraform_remote_state.data.outputs.admin_audit_events_table_name
       CORS_ALLOWED_ORIGIN          = var.stage3_cors_allowed_origin
+      CORS_ALLOWED_ORIGINS         = jsonencode(local.stage3_cors_allowed_origins)
       SCHEDULER_GROUP              = data.terraform_remote_state.messaging.outputs.scheduler_group_name
       SCHEDULER_ROLE_ARN           = data.terraform_remote_state.messaging.outputs.scheduler_role_arn
       SCHEDULER_DLQ_ARN            = data.terraform_remote_state.messaging.outputs.scheduler_dlq_arn
       ADMIN_COMMAND_ARN            = local.stage3_admin_function_arn
+      COGNITO_USER_POOL_ID         = data.terraform_remote_state.identity[0].outputs.cognito_user_pool_id
+      BOOTSTRAP_ADMIN_SUB          = var.bootstrap_admin_sub
       POWERTOOLS_SERVICE_NAME      = "admin-command"
       POWERTOOLS_METRICS_NAMESPACE = local.metrics_ns
     }

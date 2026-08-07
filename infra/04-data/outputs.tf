@@ -65,3 +65,35 @@ output "media_bucket_name" {
 output "media_bucket_arn" {
   value = var.enable_stage3 ? aws_s3_bucket.media[0].arn : null
 }
+
+output "category_catalog_table_name" {
+  value = var.enable_stage3 ? aws_dynamodb_table.category_catalog[0].name : null
+}
+
+output "category_catalog_table_arn" {
+  value = var.enable_stage3 ? aws_dynamodb_table.category_catalog[0].arn : null
+}
+
+output "category_catalog_slug_index_name" {
+  value = var.enable_stage3 ? "slug-index" : null
+}
+
+output "category_catalog_status_index_name" {
+  value = var.enable_stage3 ? "status-index" : null
+}
+
+output "admin_audit_events_table_name" {
+  value = var.enable_stage3 ? aws_dynamodb_table.admin_audit_events[0].name : null
+}
+
+output "admin_audit_events_table_arn" {
+  value = var.enable_stage3 ? aws_dynamodb_table.admin_audit_events[0].arn : null
+}
+
+output "admin_audit_events_actor_index_name" {
+  value = var.enable_stage3 ? "actor-index" : null
+}
+
+output "admin_audit_events_resource_index_name" {
+  value = var.enable_stage3 ? "resource-index" : null
+}

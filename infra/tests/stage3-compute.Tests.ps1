@@ -552,6 +552,7 @@ $parentLegacyAddresses = @(
     'resource.aws_lambda_function.broadcast'
 )
 $stage3Addresses = @(
+    'data.terraform_remote_state.identity',
     'resource.aws_lambda_layer_version.stage3_common',
     'resource.aws_lambda_permission.admin_scheduler',
     'resource.aws_scheduler_schedule.lifecycle_watchdog'
@@ -627,7 +628,7 @@ Describe 'Stage 3 compute Terraform parsing and inputs' {
         $s3Backend = Get-HclBlock $backend 'backend\s+"s3"'
         (Get-HclAssignmentValue $s3Backend 'profile') | Should Be '"la-admin"'
 
-        foreach ($name in @('data', 'messaging')) {
+        foreach ($name in @('data', 'messaging', 'identity')) {
             $state = Get-HclBlock $main (
                 'data\s+"terraform_remote_state"\s+"' + $name + '"'
             )
@@ -756,8 +757,12 @@ locals {
         $dataState | Should Match 'key\s*=\s*"04-data/terraform\.tfstate"'
         $messagingState | Should Match `
             'key\s*=\s*"05-messaging/terraform\.tfstate"'
-        $main | Should Not Match `
+        $identityState = Get-HclBlock $main `
             'data\s+"terraform_remote_state"\s+"identity"'
+        $identityState | Should Match `
+            'count\s*=\s*var\.enable_stage3\s*\?\s*1\s*:\s*0'
+        $identityState | Should Match `
+            'key\s*=\s*"03-identity/terraform\.tfstate"'
     }
 
     It 'defaults the Stage 3 gate to false' {
@@ -1076,6 +1081,14 @@ Describe 'Stage 3 explicit Lambda resource stacks' {
             query_service = $base.Clone()
             admin_command = $base.Clone()
         }
+        $expected.item_service.TBL_CATEGORY_CATALOG = `
+            'data.terraform_remote_state.data.outputs.category_catalog_table_name'
+        $expected.query_service.TBL_CATEGORY_CATALOG = `
+            'data.terraform_remote_state.data.outputs.category_catalog_table_name'
+        $expected.admin_command.TBL_CATEGORY_CATALOG = `
+            'data.terraform_remote_state.data.outputs.category_catalog_table_name'
+        $expected.admin_command.TBL_ADMIN_AUDIT_EVENTS = `
+            'data.terraform_remote_state.data.outputs.admin_audit_events_table_name'
         $expected.session_service.POWERTOOLS_SERVICE_NAME = '"session-service"'
         $expected.item_service.POWERTOOLS_SERVICE_NAME = '"item-service"'
         $expected.item_service.MEDIA_BUCKET = `
@@ -1093,10 +1106,16 @@ Describe 'Stage 3 explicit Lambda resource stacks' {
             'data.terraform_remote_state.messaging.outputs.scheduler_dlq_arn'
         $expected.admin_command.ADMIN_COMMAND_ARN = `
             'local.stage3_admin_function_arn'
+        $expected.admin_command.COGNITO_USER_POOL_ID = `
+            'data.terraform_remote_state.identity[0].outputs.cognito_user_pool_id'
+        $expected.admin_command.BOOTSTRAP_ADMIN_SUB = `
+            'var.bootstrap_admin_sub'
 
         foreach ($name in $functionNames) {
             $expected[$name].CORS_ALLOWED_ORIGIN = `
                 'var.stage3_cors_allowed_origin'
+            $expected[$name].CORS_ALLOWED_ORIGINS = `
+                'jsonencode(local.stage3_cors_allowed_origins)'
         }
 
         foreach ($name in $functionNames) {
@@ -1159,7 +1178,7 @@ Describe 'Stage 3 exact least privilege IAM' {
     }
 
     It 'grants item service exact catalog and item media access' {
-        (Get-HclBlocks $itemPolicy 'statement').Count | Should Be 3
+        (Get-HclBlocks $itemPolicy 'statement').Count | Should Be 4
         Assert-ExactStatement $itemPolicy 'ManageCatalogItems' @(
             '"dynamodb:GetItem"',
             '"dynamodb:ConditionCheckItem"',
@@ -1171,10 +1190,15 @@ Describe 'Stage 3 exact least privilege IAM' {
         ) @(
             '"${data.terraform_remote_state.data.outputs.media_bucket_arn}/items/*"'
         )
+        Assert-ExactStatement $itemPolicy 'ReadCategories' @(
+            '"dynamodb:GetItem"'
+        ) @(
+            'data.terraform_remote_state.data.outputs.category_catalog_table_arn'
+        )
     }
 
     It 'scopes query service reads to used tables and exact indexes' {
-        (Get-HclBlocks $queryPolicy 'statement').Count | Should Be 4
+        (Get-HclBlocks $queryPolicy 'statement').Count | Should Be 6
         Assert-ExactStatement $queryPolicy 'ReadControlPlaneItems' @(
             '"dynamodb:GetItem"'
         ) @($catalog, $itemState)
@@ -1184,10 +1208,21 @@ Describe 'Stage 3 exact least privilege IAM' {
         Assert-ExactStatement $queryPolicy 'QueryBidderEvents' @(
             '"dynamodb:Query"'
         ) @($bidderEventsIndex)
+        Assert-ExactStatement $queryPolicy 'QueryCategories' @(
+            '"dynamodb:Query"'
+        ) @(
+            'data.terraform_remote_state.data.outputs.category_catalog_table_arn',
+            '"${data.terraform_remote_state.data.outputs.category_catalog_table_arn}/index/${data.terraform_remote_state.data.outputs.category_catalog_status_index_name}"'
+        )
+        Assert-ExactStatement $queryPolicy 'ReadCategory' @(
+            '"dynamodb:GetItem"'
+        ) @(
+            'data.terraform_remote_state.data.outputs.category_catalog_table_arn'
+        )
     }
 
     It 'grants admin only the item actions used on each table' {
-        (Get-HclBlocks $adminPolicy 'statement').Count | Should Be 7
+        (Get-HclBlocks $adminPolicy 'statement').Count | Should Be 10
         Assert-ExactStatement $adminPolicy 'ManageCatalogItems' @(
             '"dynamodb:GetItem"',
             '"dynamodb:UpdateItem"'
@@ -1203,6 +1238,34 @@ Describe 'Stage 3 exact least privilege IAM' {
         Assert-ExactStatement $adminPolicy 'QueryCatalogRecords' @(
             '"dynamodb:Query"'
         ) @($catalog, $catalogGsi2)
+        Assert-ExactStatement $adminPolicy 'ManageCognitoUsers' @(
+            '"cognito-idp:AdminDisableUser"',
+            '"cognito-idp:AdminEnableUser"',
+            '"cognito-idp:AdminGetUser"',
+            '"cognito-idp:AdminListGroupsForUser"',
+            '"cognito-idp:AdminCreateUser"',
+            '"cognito-idp:AdminAddUserToGroup"',
+            '"cognito-idp:ListUsers"'
+        ) @('data.terraform_remote_state.identity[0].outputs.cognito_user_pool_arn')
+        Assert-ExactStatement $adminPolicy 'ManageAdminCatalog' @(
+            '"dynamodb:GetItem"',
+            '"dynamodb:PutItem"',
+            '"dynamodb:UpdateItem"',
+            '"dynamodb:Query"',
+            '"dynamodb:Scan"'
+        ) @(
+            'data.terraform_remote_state.data.outputs.category_catalog_table_arn',
+            '"${data.terraform_remote_state.data.outputs.category_catalog_table_arn}/index/${data.terraform_remote_state.data.outputs.category_catalog_slug_index_name}"',
+            'data.terraform_remote_state.data.outputs.admin_audit_events_table_arn',
+            '"${data.terraform_remote_state.data.outputs.admin_audit_events_table_arn}/index/${data.terraform_remote_state.data.outputs.admin_audit_events_actor_index_name}"',
+            '"${data.terraform_remote_state.data.outputs.admin_audit_events_table_arn}/index/${data.terraform_remote_state.data.outputs.admin_audit_events_resource_index_name}"'
+        )
+        Assert-ExactStatement $adminPolicy 'QueryCategories' @(
+            '"dynamodb:Query"'
+        ) @(
+            'data.terraform_remote_state.data.outputs.category_catalog_table_arn',
+            '"${data.terraform_remote_state.data.outputs.category_catalog_table_arn}/index/${data.terraform_remote_state.data.outputs.category_catalog_status_index_name}"'
+        )
     }
 
     It 'scopes admin Scheduler management to its schedule group' {

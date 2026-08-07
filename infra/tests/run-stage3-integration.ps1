@@ -3,7 +3,10 @@ param(
     [string]$Profile = 'la-admin',
     [string]$Region = 'ap-southeast-1',
     [int]$TimeoutSeconds = 420,
-    [switch]$RunStage4LiveE2E
+    [switch]$RunStage4LiveE2E,
+    [switch]$RunStage4AdminLiveCheckpoint,
+    [string]$BootstrapAdminUsername = '',
+    [string]$BootstrapAdminPasswordEnvironmentVariable = 'LIVE_AUCTION_BOOTSTRAP_ADMIN_PASSWORD'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -277,6 +280,147 @@ function Get-OptionalCollection {
     return $items.ToArray()
 }
 
+function ConvertTo-CurlConfigValue {
+    param([Parameter(Mandatory)][string]$Value)
+
+    return $Value.Replace('\', '\\').Replace('"', '\"').Replace("`r", '').Replace("`n", '')
+}
+
+
+function Invoke-HttpClientResponse {
+    param(
+        [Parameter(Mandatory)][string]$Method,
+        [Parameter(Mandatory)][string]$Uri,
+        [Parameter(Mandatory)][string]$ApiKey,
+        [Parameter(Mandatory)][string]$IdToken,
+        $Body
+    )
+
+    Add-Type -AssemblyName System.Net.Http -ErrorAction SilentlyContinue
+    $client = New-Object -TypeName System.Net.Http.HttpClient
+    $request = New-Object -TypeName System.Net.Http.HttpRequestMessage
+    try {
+        $request.Method = New-Object -TypeName System.Net.Http.HttpMethod `
+            -ArgumentList @($Method)
+        $request.RequestUri = New-Object -TypeName System.Uri `
+            -ArgumentList @($Uri)
+        $request.Headers.TryAddWithoutValidation(
+            'Authorization',
+            "Bearer $IdToken"
+        ) | Out-Null
+        $request.Headers.TryAddWithoutValidation('x-api-key', $ApiKey) | Out-Null
+        if ($null -ne $Body) {
+            $request.Content = New-Object -TypeName System.Net.Http.StringContent `
+                -ArgumentList @(
+                    [string]$Body,
+                    [System.Text.Encoding]::UTF8,
+                    'application/json'
+                )
+        }
+        $response = $client.SendAsync($request).GetAwaiter().GetResult()
+        $content = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        return [pscustomobject]@{
+            StatusCode = [int]$response.StatusCode
+            Content    = [string]$content
+        }
+    }
+    finally {
+        if ($null -ne $request) {
+            $request.Dispose()
+        }
+        $client.Dispose()
+    }
+}
+
+
+function Invoke-CurlResponse {
+    param(
+        [Parameter(Mandatory)][string]$Method,
+        [Parameter(Mandatory)][string]$Uri,
+        [Parameter(Mandatory)][string]$ApiKey,
+        [Parameter(Mandatory)][string]$IdToken,
+        $Body
+    )
+
+    $marker = '__LIVE_AUCTION_CURL_STATUS__'
+    $config = @(
+        "url = `"$(ConvertTo-CurlConfigValue $Uri)`"",
+        "request = `"$(ConvertTo-CurlConfigValue $Method)`"",
+        "header = `"Authorization: Bearer $(ConvertTo-CurlConfigValue $IdToken)`"",
+        "header = `"x-api-key: $(ConvertTo-CurlConfigValue $ApiKey)`"",
+        'silent',
+        'show-error',
+        "write-out = `"\\n$marker%{http_code}`""
+    )
+    if ($null -ne $Body) {
+        $config += 'header = "Content-Type: application/json"'
+        $config += "data = `"$(ConvertTo-CurlConfigValue $Body)`""
+    }
+
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = 'curl.exe'
+    $startInfo.Arguments = '--config -'
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardInput = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $startInfo
+    $started = $false
+    $stdout = ''
+    $stderr = ''
+    $exitCode = -1
+    try {
+        $started = $process.Start()
+        if (-not $started) {
+            throw 'curl fallback process could not start'
+        }
+        $configBytes = [System.Text.Encoding]::UTF8.GetBytes($config -join "`n")
+        $inputStream = $process.StandardInput.BaseStream
+        $inputStream.Write(
+            $configBytes,
+            0,
+            $configBytes.Length
+        )
+        $inputStream.Close()
+        $stdout = $process.StandardOutput.ReadToEnd()
+        $stderr = $process.StandardError.ReadToEnd()
+        $process.WaitForExit()
+        $exitCode = $process.ExitCode
+    }
+    finally {
+        if ($started -and -not $process.HasExited) {
+            $process.Kill()
+        }
+        $process.Dispose()
+    }
+    $raw = if ([string]::IsNullOrEmpty($stdout)) { @() } else { @($stdout) }
+    if ($exitCode -ne 0) {
+        $diagnostic = $stderr.Trim()
+        if ($diagnostic.Length -gt 240) {
+            $diagnostic = $diagnostic.Substring(0, 240)
+        }
+        if ([string]::IsNullOrWhiteSpace($diagnostic)) {
+            $diagnostic = 'no curl diagnostic output'
+        }
+        throw "curl fallback request failed for $Method (exit code $exitCode): $diagnostic"
+    }
+    $response = $raw -join "`n"
+    $match = [regex]::Match(
+        $response,
+        "(?s)^(?<content>.*)$marker(?<status>\d{3})\s*$"
+    )
+    if (-not $match.Success) {
+        throw 'curl fallback response did not include an HTTP status'
+    }
+    return [pscustomobject]@{
+        StatusCode = [int]$match.Groups['status'].Value
+        Content    = $match.Groups['content'].Value.TrimEnd("`r", "`n")
+    }
+}
+
+
 function Invoke-RestJson {
     param(
         [Parameter(Mandatory)][string]$Method,
@@ -326,6 +470,37 @@ function Invoke-RestJson {
             $stream.Dispose()
         }
     }
+    $fallbackBody = $null
+    if ($request.ContainsKey('Body')) {
+        $fallbackBody = [string]$request.Body
+    }
+    if ([string]::IsNullOrWhiteSpace($content) -and
+        $statusCode -ge 400 -and $statusCode -lt 500) {
+        try {
+            $fallback = Invoke-HttpClientResponse -Method $Method -Uri $request.Uri `
+                -ApiKey $ApiKey -IdToken $IdToken -Body $fallbackBody
+        }
+        catch {
+            $httpClientError = $_
+            try {
+                $fallback = Invoke-CurlResponse -Method $Method -Uri $request.Uri `
+                    -ApiKey $ApiKey -IdToken $IdToken -Body $fallbackBody
+            }
+            catch {
+                $httpDiagnostic = [string]$httpClientError.Exception.Message
+                $curlDiagnostic = [string]$_.Exception.Message
+                foreach ($secret in @($IdToken, $ApiKey)) {
+                    if (-not [string]::IsNullOrWhiteSpace($secret)) {
+                        $httpDiagnostic = $httpDiagnostic.Replace($secret, '<redacted>')
+                        $curlDiagnostic = $curlDiagnostic.Replace($secret, '<redacted>')
+                    }
+                }
+                throw "REST error-body recovery failed (HttpClient: $httpDiagnostic; curl: $curlDiagnostic)"
+            }
+        }
+        $statusCode = $fallback.StatusCode
+        $content = $fallback.Content
+    }
 
     $json = $null
     if (-not [string]::IsNullOrWhiteSpace($content)) {
@@ -351,7 +526,9 @@ function Assert-RestEnvelope {
     )
 
     if ($Response.StatusCode -ne $StatusCode) {
-        throw "REST expected HTTP $StatusCode but received $($Response.StatusCode)"
+        $actualCode = [string](Get-OptionalProperty $Response.Body 'code')
+        $actualMessage = [string](Get-OptionalProperty $Response.Body 'message')
+        throw "REST $Code expected HTTP $StatusCode but received $($Response.StatusCode) ($actualCode): $actualMessage"
     }
     Assert-ExactProperties -Value $Response.Body `
         -Names @('status', 'code', 'message', 'data') -Description 'REST envelope'
@@ -382,10 +559,11 @@ function New-CognitoFixtureUser {
         [Parameter(Mandatory)][string]$PoolId,
         [Parameter(Mandatory)][string]$Username,
         [Parameter(Mandatory)][string]$Password,
-        [Parameter(Mandatory)][ValidateSet('USER')][string]$Group,
+        [Parameter(Mandatory)][ValidateSet('USER', 'ADMIN')][string]$Group,
         [Parameter(Mandatory)]
         [AllowEmptyCollection()]
-        [System.Collections.Generic.List[string]]$CreatedUsers
+        [System.Collections.Generic.List[string]]$CreatedUsers,
+        [switch]$Temporary
     )
 
     Invoke-AwsJson -Arguments @(
@@ -399,14 +577,18 @@ function New-CognitoFixtureUser {
     ) | Out-Null
     $CreatedUsers.Add($Username)
 
-    Invoke-AwsJsonPayload -Arguments @(
-        'cognito-idp', 'admin-set-user-password'
-    ) -Payload @{
+    $passwordPayload = @{
         UserPoolId = $PoolId
         Username   = $Username
         Password   = $Password
         Permanent  = $true
-    } | Out-Null
+    }
+    if ($Temporary) {
+        $passwordPayload.Permanent = $false
+    }
+    Invoke-AwsJsonPayload -Arguments @(
+        'cognito-idp', 'admin-set-user-password'
+    ) -Payload $passwordPayload | Out-Null
     Invoke-AwsJson -Arguments @(
         'cognito-idp', 'admin-add-user-to-group',
         '--user-pool-id', $PoolId,
@@ -445,7 +627,39 @@ function Get-CognitoIdentity {
             PASSWORD = $Password
         }
     }
-    $idToken = [string]$auth.AuthenticationResult.IdToken
+    $idToken = ''
+    if ($null -ne $auth.PSObject.Properties['AuthenticationResult']) {
+        $idToken = [string]$auth.AuthenticationResult.IdToken
+    }
+    if ([string]::IsNullOrWhiteSpace($idToken) -and
+        [string]$auth.ChallengeName -eq 'NEW_PASSWORD_REQUIRED') {
+        $challengePassword = New-TemporaryPassword
+        $challenge = Invoke-AwsJsonPayload -Arguments @(
+            'cognito-idp', 'respond-to-auth-challenge'
+        ) -Payload @{
+            ClientId      = $ClientId
+            ChallengeName = 'NEW_PASSWORD_REQUIRED'
+            Session       = [string]$auth.Session
+            ChallengeResponses = @{
+                USERNAME    = $Username
+                NEW_PASSWORD = $challengePassword
+            }
+        }
+        if ($null -ne $challenge.PSObject.Properties['AuthenticationResult']) {
+            $auth = Invoke-AwsJsonPayload -Arguments @(
+                'cognito-idp', 'admin-initiate-auth'
+            ) -Payload @{
+                UserPoolId    = $PoolId
+                ClientId      = $ClientId
+                AuthFlow      = 'ADMIN_USER_PASSWORD_AUTH'
+                AuthParameters = @{
+                    USERNAME = $Username
+                    PASSWORD = $challengePassword
+                }
+            }
+            $idToken = [string]$auth.AuthenticationResult.IdToken
+        }
+    }
     $auth = $null
     if ([string]::IsNullOrWhiteSpace($idToken)) {
         throw 'Cognito fixture ID token is unavailable'
@@ -1065,6 +1279,8 @@ $restUrl = $null
 $apiKeyId = $null
 $apiKeyValue = $null
 $catalogTable = $null
+$categoryTable = $null
+$auditTable = $null
 $stateTable = $null
 $eventsTable = $null
 $connectionsTable = $null
@@ -1078,9 +1294,15 @@ $mediaBucket = $null
 $sellerSub = $null
 $bidderSub = $null
 $bidderBSub = $null
+$adminSub = $null
+$bootstrapSub = $null
+$bootstrapToken = $null
+$createdAdminAccountUsername = $null
 $sellerToken = $null
 $bidderToken = $null
+$adminToken = $null
 $sessionId = $null
+$categoryId = $null
 $item1Id = $null
 $item2Id = $null
 $item1End = $null
@@ -1099,15 +1321,21 @@ $invalidFixtureTitle = "stage3-$runId-invalid-token"
 $sellerUsername = "stage3-$runId-seller@example.invalid"
 $bidderUsername = "stage3-$runId-bidder@example.invalid"
 $bidderBUsername = "stage3-$runId-bidder-b@example.invalid"
+$adminUsername = "stage4-$runId-admin@example.invalid"
+$temporaryAdminUsername = "stage4-$runId-temporary-admin@example.invalid"
 $item2DurationSeconds = if ($RunStage4LiveE2E) { 300 } else { 60 }
 $sellerPassword = New-TemporaryPassword
 $bidderPassword = New-TemporaryPassword
 $bidderBPassword = if ($RunStage4LiveE2E) { New-TemporaryPassword } else { $null }
+$adminPassword = if ($RunStage4AdminLiveCheckpoint) { New-TemporaryPassword } else { $null }
+$temporaryAdminPassword = if ($RunStage4AdminLiveCheckpoint) { New-TemporaryPassword } else { $null }
 
 try {
     $poolId = Get-TerraformOutput 'infra/03-identity' 'cognito_user_pool_id'
     $clientId = Get-TerraformOutput 'infra/03-identity' 'cognito_user_pool_client_id'
     $catalogTable = Get-TerraformOutput 'infra/04-data' 'auction_catalog_table_name'
+    $categoryTable = Get-TerraformOutput 'infra/04-data' 'category_catalog_table_name'
+    $auditTable = Get-TerraformOutput 'infra/04-data' 'admin_audit_events_table_name'
     $stateTable = Get-TerraformOutput 'infra/04-data' 'item_state_table_name'
     $eventsTable = Get-TerraformOutput 'infra/04-data' 'bid_events_table_name'
     $connectionsTable = Get-TerraformOutput 'infra/04-data' 'websocket_connections_table_name'
@@ -1178,6 +1406,13 @@ try {
         New-CognitoFixtureUser -PoolId $poolId -Username $bidderBUsername `
             -Password $bidderBPassword -Group 'USER' -CreatedUsers $createdUsers
     }
+    if ($RunStage4AdminLiveCheckpoint) {
+        New-CognitoFixtureUser -PoolId $poolId -Username $adminUsername `
+            -Password $adminPassword -Group 'ADMIN' -CreatedUsers $createdUsers
+        New-CognitoFixtureUser -PoolId $poolId -Username $temporaryAdminUsername `
+            -Password $temporaryAdminPassword -Group 'ADMIN' -CreatedUsers $createdUsers `
+            -Temporary
+    }
     $sellerIdentity = Get-CognitoIdentity -PoolId $poolId -ClientId $clientId `
         -Username $sellerUsername -Password $sellerPassword
     $bidderIdentity = Get-CognitoIdentity -PoolId $poolId -ClientId $clientId `
@@ -1192,63 +1427,60 @@ try {
         $bidderBSub = [string]$bidderBIdentity.Sub
         $bidderBIdentity = $null
     }
+    if ($RunStage4AdminLiveCheckpoint) {
+        $adminIdentity = Get-CognitoIdentity -PoolId $poolId -ClientId $clientId `
+            -Username $adminUsername -Password $adminPassword
+        $adminSub = [string]$adminIdentity.Sub
+        $adminToken = [string]$adminIdentity.IdToken
+        $adminIdentity = $null
+        $temporaryAdminIdentity = Get-CognitoIdentity -PoolId $poolId -ClientId $clientId `
+            -Username $temporaryAdminUsername -Password $temporaryAdminPassword
+        if ([string]::IsNullOrWhiteSpace([string]$temporaryAdminIdentity.IdToken)) {
+            throw 'Temporary Admin password completion did not return an ID token'
+        }
+        $temporaryAdminIdentity = $null
+    }
+    if (-not [string]::IsNullOrWhiteSpace($BootstrapAdminUsername)) {
+        $bootstrapPassword = [Environment]::GetEnvironmentVariable(
+            $BootstrapAdminPasswordEnvironmentVariable
+        )
+        if ([string]::IsNullOrWhiteSpace($bootstrapPassword)) {
+            $bootstrapPassword = Read-Host -Prompt 'Bootstrap Admin password'
+        }
+        if ([string]::IsNullOrWhiteSpace($bootstrapPassword)) {
+            throw "Bootstrap Admin password environment variable is empty: $BootstrapAdminPasswordEnvironmentVariable"
+        }
+        $bootstrapIdentity = Get-CognitoIdentity -PoolId $poolId -ClientId $clientId `
+            -Username $BootstrapAdminUsername -Password $bootstrapPassword
+        $bootstrapSub = [string]$bootstrapIdentity.Sub
+        $bootstrapToken = [string]$bootstrapIdentity.IdToken
+        $bootstrapIdentity = $null
+        $bootstrapPassword = $null
+    }
     $sellerIdentity = $null
     $bidderIdentity = $null
 
-    $wrongRole = Invoke-RestJson -Method 'POST' -BaseUrl $restUrl `
+    $userSessionResponse = Invoke-RestJson -Method 'POST' -BaseUrl $restUrl `
         -Path '/api/v1/auction-sessions' -ApiKey $apiKeyValue `
         -IdToken $bidderToken -Body @{
-            title       = "stage3-$runId-forbidden"
-            description = 'Role boundary probe'
+            title       = "stage3-$runId-user-session"
+            description = 'USER session creation probe'
         }
-    $wrongRoleData = Get-OptionalProperty $wrongRole.Body 'data'
-    $wrongRoleSessionId = [string](
-        Get-OptionalProperty $wrongRoleData 'session_id'
+    $userSessionData = Get-OptionalProperty $userSessionResponse.Body 'data'
+    $userSessionId = [string](
+        Get-OptionalProperty $userSessionData 'session_id'
     )
-    if (-not [string]::IsNullOrWhiteSpace($wrongRoleSessionId)) {
-        $sessionId = $wrongRoleSessionId
-        if (-not $cleanupSessionIds.Contains($wrongRoleSessionId)) {
-            $cleanupSessionIds.Add($wrongRoleSessionId)
-        }
-        throw 'Bidder denial returned a catalog session'
-    }
-    if ($wrongRole.StatusCode -ne 403) {
-        throw 'Bidder unexpectedly received seller mutation permission'
-    }
-
-    $bidderProofDeadline = [DateTimeOffset]::UtcNow.AddSeconds(10)
-    $bidderProofBackoff = 1
-    $observedBidderSessionIds = New-Object System.Collections.Generic.List[string]
-    do {
-        $currentBidderSessionIds = @(Get-ScopedCatalogSessionIds `
-            -TableName $catalogTable -SellerSub $bidderSub -RequireSessionId)
-        foreach ($currentBidderSessionId in $currentBidderSessionIds) {
-            if (-not $observedBidderSessionIds.Contains($currentBidderSessionId)) {
-                $observedBidderSessionIds.Add($currentBidderSessionId)
-            }
-        }
-        if ($currentBidderSessionIds.Count -ne 0 -or
-            [DateTimeOffset]::UtcNow -ge $bidderProofDeadline) {
-            break
-        }
-        Start-Sleep -Seconds $bidderProofBackoff
-        $bidderProofBackoff = [Math]::Min($bidderProofBackoff + 1, 3)
-    } while ([DateTimeOffset]::UtcNow -lt $bidderProofDeadline)
-
-    $finalBidderSessionIds = @(Get-ScopedCatalogSessionIds `
-        -TableName $catalogTable -SellerSub $bidderSub -RequireSessionId)
-    foreach ($finalBidderSessionId in $finalBidderSessionIds) {
-        if (-not $observedBidderSessionIds.Contains($finalBidderSessionId)) {
-            $observedBidderSessionIds.Add($finalBidderSessionId)
+    if (-not [string]::IsNullOrWhiteSpace($userSessionId)) {
+        if (-not $cleanupSessionIds.Contains($userSessionId)) {
+            $cleanupSessionIds.Add($userSessionId)
         }
     }
-    foreach ($unexpectedSessionId in $observedBidderSessionIds.ToArray()) {
-        if (-not $cleanupSessionIds.Contains($unexpectedSessionId)) {
-            $cleanupSessionIds.Add($unexpectedSessionId)
-        }
-    }
-    if ($observedBidderSessionIds.Count -ne 0) {
-        throw 'Bidder denial created a catalog session'
+    $userSessionData = Assert-RestEnvelope -Response $userSessionResponse `
+        -StatusCode 201 -Code 'SESSION_CREATED' `
+        -DataProperties @('session_id', 'status')
+    if ([string]$userSessionData.status -ne 'DRAFT' -or
+        [string]$userSessionData.session_id -ne $userSessionId) {
+        throw 'USER session creation result is inconsistent'
     }
 
     $sessionResponse = Invoke-RestJson -Method 'POST' -BaseUrl $restUrl `
@@ -1562,6 +1794,293 @@ try {
         Write-Output 'stale close: RESCHEDULED'
     }
 
+    if ($RunStage4AdminLiveCheckpoint) {
+        $dashboardResponse = Invoke-RestJson -Method 'GET' -BaseUrl $restUrl `
+            -Path '/api/v1/admin/dashboard' -ApiKey $apiKeyValue `
+            -IdToken $adminToken
+        $dashboardData = Assert-RestEnvelope -Response $dashboardResponse `
+            -StatusCode 200 -Code 'ADMIN_DASHBOARD_RETRIEVED' `
+            -DataProperties @('session_counts', 'item_counts', 'recent_sessions', 'truncated')
+        if ($null -eq $dashboardData.session_counts -or
+            $null -eq $dashboardData.item_counts) {
+            throw 'Admin dashboard counts are missing'
+        }
+
+        $adminSessionFields = @(
+            'session_id', 'title', 'description', 'status', 'review_status',
+            'item_count', 'seller_sub', 'version', 'created_at', 'updated_at'
+        )
+        $adminSessionsResponse = Invoke-RestJson -Method 'GET' -BaseUrl $restUrl `
+            -Path '/api/v1/admin/auction-sessions?reviewStatus=PENDING&pageSize=100' `
+            -ApiKey $apiKeyValue -IdToken $adminToken
+        $adminSessionsData = Assert-RestEnvelope -Response $adminSessionsResponse `
+            -StatusCode 200 -Code 'ADMIN_SESSIONS_LISTED' `
+            -DataProperties @('items', 'next_token')
+        if (-not @($adminSessionsData.items | Where-Object {
+            [string]$_.session_id -eq $userSessionId
+        })) {
+            throw 'Admin session queue does not contain the USER fixture'
+        }
+
+        $adminSessionDetail = Invoke-RestJson -Method 'GET' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/auction-sessions/$userSessionId" `
+            -ApiKey $apiKeyValue -IdToken $adminToken
+        $adminSessionDetailData = Assert-RestEnvelope -Response $adminSessionDetail `
+            -StatusCode 200 -Code 'ADMIN_SESSION_RETRIEVED' `
+            -DataProperties @('session', 'items')
+        Assert-ExactProperties -Value $adminSessionDetailData.session `
+            -Names $adminSessionFields -Description 'Admin session detail'
+
+        $approvedSession = Invoke-RestJson -Method 'POST' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/auction-sessions/$userSessionId/approve" `
+            -ApiKey $apiKeyValue -IdToken $adminToken
+        $approvedSessionData = Assert-RestEnvelope -Response $approvedSession `
+            -StatusCode 200 -Code 'SESSION_APPROVED' `
+            -DataProperties $adminSessionFields
+        if ([string]$approvedSessionData.review_status -ne 'APPROVED' -or
+            [string]$approvedSessionData.status -ne 'DRAFT') {
+            throw 'Admin session approval result is inconsistent'
+        }
+
+        $cancelledSession = Invoke-RestJson -Method 'POST' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/auction-sessions/$userSessionId/cancel" `
+            -ApiKey $apiKeyValue -IdToken $adminToken
+        $cancelledSessionData = Assert-RestEnvelope -Response $cancelledSession `
+            -StatusCode 200 -Code 'SESSION_CANCELLED' `
+            -DataProperties $adminSessionFields
+        if ([string]$cancelledSessionData.status -ne 'CANCELLED') {
+            throw 'Admin session cancellation result is inconsistent'
+        }
+        Write-Output 'stage4 admin session: passed'
+
+        $categoryName = "Stage4 $runId category"
+        $categorySlug = "stage4-$runId-category"
+        $categoryCreate = Invoke-RestJson -Method 'POST' -BaseUrl $restUrl `
+            -Path '/api/v1/admin/categories' -ApiKey $apiKeyValue `
+            -IdToken $adminToken -Body @{ name = $categoryName; slug = $categorySlug }
+        $categoryFields = @('category_id', 'name', 'slug', 'status', 'created_at', 'updated_at')
+        $categoryData = Assert-RestEnvelope -Response $categoryCreate `
+            -StatusCode 201 -Code 'CATEGORY_CREATED' `
+            -DataProperties $categoryFields
+        $categoryId = [string]$categoryData.category_id
+        if ([string]::IsNullOrWhiteSpace($categoryId)) {
+            throw 'Category fixture did not return an ID'
+        }
+
+        $categoryUpdate = Invoke-RestJson -Method 'PATCH' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/categories/$categoryId" -ApiKey $apiKeyValue `
+            -IdToken $adminToken -Body @{
+                name = "$categoryName updated"
+                slug = "${categorySlug}-updated"
+            }
+        $updatedCategory = Assert-RestEnvelope -Response $categoryUpdate `
+            -StatusCode 200 -Code 'CATEGORY_UPDATED' `
+            -DataProperties $categoryFields
+        if ([string]$updatedCategory.status -ne 'ACTIVE' -or
+            [string]$updatedCategory.slug -ne "${categorySlug}-updated") {
+            throw 'Category update result is inconsistent'
+        }
+
+        $publicCategories = Invoke-RestJson -Method 'GET' -BaseUrl $restUrl `
+            -Path '/api/v1/categories?pageSize=100' -ApiKey $apiKeyValue `
+            -IdToken $bidderToken
+        $publicCategoryData = Assert-RestEnvelope -Response $publicCategories `
+            -StatusCode 200 -Code 'CATEGORIES_LISTED' `
+            -DataProperties @('items', 'next_token')
+        if (-not @($publicCategoryData.items | Where-Object {
+            [string]$_.category_id -eq $categoryId -and [string]$_.status -eq 'ACTIVE'
+        })) {
+            throw 'Active category is missing from the public category list'
+        }
+
+        $categoryArchive = Invoke-RestJson -Method 'POST' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/categories/$categoryId/archive" -ApiKey $apiKeyValue `
+            -IdToken $adminToken -Body @{}
+        $archivedCategory = Assert-RestEnvelope -Response $categoryArchive `
+            -StatusCode 200 -Code 'CATEGORY_ARCHIVED' `
+            -DataProperties $categoryFields
+        if ([string]$archivedCategory.status -ne 'INACTIVE') {
+            throw 'Category archive did not set INACTIVE status'
+        }
+
+        $inactiveCategory = Invoke-RestJson -Method 'GET' -BaseUrl $restUrl `
+            -Path "/api/v1/categories/$categoryId" -ApiKey $apiKeyValue `
+            -IdToken $bidderToken
+        if ($inactiveCategory.StatusCode -ne 404 -or
+            [string]$inactiveCategory.Body.code -ne 'CATEGORY_NOT_FOUND') {
+            throw 'Archived category remained publicly readable'
+        }
+        $adminInactiveCategories = Invoke-RestJson -Method 'GET' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/categories?status=INACTIVE&keyword=$([uri]::EscapeDataString("${categorySlug}-updated"))&pageSize=100" `
+            -ApiKey $apiKeyValue -IdToken $adminToken
+        $adminInactiveData = Assert-RestEnvelope -Response $adminInactiveCategories `
+            -StatusCode 200 -Code 'ADMIN_CATEGORIES_LISTED' `
+            -DataProperties @('items', 'next_token')
+        if (-not @($adminInactiveData.items | Where-Object {
+            [string]$_.category_id -eq $categoryId -and [string]$_.status -eq 'INACTIVE'
+        })) {
+            throw 'Admin inactive category filter did not return the fixture'
+        }
+        Write-Output 'stage4 admin category: passed'
+
+        $adminUsers = Invoke-RestJson -Method 'GET' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/users?role=USER&keyword=$([uri]::EscapeDataString($bidderUsername))&pageSize=60" `
+            -ApiKey $apiKeyValue -IdToken $adminToken
+        $adminUsersData = Assert-RestEnvelope -Response $adminUsers `
+            -StatusCode 200 -Code 'ADMIN_USERS_LISTED' `
+            -DataProperties @('items', 'next_token')
+        if (-not @($adminUsersData.items | Where-Object {
+            [string]$_.sub -eq $bidderSub -and [string]$_.role -eq 'USER'
+        })) {
+            throw 'Admin user list does not contain the USER fixture'
+        }
+
+        $userStatusFields = @(
+            'sub', 'email', 'full_name', 'phone', 'role', 'status', 'enabled',
+            'cognito_status', 'is_primary_admin', 'created_at', 'updated_at'
+        )
+        $disabledUser = Invoke-RestJson -Method 'PATCH' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/users/$bidderSub/status" -ApiKey $apiKeyValue `
+            -IdToken $adminToken -Body @{ status = 'BANNED' }
+        $disabledUserData = Assert-RestEnvelope -Response $disabledUser `
+            -StatusCode 200 -Code 'ADMIN_USER_STATUS_UPDATED' `
+            -DataProperties $userStatusFields
+        if ([string]$disabledUserData.status -ne 'BANNED' -or
+            $disabledUserData.enabled -ne $false) {
+            throw 'Admin USER disable result is inconsistent'
+        }
+        $disabledCognitoUser = Invoke-AwsJson -Arguments @(
+            'cognito-idp', 'admin-get-user', '--user-pool-id', $poolId,
+            '--username', $bidderUsername
+        )
+        if ($disabledCognitoUser.Enabled -ne $false) {
+            throw 'Cognito fixture USER was not disabled'
+        }
+
+        $enabledUser = Invoke-RestJson -Method 'PATCH' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/users/$bidderSub/status" -ApiKey $apiKeyValue `
+            -IdToken $adminToken -Body @{ status = 'ACTIVE' }
+        $enabledUserData = Assert-RestEnvelope -Response $enabledUser `
+            -StatusCode 200 -Code 'ADMIN_USER_STATUS_UPDATED' `
+            -DataProperties $userStatusFields
+        if ([string]$enabledUserData.status -ne 'ACTIVE' -or
+            $enabledUserData.enabled -ne $true) {
+            throw 'Admin USER enable result is inconsistent'
+        }
+        $enabledCognitoUser = Invoke-AwsJson -Arguments @(
+            'cognito-idp', 'admin-get-user', '--user-pool-id', $poolId,
+            '--username', $bidderUsername
+        )
+        if ($enabledCognitoUser.Enabled -ne $true) {
+            throw 'Cognito fixture USER was not enabled'
+        }
+        Write-Output 'stage4 admin users: passed'
+
+        if (-not [string]::IsNullOrWhiteSpace($bootstrapToken)) {
+            $createdAdminEmail = "stage4-$runId-bootstrap@example.invalid"
+            $createdAdmin = Invoke-RestJson -Method 'POST' -BaseUrl $restUrl `
+                -Path '/api/v1/admin/admin-accounts' -ApiKey $apiKeyValue `
+                -IdToken $bootstrapToken -Body @{
+                    email = $createdAdminEmail
+                    full_name = "Stage4 $runId bootstrap fixture"
+                }
+            $createdAdminData = Assert-RestEnvelope -Response $createdAdmin `
+                -StatusCode 201 -Code 'ADMIN_INVITED' `
+                -DataProperties $userStatusFields
+            $createdAdminAccountUsername = [string]$createdAdminData.sub
+            if ([string]::IsNullOrWhiteSpace($createdAdminAccountUsername)) {
+                throw 'Bootstrap Admin invitation did not return an account identifier'
+            }
+            $createdUsers.Add($createdAdminAccountUsername)
+
+            $resetAdmin = Invoke-RestJson -Method 'POST' -BaseUrl $restUrl `
+                -Path "/api/v1/admin/admin-accounts/$createdAdminAccountUsername/reset-invitation" `
+                -ApiKey $apiKeyValue -IdToken $bootstrapToken -Body @{}
+            $resetAdminData = Assert-RestEnvelope -Response $resetAdmin `
+                -StatusCode 200 -Code 'ADMIN_INVITATION_RESET' `
+                -DataProperties $userStatusFields
+            if ([string]$resetAdminData.role -ne 'ADMIN') {
+                throw 'Bootstrap Admin reset returned a non-Admin account'
+            }
+
+            $disabledAdmin = Invoke-RestJson -Method 'PATCH' -BaseUrl $restUrl `
+                -Path "/api/v1/admin/admin-accounts/$createdAdminAccountUsername/status" `
+                -ApiKey $apiKeyValue -IdToken $bootstrapToken -Body @{ status = 'BANNED' }
+            $disabledAdminData = Assert-RestEnvelope -Response $disabledAdmin `
+                -StatusCode 200 -Code 'ADMIN_STATUS_UPDATED' `
+                -DataProperties $userStatusFields
+            if ([string]$disabledAdminData.status -ne 'BANNED') {
+                throw 'Bootstrap Admin disable result is inconsistent'
+            }
+
+            $enabledAdmin = Invoke-RestJson -Method 'PATCH' -BaseUrl $restUrl `
+                -Path "/api/v1/admin/admin-accounts/$createdAdminAccountUsername/status" `
+                -ApiKey $apiKeyValue -IdToken $bootstrapToken -Body @{ status = 'ACTIVE' }
+            $enabledAdminData = Assert-RestEnvelope -Response $enabledAdmin `
+                -StatusCode 200 -Code 'ADMIN_STATUS_UPDATED' `
+                -DataProperties $userStatusFields
+            if ([string]$enabledAdminData.status -ne 'ACTIVE') {
+                throw 'Bootstrap Admin enable result is inconsistent'
+            }
+        }
+
+        $adminPause = Invoke-RestJson -Method 'POST' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/items/$item2Id/pause" -ApiKey $apiKeyValue `
+            -IdToken $adminToken
+        $pauseData = Assert-RestEnvelope -Response $adminPause `
+            -StatusCode 200 -Code 'ITEM_PAUSED' `
+            -DataProperties @('status', 'item_id', 'remaining_seconds')
+        if ([string]$pauseData.status -ne 'PAUSED' -or
+            [string]$pauseData.item_id -ne $item2Id -or
+            [int]$pauseData.remaining_seconds -lt 0) {
+            throw 'Admin pause result is inconsistent'
+        }
+
+        $userDenied = Invoke-RestJson -Method 'POST' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/items/$item2Id/resume" -ApiKey $apiKeyValue `
+            -IdToken $bidderToken
+        if ($userDenied.StatusCode -ne 403) {
+            throw 'USER unexpectedly received admin moderation permission'
+        }
+
+        $adminResume = Invoke-RestJson -Method 'POST' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/items/$item2Id/resume" -ApiKey $apiKeyValue `
+            -IdToken $adminToken
+        $resumeData = Assert-RestEnvelope -Response $adminResume `
+            -StatusCode 200 -Code 'ITEM_RESUMED' `
+            -DataProperties @('status', 'item_id', 'end_time')
+        if ([string]$resumeData.status -ne 'LIVE' -or
+            [string]$resumeData.item_id -ne $item2Id -or
+            [long]$resumeData.end_time -le [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()) {
+            throw 'Admin resume result is inconsistent'
+        }
+        $adminState = Get-DynamoItem -TableName $stateTable -Key @{
+            item_id = @{ S = $item2Id }
+        }
+        if ((Get-DynamoString $adminState 'status') -ne 'LIVE') {
+            throw 'Admin moderation did not restore LIVE state'
+        }
+
+        $auditResponse = Invoke-RestJson -Method 'GET' -BaseUrl $restUrl `
+            -Path "/api/v1/admin/audit-events?actorSub=$([uri]::EscapeDataString($adminSub))&pageSize=100" `
+            -ApiKey $apiKeyValue -IdToken $adminToken
+        $auditData = Assert-RestEnvelope -Response $auditResponse `
+            -StatusCode 200 -Code 'AUDIT_EVENTS_LISTED' `
+            -DataProperties @('items', 'next_token')
+        $auditActions = @($auditData.items | ForEach-Object { [string]$_.action })
+        foreach ($requiredAction in @(
+            'SESSION_APPROVED', 'SESSION_CANCELLED', 'CATEGORY_CREATED',
+            'CATEGORY_UPDATED', 'CATEGORY_ARCHIVED', 'USER_STATUS_UPDATED',
+            'ITEM_PAUSED', 'ITEM_RESUMED'
+        )) {
+            if ($auditActions -notcontains $requiredAction) {
+                throw "Admin audit history is missing $requiredAction"
+            }
+        }
+        Write-Output 'stage4 admin audit: passed'
+        Write-Output 'stage4 admin: passed'
+    }
+
     Wait-Until -Description 'queue and DLQ health' -Timeout 30 -Condition {
         (Get-QueueCount $commandQueueUrl) -eq 0 -and
         (Get-QueueCount $commandDlqUrl) -eq 0 -and
@@ -1576,7 +2095,7 @@ finally {
     if (-not [string]::IsNullOrWhiteSpace($catalogTable)) {
         Invoke-CleanupStep -Description 'scoped catalog session discovery' `
             -Errors $cleanupErrors -Action {
-                foreach ($generatedSub in @($sellerSub, $bidderSub, $bidderBSub)) {
+                foreach ($generatedSub in @($sellerSub, $bidderSub, $bidderBSub, $adminSub)) {
                     if ([string]::IsNullOrWhiteSpace($generatedSub)) {
                         continue
                     }
@@ -1765,6 +2284,51 @@ finally {
         Invoke-CleanupStep -Description 'versioned media fixtures' `
             -Errors $cleanupErrors -Action {
                 Remove-MediaVersions -BucketName $mediaBucket -SellerSub $sellerSub
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($categoryTable) -and
+        -not [string]::IsNullOrWhiteSpace($categoryId)) {
+        Invoke-CleanupStep -Description 'category fixture' `
+            -Errors $cleanupErrors -Action {
+                Remove-DynamoKeysBatch -TableName $categoryTable -Keys @(
+                    @{ category_id = @{ S = $categoryId } }
+                )
+            }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($auditTable)) {
+        Invoke-CleanupStep -Description 'scoped Admin audit fixtures' `
+            -Errors $cleanupErrors -Action {
+                $fixtureSubs = @($sellerSub, $bidderSub, $bidderBSub, $adminSub) | Where-Object {
+                    -not [string]::IsNullOrWhiteSpace($_)
+                }
+                $fixtureResourceIds = @(
+                    $categoryId, $sessionId, $createdAdminAccountUsername
+                ) + @($cleanupSessionIds.ToArray()) + @($cleanupItemIds.ToArray()) + @(
+                    $fixtureSubs
+                ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+                $auditKeys = New-Object System.Collections.Generic.List[object]
+                foreach ($event in @(Get-DynamoPartitionItems `
+                    -TableName $auditTable -PartitionKeyName 'pk' `
+                    -PartitionValue 'AUDIT')) {
+                    if ((Get-DynamoString $event 'pk') -ne 'AUDIT') {
+                        continue
+                    }
+                    $actor = Get-DynamoString $event 'actor_sub'
+                    $resourceId = Get-DynamoString $event 'resource_id'
+                    if (($fixtureSubs -contains $actor) -or
+                        ($fixtureResourceIds -contains $resourceId)) {
+                        $auditKeys.Add(@{
+                            pk = @{ S = 'AUDIT' }
+                            sk = @{ S = Get-DynamoString $event 'sk' }
+                        })
+                    }
+                }
+                if ($auditKeys.Count -gt 0) {
+                    Remove-DynamoKeysBatch -TableName $auditTable `
+                        -Keys $auditKeys.ToArray()
+                }
             }
     }
 
@@ -1785,8 +2349,12 @@ finally {
 $sellerPassword = $null
 $bidderPassword = $null
 $bidderBPassword = $null
+$adminPassword = $null
+$temporaryAdminPassword = $null
+$bootstrapPassword = $null
 $sellerToken = $null
 $bidderToken = $null
+$adminToken = $null
 $apiKeyValue = $null
 $script:TerraformCredentials = $null
 

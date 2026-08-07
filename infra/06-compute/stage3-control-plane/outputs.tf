@@ -26,3 +26,7 @@ output "stage3_functions" {
 output "stage3_cors_allowed_origin" {
   value = var.stage3_cors_allowed_origin
 }
+
+output "stage3_cors_allowed_origins" {
+  value = local.stage3_cors_allowed_origins
+}

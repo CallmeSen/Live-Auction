@@ -14,8 +14,13 @@ Describe 'Stage 3 integration runner static safety contract' {
             'item two: LIVE'
             'stage4 browser window: prepared'
             'stale close: RESCHEDULED'
+            'stage4 admin session: passed'
+            'stage4 admin category: passed'
+            'stage4 admin users: passed'
+            'stage4 admin audit: passed'
             'queue and DLQ: no unexpected messages'
             'stage4 live browser: passed'
+            'stage4 admin: passed'
         )
     }
 
@@ -119,22 +124,32 @@ Describe 'Stage 3 integration runner static safety contract' {
             $source,
             "(?m)^\s*Write-Output\s+'([^']+)'\s*$"
         )
-        $writes.Count | Should Be 9
+        $writes.Count | Should Be 14
         @(Compare-Object `
             @($writes | ForEach-Object { $_.Groups[1].Value } | Sort-Object) `
             @($markerLiterals | Sort-Object)).Count | Should Be 0
     }
 
-    It 'creates scoped USER Cognito fixtures and retains only ID tokens' {
+    It 'creates scoped USER and ADMIN Cognito fixtures and retains only ID tokens' {
         $source | Should Match 'stage3-'
         $source | Should Match 'cognito-idp'',\s*''admin-create-user'''
         $source | Should Match 'cognito-idp'',\s*''admin-set-user-password'''
         $source | Should Match 'Permanent\s*=\s*\$true'
         $source | Should Match 'cognito-idp'',\s*''admin-add-user-to-group'''
-        $source | Should Match "ValidateSet\('USER'\)"
+        $source | Should Match "ValidateSet\('USER',\s*'ADMIN'\)"
         $source | Should Match "-Group\s+'USER'"
         $source | Should Match 'ADMIN_USER_PASSWORD_AUTH'
         $source | Should Match 'admin-delete-user'
+    }
+
+    It 'runs the opt-in live ADMIN moderation checkpoint through the serverless API' {
+        $source | Should Match '\[switch\]\$RunStage4AdminLiveCheckpoint'
+        $source | Should Match "-Group\s+'ADMIN'"
+        $source | Should Match '\$adminToken'
+        $source | Should Match '-Path\s+["'']/api/v1/admin/items/\$item2Id/pause["'']'
+        $source | Should Match '-Path\s+["'']/api/v1/admin/items/\$item2Id/resume["'']'
+        $source | Should Match '(?s)\$adminPause.*?Assert-RestEnvelope.*?ITEM_PAUSED.*?\$userDenied.*?\$userDenied\.StatusCode\s+-ne\s+403.*?\$adminResume.*?ITEM_RESUMED'
+        $source | Should Match 'stage4 admin: passed'
     }
 
     It 'keeps Cognito passwords out of native process arguments' {
@@ -142,6 +157,42 @@ Describe 'Stage 3 integration runner static safety contract' {
         $source | Should Not Match 'PASSWORD=\$Password'
         $source | Should Match '(?s)Invoke-AwsJsonPayload\s+-Arguments\s+@\(\s*''cognito-idp'',\s*''admin-set-user-password''.*?-Payload\s+@\{.*?Password\s*=\s*\$Password'
         $source | Should Match '(?s)Invoke-AwsJsonPayload\s+-Arguments\s+@\(\s*''cognito-idp'',\s*''admin-initiate-auth''.*?AuthParameters\s*=\s*@\{.*?PASSWORD\s*=\s*\$Password'
+    }
+
+    It 'recovers blank HTTP error bodies through stdin-only curl configuration' {
+        $source | Should Match '(?s)function Invoke-CurlResponse.*?--config.*?''-'''
+        $source | Should Not Match '(?s)function Invoke-CurlResponse.*?\[string\]\$Body'
+        $source | Should Match '(?s)function Invoke-RestJson.*?ContainsKey\(''Body''\).*?IsNullOrWhiteSpace\(\$content\).*?Invoke-CurlResponse'
+        $source | Should Not Match '\$curlArguments\s*='
+    }
+
+    It 'reports a sanitized curl exit code when fallback transport fails' {
+        $source | Should Match 'curl fallback request failed for \$Method \(exit code \$exitCode\)'
+        $source | Should Match '\$diagnostic\s*=\s*\$stderr\.Trim\(\)'
+        $source | Should Match '\$diagnostic\.Substring\(0, 240\)'
+    }
+
+    It 'writes curl configuration as no-BOM bytes to avoid PowerShell 5.1 stdin encoding' {
+        $source | Should Match 'ProcessStartInfo'
+        $source | Should Match '\$inputStream\s*=\s*\$process\.StandardInput\.BaseStream'
+        $source | Should Match '\$inputStream\.Write'
+        $source | Should Match '\$inputStream\.Close\(\)'
+        $source | Should Not Match '\$process\.StandardInput\.Close\(\)'
+        $source | Should Match '\[System\.Text\.Encoding\]::UTF8\.GetBytes'
+        $source | Should Not Match '\$config\s+-join.*\|\s*&\s*curl\.exe'
+    }
+
+    It 'recovers blank error bodies through in-memory HttpClient before curl' {
+        $source | Should Match '(?s)function Invoke-HttpClientResponse.*?HttpRequestMessage'
+        $source | Should Match 'TryAddWithoutValidation'
+        $source | Should Match '(?s)SendAsync\(\$request\).*?ReadAsStringAsync'
+        $source | Should Match '(?s)Invoke-HttpClientResponse.*?catch.*?Invoke-CurlResponse'
+        $source | Should Match 'REST error-body recovery failed \(HttpClient:'
+    }
+
+    It 'prompts for bootstrap password when the process environment value is empty' {
+        $source | Should Match '(?s)\$bootstrapPassword\s*=\s*\[Environment\]::GetEnvironmentVariable.*?IsNullOrWhiteSpace\(\$bootstrapPassword\).*?Read-Host\s+-Prompt\s+''Bootstrap Admin password'''
+        $source | Should Not Match '(?i)Write-(Output|Host|Verbose|Debug).*bootstrapPassword'
     }
 
     It 'allows empty tracking lists before the first fixture and cleanup error' {
@@ -181,13 +232,13 @@ Describe 'Stage 3 integration runner static safety contract' {
         $source | Should Not Match 'IndexName\s*=\s*''gsi1''|Get-SellerSessionIds'
     }
 
-    It 'uses the final strong scan as the authoritative bidder no-mutation proof' {
-        $source | Should Match '(?s)\$wrongRoleSessionId.*?\$cleanupSessionIds\.Add\(\$wrongRoleSessionId\).*?throw\s+''Bidder denial returned a catalog session''.*?\$wrongRole\.StatusCode\s+-ne\s+403'
-        $source | Should Match '(?s)\$bidderProofDeadline.*?do\s*\{.*?Get-ScopedCatalogSessionIds.*?-SellerSub\s+\$bidderSub.*?Start-Sleep\s+-Seconds\s+\$bidderProofBackoff.*?\}\s*while.*?\$finalBidderSessionIds\s*=\s*@\(Get-ScopedCatalogSessionIds.*?-SellerSub\s+\$bidderSub.*?-RequireSessionId.*?\$cleanupSessionIds\.Add\(\$unexpectedSessionId\).*?throw\s+''Bidder denial created a catalog session''.*?\$sessionResponse\s*='
+    It 'proves USER can create a session and tracks it for cleanup' {
+        $source | Should Match '(?s)\$userSessionResponse\s*=.*?-IdToken\s+\$bidderToken.*?\$userSessionId\s*=.*?\$cleanupSessionIds\.Add\(\$userSessionId\).*?Assert-RestEnvelope\s+-Response\s+\$userSessionResponse.*?-StatusCode\s+201.*?-Code\s+''SESSION_CREATED'''
+        $source | Should Match '\$userSessionData\.status\s+-ne\s+''DRAFT'''
     }
 
     It 're-discovers exact generated sessions strongly consistently before finally cleanup' {
-        $source | Should Match '(?s)finally\s*\{.*?scoped catalog session discovery.*?@\(\$sellerSub,\s*\$bidderSub,\s*\$bidderBSub\).*?Get-ScopedCatalogSessionIds.*?-SellerSub\s+\$generatedSub.*?-AllowMissingSessionId.*?Get-ScopedCatalogSessionIds.*?-FixtureTitle\s+\$invalidFixtureTitle.*?-AllowMissingSessionId.*?catalog fixture discovery'
+        $source | Should Match '(?s)finally\s*\{.*?scoped catalog session discovery.*?@\(\$sellerSub,\s*\$bidderSub,\s*\$bidderBSub,\s*\$adminSub\).*?Get-ScopedCatalogSessionIds.*?-SellerSub\s+\$generatedSub.*?-AllowMissingSessionId.*?Get-ScopedCatalogSessionIds.*?-FixtureTitle\s+\$invalidFixtureTitle.*?-AllowMissingSessionId.*?catalog fixture discovery'
     }
 
     It 'executes the exact seller REST lifecycle with structured checks' {
@@ -266,7 +317,7 @@ Describe 'Stage 3 integration runner static safety contract' {
 
     It 'captures provisional API identifiers and discovers partial item fixtures before deletion' {
         $source | Should Match '(?s)\$invalid\s*=.*?Get-OptionalProperty.*?''session_id''.*?\$cleanupSessionIds\.Add\(\$invalidSessionId\).*?throw\s+''Invalid token request returned a catalog session''.*?\$invalid\.StatusCode\s+-ne\s+401'
-        $source | Should Match '(?s)\$wrongRole\s*=.*?Get-OptionalProperty.*?''session_id''.*?\$cleanupSessionIds\.Add\(\$wrongRoleSessionId\).*?throw\s+''Bidder denial returned a catalog session''.*?\$wrongRole\.StatusCode\s+-ne\s+403'
+        $source | Should Match '(?s)\$userSessionResponse\s*=.*?Get-OptionalProperty.*?''session_id''.*?\$cleanupSessionIds\.Add\(\$userSessionId\).*?Assert-RestEnvelope'
         $source | Should Match '(?s)\$sessionResponse\s*=.*?Get-OptionalProperty.*?''session_id''.*?Assert-RestEnvelope'
         $source | Should Match '(?s)\$item1Response\s*=.*?Get-OptionalProperty.*?''item_id''.*?Assert-RestEnvelope'
         $source | Should Match '(?s)\$item2Response\s*=.*?Get-OptionalProperty.*?''item_id''.*?Assert-RestEnvelope'

@@ -243,10 +243,12 @@ function Test-OptionsTemplate([string]$Text) {
     $normalized = Normalize-HclExpression $Text
     return (
         $normalized -match 'security=\[\]' -and
-        $normalized -match 'type="mock"' -and
-        $normalized -match 'Access-Control-Allow-Origin' -and
-        $normalized -match 'Access-Control-Allow-Headers' -and
-        $normalized -match 'Access-Control-Allow-Methods'
+        $normalized -match 'type="aws_proxy"' -and
+        $normalized -match 'httpMethod="POST"' -and
+        $normalized -match (
+            'uri=lookup\(local\.stage3_function_invoke_arns,' +
+            '"query_service",null\)'
+        )
     )
 }
 
@@ -287,6 +289,12 @@ $stage3 = if (Test-Path -LiteralPath $stage3Path) {
 else {
     ''
 }
+$stage3Raw = if (Test-Path -LiteralPath $stage3Path) {
+    Get-Content -Raw -LiteralPath $stage3Path
+}
+else {
+    ''
+}
 
 $functionNames = @(
     'session_service',
@@ -310,6 +318,25 @@ $expectedRoutes = [ordered]@{
     '/api/v1/admin/items/{item_id}/approve' = 'POST="admin_command"'
     '/api/v1/admin/items/{item_id}/close' = 'POST="admin_command"'
     '/api/v1/admin/items/{item_id}/cancel' = 'POST="admin_command"'
+    '/api/v1/admin/dashboard' = 'GET="admin_command"'
+    '/api/v1/admin/auction-sessions' = 'GET="admin_command"'
+    '/api/v1/admin/auction-sessions/{session_id}' = 'GET="admin_command"'
+    '/api/v1/admin/auction-sessions/{session_id}/approve' = 'POST="admin_command"'
+    '/api/v1/admin/auction-sessions/{session_id}/reject' = 'POST="admin_command"'
+    '/api/v1/admin/auction-sessions/{session_id}/cancel' = 'POST="admin_command"'
+    '/api/v1/admin/auction-sessions/{session_id}/close' = 'POST="admin_command"'
+    '/api/v1/admin/users' = 'GET="admin_command"'
+    '/api/v1/admin/users/{user_id}' = 'GET="admin_command"'
+    '/api/v1/admin/users/{user_id}/status' = 'PATCH="admin_command"'
+    '/api/v1/admin/admin-accounts' = 'GET="admin_command",POST="admin_command"'
+    '/api/v1/admin/admin-accounts/{user_id}/status' = 'PATCH="admin_command"'
+    '/api/v1/admin/admin-accounts/{user_id}/reset-invitation' = 'POST="admin_command"'
+    '/api/v1/admin/categories' = 'GET="admin_command",POST="admin_command"'
+    '/api/v1/admin/categories/{category_id}' = 'PATCH="admin_command"'
+    '/api/v1/admin/categories/{category_id}/archive' = 'POST="admin_command"'
+    '/api/v1/admin/audit-events' = 'GET="admin_command"'
+    '/api/v1/categories' = 'GET="query_service"'
+    '/api/v1/categories/{category_id}' = 'GET="query_service"'
 }
 $expectedCachePaths = @(
     '/api/v1/auction-sessions',
@@ -501,8 +528,7 @@ Describe 'Stage 3 REST API inputs and dependencies' {
         $paths | Should Match 'if\s+var\.enable_stage3'
         $paths | Should Match `
             'lookup\(local\.stage3_function_invoke_arns,\s*function_name,\s*null\)'
-        $options | Should Match `
-            'coalesce\(local\.stage3_cors_allowed_origin,\s*""\)'
+        $stage3Raw | Should Not Match 'responseOverride\.header'
         $document | Should Match 'local\.stage3_identity_user_pool_arn'
         $gatewayCors | Should Match `
             'coalesce\(local\.stage3_cors_allowed_origin,\s*""\)'
@@ -599,7 +625,7 @@ Describe 'Stage 3 REST API inputs and dependencies' {
 }
 
 Describe 'Stage 3 exact REST route and OpenAPI contract' {
-    It 'defines exactly the fifteen approved paths and handler mappings' {
+    It 'defines exactly the approved paths and handler mappings' {
         $locals = Get-HclBlock $stage3 'locals'
         $routes = Get-HclAssignmentValue $locals 'stage3_routes'
         $actualPaths = @([regex]::Matches(
@@ -639,17 +665,26 @@ Describe 'Stage 3 exact REST route and OpenAPI contract' {
         (Test-SecureOperationTemplate $paths) | Should Be $true
     }
 
-    It 'defines an unauthenticated non-keyed mock OPTIONS operation with explicit CORS' {
+    It 'defines an unauthenticated non-keyed query-service OPTIONS proxy' {
         $locals = Get-HclBlock $stage3 'locals'
         $options = Get-HclAssignmentValue $locals 'stage3_options_operation'
 
         (Test-OptionsTemplate $options) | Should Be $true
-        $options | Should Match 'local\.stage3_cors_allowed_origin'
+        $options | Should Match 'name\s*=\s*"Origin"'
         (Get-HclAssignmentValue $locals 'stage3_cors_allowed_headers') |
             Should Be '"Content-Type,Authorization,X-Api-Key"'
         (Get-HclAssignmentValue $locals 'stage3_cors_allowed_methods') |
-            Should Be '"GET,POST,PUT,OPTIONS"'
+            Should Be '"GET,POST,PUT,PATCH,OPTIONS"'
         $options | Should Not Match 'cognito\s*=\s*\[\]|api_key\s*=\s*\[\]'
+    }
+
+    It 'passes browser origin to the Lambda CORS boundary' {
+        $options = Get-HclAssignmentValue (Get-HclBlock $stage3 'locals') `
+            'stage3_options_operation'
+
+        $options | Should Match 'name\s*=\s*"Origin"\s+in\s*=\s*"header"'
+        $options | Should Match 'query_service'
+        $options | Should Not Match 'type\s*=\s*"mock"'
     }
 
     It 'defines Cognito and the exact lowercase x-api-key OpenAPI scheme' {
@@ -752,22 +787,18 @@ x-amazon-apigateway-integration = {
 
         $options = @'
 security = []
-type = "mock"
-Access-Control-Allow-Origin = local.stage3_cors_allowed_origin
-Access-Control-Allow-Headers = "Content-Type,Authorization,X-Api-Key"
-Access-Control-Allow-Methods = "GET,POST,PUT,OPTIONS"
+type = "aws_proxy"
+httpMethod = "POST"
+uri = lookup(local.stage3_function_invoke_arns, "query_service", null)
+name = "Origin"
+in = "header"
 '@
         (Test-OptionsTemplate $options) | Should Be $true
-        foreach ($header in @(
-            'Access-Control-Allow-Origin',
-            'Access-Control-Allow-Headers',
-            'Access-Control-Allow-Methods'
-        )) {
-            (Test-OptionsTemplate $options.Replace($header, 'Removed')) |
+        foreach ($required in @('type = "aws_proxy"', 'httpMethod = "POST"', 'query_service')) {
+            (Test-OptionsTemplate $options.Replace($required, 'Removed')) |
                 Should Be $false
         }
-        (Test-OptionsTemplate `
-            $options.Replace('security = []', 'security = [{ cognito = [] }]')) |
+        (Test-OptionsTemplate $options.Replace('security = []', 'security = [{ cognito = [] }]')) |
             Should Be $false
     }
 }
@@ -883,7 +914,7 @@ Describe 'Stage 3 deployment cache and traffic controls' {
         }
     }
 
-    It 'creates an account-qualified key and daily per-method usage plan' {
+    It 'creates an account-qualified key and bounded daily usage plan' {
         $apiKey = Get-HclBlock $stage3 `
             'resource\s+"aws_api_gateway_api_key"\s+"stage3"'
         $plan = Get-HclBlock $stage3 `
@@ -897,19 +928,18 @@ Describe 'Stage 3 deployment cache and traffic controls' {
         $plan | Should Match 'quota_settings\s*\{'
         $plan | Should Match 'period\s*=\s*"DAY"'
         $plan | Should Match 'throttle_settings\s*\{'
-        $plan | Should Match 'dynamic\s+"throttle"\s*\{'
-        $plan | Should Match 'for_each\s*=\s*local\.stage3_operations'
-        $plan | Should Match 'path\s*=\s*"/\$\{trim\('
+        $plan | Should Not Match 'dynamic\s+"throttle"\s*\{'
+        $plan | Should Not Match 'for_each\s*=\s*local\.stage3_operations'
         $plan | Should Match `
             'limit\s*=\s*var\.stage3_daily_quota_limit'
         ([regex]::Matches(
             $plan,
             'burst_limit\s*=\s*var\.stage3_throttling_burst_limit'
-        )).Count | Should Be 2
+        )).Count | Should Be 1
         ([regex]::Matches(
             $plan,
             'rate_limit\s*=\s*var\.stage3_throttling_rate_limit'
-        )).Count | Should Be 2
+        )).Count | Should Be 1
         $association | Should Match 'key_type\s*=\s*"API_KEY"'
         $association | Should Match 'aws_api_gateway_api_key\.stage3\[0\]\.id'
         $association | Should Match 'aws_api_gateway_usage_plan\.stage3\[0\]\.id'
