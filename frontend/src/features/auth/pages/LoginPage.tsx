@@ -5,10 +5,8 @@ import Input from '../../../components/common/Input';
 import Button from '../../../components/common/Button';
 import useAuth from '../../../hooks/useAuth';
 
-const ROLE_HOME: Record<AuthRole, string> = {
-  ADMIN: '/auctions',
-  USER: '/auctions',
-};
+const USER_HOME = '/auctions';
+const INVALID_CREDENTIALS_MESSAGE = 'Tài khoản hoặc mật khẩu chưa hợp lệ';
 
 const COMMON_PROTECTED_PATHS = new Set(['/profile']);
 
@@ -27,7 +25,7 @@ function isRoleRoute(role: AuthRole, pathname: string): boolean {
 
 function getPostLoginPath(role: AuthRole, from?: string): string {
   if (!from || !from.startsWith('/') || from.startsWith('//')) {
-    return ROLE_HOME[role];
+    return USER_HOME;
   }
 
   const url = new URL(from, window.location.origin);
@@ -39,11 +37,8 @@ function getPostLoginPath(role: AuthRole, from?: string): string {
     return `${url.pathname}${url.search}${url.hash}`;
   }
 
-  return ROLE_HOME[role];
+  return USER_HOME;
 }
-
-const adminAppUrl =
-  import.meta.env.VITE_ADMIN_APP_URL ?? 'http://localhost:5174';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -63,11 +58,6 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (status !== 'authenticated' || !session) {
-      return;
-    }
-
-    if (session.role === 'ADMIN') {
-      window.location.replace(adminAppUrl);
       return;
     }
 
@@ -93,7 +83,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
     } catch {
-      setError('Email hoặc mật khẩu không đúng.');
+      setError(INVALID_CREDENTIALS_MESSAGE);
       setLoading(false);
     }
   };
@@ -209,15 +199,6 @@ export default function LoginPage() {
         </Link>
       </p>
 
-      <p className="mt-5 border-t border-[var(--color-border)] pt-5 text-center text-xs text-[var(--color-text-dim)]">
-        Bạn là quản trị viên?{' '}
-        <a
-          href={adminAppUrl}
-          className="text-[var(--color-primary)] transition hover:underline"
-        >
-          Mở trang quản trị
-        </a>
-      </p>
     </div>
   );
 }

@@ -132,6 +132,47 @@ describe('AuthProvider', () => {
     });
   });
 
+  it('signs out an ADMIN returned by sign-in before exposing a client session', async () => {
+    const adapter = createAdapter({
+      signIn: vi.fn().mockResolvedValue({
+        sub: 'admin-1',
+        email: 'admin@example.test',
+        role: 'ADMIN',
+      }),
+    });
+
+    renderProbe(adapter);
+    await waitFor(() => {
+      expect(screen.getByTestId('status')).toHaveTextContent('anonymous');
+    });
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Login' }));
+
+    await waitFor(() => {
+      expect(adapter.signOut).toHaveBeenCalledOnce();
+      expect(screen.getByTestId('status')).toHaveTextContent('anonymous');
+      expect(screen.getByTestId('session')).toHaveTextContent('none');
+    });
+  });
+
+  it('signs out an ADMIN restored from Cognito before exposing a client session', async () => {
+    const adapter = createAdapter({
+      restore: vi.fn().mockResolvedValue({
+        sub: 'admin-restore-1',
+        email: 'admin-restore@example.test',
+        role: 'ADMIN',
+      }),
+    });
+
+    renderProbe(adapter);
+
+    await waitFor(() => {
+      expect(adapter.signOut).toHaveBeenCalledOnce();
+      expect(screen.getByTestId('status')).toHaveTextContent('anonymous');
+      expect(screen.getByTestId('session')).toHaveTextContent('none');
+    });
+  });
+
   it('logs in, logs out asynchronously, and delegates ID-token retrieval', async () => {
     const user = userEvent.setup();
     const signOut = deferred<void>();
@@ -251,12 +292,9 @@ async function submitLogin(password = 'top-secret-password') {
 }
 
 describe('LoginPage', () => {
-  it.each([
-    ['ADMIN', '/admin'],
-    ['USER', '/auctions'],
-  ] as const)('redirects restored %s sessions to %s without submitting', async (role, destination) => {
+  it('redirects a restored USER session to the user home without submitting', async () => {
     const adapter = createAdapter({
-      restore: vi.fn().mockResolvedValue({ ...userSession, role }),
+      restore: vi.fn().mockResolvedValue(userSession),
     });
 
     render(
@@ -264,14 +302,28 @@ describe('LoginPage', () => {
         <MemoryRouter initialEntries={['/login']}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path={destination} element={<div>{destination}</div>} />
+            <Route path="/auctions" element={<div>/auctions</div>} />
           </Routes>
         </MemoryRouter>
       </AuthProvider>,
     );
 
-    expect(await screen.findByText(destination)).toBeInTheDocument();
+    expect(await screen.findByText('/auctions')).toBeInTheDocument();
     expect(adapter.signIn).not.toHaveBeenCalled();
+  });
+
+  it('keeps a restored ADMIN session anonymous without revealing an admin destination', async () => {
+    const adapter = createAdapter({
+      restore: vi.fn().mockResolvedValue({ ...userSession, role: 'ADMIN' }),
+    });
+
+    renderLogin(adapter);
+
+    await waitFor(() => {
+      expect(adapter.signOut).toHaveBeenCalledOnce();
+    });
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.queryByText('/admin')).not.toBeInTheDocument();
   });
 
   it('returns a restored bidder to an allowed protected from location', async () => {
@@ -333,7 +385,7 @@ describe('LoginPage', () => {
     await screen.findByTestId('destination');
   });
 
-  it('renders a sanitized error without exposing rejected credentials', async () => {
+  it('renders the generic invalid-credential error without exposing rejected credentials', async () => {
     const adapter = createAdapter({
       signIn: vi.fn().mockRejectedValue(
         new Error('Cognito rejected top-secret-password for an internal reason'),
@@ -344,33 +396,27 @@ describe('LoginPage', () => {
     await submitLogin();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      /unable to sign in/i,
+      'Tài khoản hoặc mật khẩu chưa hợp lệ',
     );
     expect(document.body).not.toHaveTextContent('top-secret-password');
     expect(document.body).not.toHaveTextContent('internal reason');
   });
 
-  it.each([
-    ['ADMIN', '/admin'],
-    ['USER', '/auctions'],
-  ] as const)('redirects %s to %s', async (role, destination) => {
+  it('keeps valid ADMIN credentials on login with the same generic error as a bad password', async () => {
     const adapter = createAdapter({
-      signIn: vi.fn().mockResolvedValue({ ...userSession, role }),
+      signIn: vi.fn().mockResolvedValue({ ...userSession, role: 'ADMIN' }),
     });
-    render(
-      <AuthProvider adapter={adapter}>
-        <MemoryRouter initialEntries={['/login']}>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path={destination} element={<div>{destination}</div>} />
-          </Routes>
-        </MemoryRouter>
-      </AuthProvider>,
-    );
+    renderLogin(adapter);
 
     await submitLogin('safe-password');
 
-    expect(await screen.findByText(destination)).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Tài khoản hoặc mật khẩu chưa hợp lệ',
+    );
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Mật khẩu$/i)).toHaveValue('');
+    expect(adapter.signOut).toHaveBeenCalledOnce();
+    expect(screen.queryByText('/admin')).not.toBeInTheDocument();
   });
 
   it('returns a user to an allowed protected route but rejects an admin route', async () => {
@@ -390,20 +436,6 @@ describe('LoginPage', () => {
     expect(await screen.findByText('bid history')).toBeInTheDocument();
 
     validView.unmount();
-    const invalidAdapter = createAdapter();
-    render(
-      <AuthProvider adapter={invalidAdapter}>
-        <MemoryRouter initialEntries={[{ pathname: '/login', state: { from: '/admin' } }]}>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/auctions" element={<div>user home</div>} />
-          </Routes>
-        </MemoryRouter>
-      </AuthProvider>,
-    );
-
-    await submitLogin('safe-password');
-    expect(await screen.findByText('user home')).toBeInTheDocument();
   });
 
   it('links registration and password reset flows', async () => {
@@ -411,7 +443,8 @@ describe('LoginPage', () => {
 
     await screen.findByLabelText('Email');
 
-    expect(screen.getByRole('link', { name: /create a new account/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /forgot password/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /đăng ký ngay/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /quên mật khẩu/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /admin|quản trị/i })).not.toBeInTheDocument();
   });
 });

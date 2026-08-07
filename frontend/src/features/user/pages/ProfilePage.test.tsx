@@ -94,6 +94,7 @@ describe('ProfilePage logout', () => {
   it('awaits Cognito logout before navigating from the direct logout button', async () => {
     const signOut = deferred<void>();
     authState.logout.mockImplementation(() => signOut.promise);
+    vi.stubGlobal('confirm', vi.fn(() => true));
     const user = userEvent.setup();
     renderProfile();
 
@@ -122,7 +123,6 @@ describe('ProfilePage logout', () => {
     await user.clear(fullName);
     await user.type(fullName, 'Changed Seller');
     await user.click(screen.getByRole('button', { name: /ng xuất/i }));
-    await user.click(await screen.findByRole('button', { name: /giữ nguyên/i }));
 
     expect(authState.logout).toHaveBeenCalledOnce();
     expect(screen.queryByText('auction home')).not.toBeInTheDocument();
@@ -144,7 +144,7 @@ describe('ProfilePage logout', () => {
     await user.click(logoutButton);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      /unable to sign out/i,
+      /Không thể đăng xuất/i,
     );
     expect(document.body).not.toHaveTextContent('sensitive-profile-marker');
     expect(screen.queryByText('auction home')).not.toBeInTheDocument();

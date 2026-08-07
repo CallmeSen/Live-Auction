@@ -44,6 +44,26 @@ describe('Cognito account service', () => {
     });
   });
 
+  it('normalizes a Vietnamese local phone number for Cognito', async () => {
+    const dependencies = createDependencies();
+    const service = createCognitoAccountService(dependencies);
+
+    await service.signUp({
+      email: 'member@example.test',
+      password: 'Strong-password-123!',
+      fullName: 'Member Example',
+      phone: '090 123 4567',
+    });
+
+    expect(dependencies.signUp).toHaveBeenCalledWith(expect.objectContaining({
+      options: {
+        userAttributes: expect.objectContaining({
+          phone_number: '+84901234567',
+        }),
+      },
+    }));
+  });
+
   it('confirms a sign-up code for the normalized username', async () => {
     const dependencies = createDependencies();
     const service = createCognitoAccountService(dependencies);

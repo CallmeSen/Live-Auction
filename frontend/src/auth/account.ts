@@ -39,6 +39,13 @@ function normalizeUsername(username: string): string {
   return username.trim().toLowerCase();
 }
 
+function normalizePhoneNumber(phone: string): string {
+  const compact = phone.trim().replace(/[()\s-]/g, '');
+  if (/^0\d+$/.test(compact)) return `+84${compact.slice(1)}`;
+  if (/^84\d+$/.test(compact)) return `+${compact}`;
+  return compact;
+}
+
 function operationError(message: string): Error {
   return new Error(message);
 }
@@ -57,7 +64,7 @@ export function createCognitoAccountService(
             userAttributes: {
               email: username,
               name: input.fullName.trim(),
-              phone_number: input.phone.trim(),
+              phone_number: normalizePhoneNumber(input.phone),
             },
           },
         });

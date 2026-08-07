@@ -205,10 +205,6 @@ describe('App route role policy', () => {
     ['USER', '/my-auctions', 'my-auctions'],
     ['USER', '/auction-sessions/session-1/items/create', 'item-editor'],
     ['USER', '/auction-items/item-1/edit', 'item-editor'],
-    ['ADMIN', '/admin', 'admin'],
-    ['ADMIN', '/admin/users', 'admin-users'],
-    ['ADMIN', '/admin/auctions', 'admin-auctions'],
-    ['ADMIN', '/admin/categories', 'admin-categories'],
   ] as const)('allows %s to open %s', (role, route, marker) => {
     setAuth(role);
 
@@ -235,7 +231,7 @@ describe('App route role policy', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('forbidden')).toBeInTheDocument();
+    expect(screen.getByText(role === 'USER' ? 'auctions' : 'forbidden')).toBeInTheDocument();
   });
 });
 
@@ -255,8 +251,8 @@ describe('Navbar auth behavior', () => {
     );
 
     expect(screen.getByText('user@example.test')).toBeInTheDocument();
-    expect(screen.getByText('USER')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /register|ng k/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Thành viên')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /đăng ký/i })).not.toBeInTheDocument();
   });
 
   it('awaits logout before navigating and disables repeated logout', async () => {
@@ -308,14 +304,14 @@ describe('Navbar auth behavior', () => {
     await user.click(logoutButton);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      /unable to sign out/i,
+      /Không thể đăng xuất/i,
     );
     expect(document.body).not.toHaveTextContent('sensitive-marker');
     expect(screen.queryByText('auction home')).not.toBeInTheDocument();
     expect(logoutButton).toBeEnabled();
   });
 
-  it('does not offer registration to anonymous users', () => {
+  it('offers registration to anonymous users', () => {
     setAuth();
 
     render(
@@ -324,6 +320,6 @@ describe('Navbar auth behavior', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole('link', { name: /register|ng k/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /đăng ký/i })).toBeInTheDocument();
   });
 });

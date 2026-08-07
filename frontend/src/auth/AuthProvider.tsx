@@ -42,15 +42,51 @@ export function AuthProvider({
     setStatus(nextSession ? 'authenticated' : 'anonymous');
   }, []);
 
+  const rejectNonUserSession = useCallback(
+    async (operation: number, nextSession: AuthSession): Promise<boolean> => {
+      if (nextSession.role === 'USER') {
+        return false;
+      }
+
+      try {
+        await adapter.signOut();
+      } catch {
+        // Keep the user-facing login result generic.
+      }
+
+      if (mountedRef.current && operationRef.current === operation) {
+        applySession(null);
+      }
+
+      return true;
+    },
+    [adapter, applySession],
+  );
+
   useEffect(() => {
     mountedRef.current = true;
     const operation = ++operationRef.current;
 
     void adapter.restore().then(
       (restoredSession) => {
-        if (mountedRef.current && operationRef.current === operation) {
-          applySession(restoredSession);
+        if (!mountedRef.current || operationRef.current !== operation) {
+          return;
         }
+
+        if (restoredSession === null) {
+          applySession(null);
+          return;
+        }
+
+        void rejectNonUserSession(operation, restoredSession).then((rejected) => {
+          if (
+            !rejected
+            && mountedRef.current
+            && operationRef.current === operation
+          ) {
+            applySession(restoredSession);
+          }
+        });
       },
       () => {
         if (mountedRef.current && operationRef.current === operation) {
@@ -63,7 +99,7 @@ export function AuthProvider({
       mountedRef.current = false;
       operationRef.current += 1;
     };
-  }, [adapter, applySession]);
+  }, [adapter, applySession, rejectNonUserSession]);
 
   const login = useCallback(async (username: string, password: string) => {
     const operation = ++operationRef.current;
@@ -80,10 +116,14 @@ export function AuthProvider({
       throw error;
     }
 
+    if (await rejectNonUserSession(operation, authenticatedSession)) {
+      throw new Error('Unable to sign in');
+    }
+
     if (mountedRef.current && operationRef.current === operation) {
       applySession(authenticatedSession);
     }
-  }, [adapter, applySession]);
+  }, [adapter, applySession, rejectNonUserSession]);
 
   const logout = useCallback(async () => {
     const operation = ++operationRef.current;
