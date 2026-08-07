@@ -53,6 +53,14 @@ locals {
     try(data.terraform_remote_state.stage3_compute[0].outputs.stage3_cors_allowed_origin, null) :
     null
   )
+  stage3_cors_allowed_origins = (
+    var.enable_stage3 ?
+    try(
+      data.terraform_remote_state.stage3_compute[0].outputs.stage3_cors_allowed_origins,
+      compact([local.stage3_cors_allowed_origin]),
+    ) :
+    []
+  )
   stage3_identity_user_pool_arn = (
     var.enable_stage3 ?
     try(data.terraform_remote_state.identity[0].outputs.cognito_user_pool_arn, null) :
@@ -77,32 +85,51 @@ locals {
         )
       ]) &&
       local.stage3_cors_allowed_origin != null &&
+      length(local.stage3_cors_allowed_origins) > 0 &&
       local.stage3_identity_user_pool_arn != null
     )
   )
   stage3_dependency_error = "Stage 3 requires compute outputs for exactly session_service, item_service, query_service, admin_command with non-null name and invoke ARN values, a non-null CORS origin, and a non-null Cognito user pool ARN."
 
   stage3_cors_allowed_headers = "Content-Type,Authorization,X-Api-Key"
-  stage3_cors_allowed_methods = "GET,POST,PUT,OPTIONS"
+  stage3_cors_allowed_methods = "GET,POST,PUT,PATCH,OPTIONS"
 
   stage3_routes = {
-  "/api/v1/auction-sessions"                       = { GET = "query_service", POST = "session_service" }
-  "/api/v1/auction-sessions/mine"                  = { GET = "query_service" }
-  "/api/v1/auction-sessions/{session_id}"          = { GET = "query_service" }
-  "/api/v1/auction-sessions/{session_id}/rules"    = { PUT = "session_service" }
-  "/api/v1/auction-sessions/{session_id}/items"    = { POST = "item_service" }
-  "/api/v1/auction-sessions/{session_id}/schedule" = { POST = "admin_command" }
-  "/api/v1/auction-items"                          = { GET = "query_service" }
-  "/api/v1/auction-items/{item_id}"                = { GET = "query_service" }
-  "/api/v1/auction-items/{item_id}/images/presign" = { POST = "item_service" }
-  "/api/v1/bids/my"                                = { GET = "query_service" }
-  "/api/v1/admin/items/{item_id}/pause"            = { POST = "admin_command" }
-  "/api/v1/admin/items/{item_id}/resume"           = { POST = "admin_command" }
-  "/api/v1/admin/items/{item_id}/approve"          = { POST = "admin_command" }
-  "/api/v1/admin/items/{item_id}/close"            = { POST = "admin_command" }
-  "/api/v1/admin/items/{item_id}/cancel"           = { POST = "admin_command" }
-  "/api/v1/users/me"                               = { GET = "query_service" }
-}
+    "/api/v1/auction-sessions"                                = { GET = "query_service", POST = "session_service" }
+    "/api/v1/auction-sessions/mine"                           = { GET = "query_service" }
+    "/api/v1/auction-sessions/{session_id}"                   = { GET = "query_service" }
+    "/api/v1/auction-sessions/{session_id}/rules"             = { PUT = "session_service" }
+    "/api/v1/auction-sessions/{session_id}/items"             = { POST = "item_service" }
+    "/api/v1/auction-sessions/{session_id}/schedule"          = { POST = "admin_command" }
+    "/api/v1/auction-items"                                   = { GET = "query_service" }
+    "/api/v1/auction-items/{item_id}"                         = { GET = "query_service" }
+    "/api/v1/auction-items/{item_id}/images/presign"          = { POST = "item_service" }
+    "/api/v1/bids/my"                                         = { GET = "query_service" }
+    "/api/v1/admin/items/{item_id}/pause"                     = { POST = "admin_command" }
+    "/api/v1/admin/items/{item_id}/resume"                    = { POST = "admin_command" }
+    "/api/v1/admin/items/{item_id}/approve"                   = { POST = "admin_command" }
+    "/api/v1/admin/items/{item_id}/close"                     = { POST = "admin_command" }
+    "/api/v1/admin/items/{item_id}/cancel"                    = { POST = "admin_command" }
+    "/api/v1/admin/dashboard"                                 = { GET = "admin_command" }
+    "/api/v1/admin/auction-sessions"                          = { GET = "admin_command" }
+    "/api/v1/admin/auction-sessions/{session_id}"             = { GET = "admin_command" }
+    "/api/v1/admin/auction-sessions/{session_id}/approve"     = { POST = "admin_command" }
+    "/api/v1/admin/auction-sessions/{session_id}/reject"      = { POST = "admin_command" }
+    "/api/v1/admin/auction-sessions/{session_id}/cancel"      = { POST = "admin_command" }
+    "/api/v1/admin/auction-sessions/{session_id}/close"       = { POST = "admin_command" }
+    "/api/v1/admin/users"                                     = { GET = "admin_command" }
+    "/api/v1/admin/users/{user_id}"                           = { GET = "admin_command" }
+    "/api/v1/admin/users/{user_id}/status"                    = { PATCH = "admin_command" }
+    "/api/v1/admin/admin-accounts"                            = { GET = "admin_command", POST = "admin_command" }
+    "/api/v1/admin/admin-accounts/{user_id}/status"           = { PATCH = "admin_command" }
+    "/api/v1/admin/admin-accounts/{user_id}/reset-invitation" = { POST = "admin_command" }
+    "/api/v1/admin/categories"                                = { GET = "admin_command", POST = "admin_command" }
+    "/api/v1/admin/categories/{category_id}"                  = { PATCH = "admin_command" }
+    "/api/v1/admin/categories/{category_id}/archive"          = { POST = "admin_command" }
+    "/api/v1/admin/audit-events"                              = { GET = "admin_command" }
+    "/api/v1/categories"                                      = { GET = "query_service" }
+    "/api/v1/categories/{category_id}"                        = { GET = "query_service" }
+  }
 
   stage3_operations = flatten([
     for path, methods in local.stage3_routes : [
@@ -136,17 +163,29 @@ locals {
   }
 
   stage3_path_parameter_names = {
-    "/api/v1/auction-sessions/{session_id}"          = ["session_id"]
-    "/api/v1/auction-sessions/{session_id}/rules"    = ["session_id"]
-    "/api/v1/auction-sessions/{session_id}/items"    = ["session_id"]
-    "/api/v1/auction-sessions/{session_id}/schedule" = ["session_id"]
-    "/api/v1/auction-items/{item_id}"                = ["item_id"]
-    "/api/v1/auction-items/{item_id}/images/presign" = ["item_id"]
-    "/api/v1/admin/items/{item_id}/pause"            = ["item_id"]
-    "/api/v1/admin/items/{item_id}/resume"           = ["item_id"]
-    "/api/v1/admin/items/{item_id}/approve"          = ["item_id"]
-    "/api/v1/admin/items/{item_id}/close"            = ["item_id"]
-    "/api/v1/admin/items/{item_id}/cancel"           = ["item_id"]
+    "/api/v1/auction-sessions/{session_id}"                   = ["session_id"]
+    "/api/v1/auction-sessions/{session_id}/rules"             = ["session_id"]
+    "/api/v1/auction-sessions/{session_id}/items"             = ["session_id"]
+    "/api/v1/auction-sessions/{session_id}/schedule"          = ["session_id"]
+    "/api/v1/auction-items/{item_id}"                         = ["item_id"]
+    "/api/v1/auction-items/{item_id}/images/presign"          = ["item_id"]
+    "/api/v1/admin/items/{item_id}/pause"                     = ["item_id"]
+    "/api/v1/admin/items/{item_id}/resume"                    = ["item_id"]
+    "/api/v1/admin/items/{item_id}/approve"                   = ["item_id"]
+    "/api/v1/admin/items/{item_id}/close"                     = ["item_id"]
+    "/api/v1/admin/items/{item_id}/cancel"                    = ["item_id"]
+    "/api/v1/admin/auction-sessions/{session_id}"             = ["session_id"]
+    "/api/v1/admin/auction-sessions/{session_id}/approve"     = ["session_id"]
+    "/api/v1/admin/auction-sessions/{session_id}/reject"      = ["session_id"]
+    "/api/v1/admin/auction-sessions/{session_id}/cancel"      = ["session_id"]
+    "/api/v1/admin/auction-sessions/{session_id}/close"       = ["session_id"]
+    "/api/v1/admin/users/{user_id}"                           = ["user_id"]
+    "/api/v1/admin/users/{user_id}/status"                    = ["user_id"]
+    "/api/v1/admin/admin-accounts/{user_id}/status"           = ["user_id"]
+    "/api/v1/admin/admin-accounts/{user_id}/reset-invitation" = ["user_id"]
+    "/api/v1/admin/categories/{category_id}"                  = ["category_id"]
+    "/api/v1/admin/categories/{category_id}/archive"          = ["category_id"]
+    "/api/v1/categories/{category_id}"                        = ["category_id"]
   }
 
   stage3_query_parameter_names = {
@@ -158,36 +197,30 @@ locals {
       "sessionId",
       "categoryId",
     ]
+    "/api/v1/admin/users"            = ["keyword", "role", "status", "pageSize", "paginationToken"]
+    "/api/v1/admin/admin-accounts"   = ["keyword", "status", "pageSize", "paginationToken"]
+    "/api/v1/admin/categories"       = ["keyword", "status", "pageSize", "paginationToken"]
+    "/api/v1/admin/audit-events"     = ["actorSub", "action", "resourceType", "outcome", "from", "to", "pageSize", "paginationToken"]
+    "/api/v1/admin/auction-sessions" = ["status", "reviewStatus", "pageSize", "paginationToken"]
+    "/api/v1/categories"             = ["pageSize", "paginationToken"]
   }
 
   stage3_options_operation = (var.enable_stage3 ? {
-    responses = {
-      "200" = {
-        description = "CORS response"
-        headers = {
-          "Access-Control-Allow-Origin"  = { schema = { type = "string" } }
-          "Access-Control-Allow-Headers" = { schema = { type = "string" } }
-          "Access-Control-Allow-Methods" = { schema = { type = "string" } }
-        }
-      }
-    }
+    parameters = [{
+      name     = "Origin"
+      in       = "header"
+      required = false
+      schema   = { type = "string" }
+    }]
     security = []
+    responses = {
+      default = { description = "Lambda proxy response" }
+    }
     "x-amazon-apigateway-integration" = {
-      type                = "mock"
+      type                = "aws_proxy"
+      httpMethod          = "POST"
+      uri                 = lookup(local.stage3_function_invoke_arns, "query_service", null)
       passthroughBehavior = "WHEN_NO_MATCH"
-      requestTemplates = {
-        "application/json" = jsonencode({ statusCode = 200 })
-      }
-      responses = {
-        default = {
-          statusCode = "200"
-          responseParameters = {
-            "method.response.header.Access-Control-Allow-Origin"  = "'${coalesce(local.stage3_cors_allowed_origin, "")}'"
-            "method.response.header.Access-Control-Allow-Headers" = "'${local.stage3_cors_allowed_headers}'"
-            "method.response.header.Access-Control-Allow-Methods" = "'${local.stage3_cors_allowed_methods}'"
-          }
-        }
-      }
     }
   } : null)
 
@@ -468,15 +501,6 @@ resource "aws_api_gateway_usage_plan" "stage3" {
   api_stages {
     api_id = aws_api_gateway_rest_api.stage3[0].id
     stage  = aws_api_gateway_stage.stage3[0].stage_name
-
-    dynamic "throttle" {
-      for_each = local.stage3_operations
-      content {
-        path        = "/${trim(throttle.value.path, "/")}/${upper(throttle.value.method)}"
-        burst_limit = var.stage3_throttling_burst_limit
-        rate_limit  = var.stage3_throttling_rate_limit
-      }
-    }
   }
 
   quota_settings {
