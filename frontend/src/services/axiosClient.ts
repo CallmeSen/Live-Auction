@@ -1,10 +1,8 @@
 import axios from 'axios';
+import { runtimeConfig } from '../config/runtime';
 
 const axiosClient = axios.create({
-  baseURL:
-    import.meta.env.VITE_REST_API_URL
-      ? `${import.meta.env.VITE_REST_API_URL}/api/v1`
-      : 'http://localhost:8000/api/v1',
+  baseURL: `${runtimeConfig.restApiUrl}/api/v1`,
   headers: {
     Accept: 'application/json',
   },
@@ -32,7 +30,7 @@ axiosClient.interceptors.request.use((config) => {
     localStorage.getItem('accessToken') ??
     getCognitoToken();
 
-  const apiKey = import.meta.env.VITE_REST_API_KEY;
+  const apiKey = runtimeConfig.restApiKey;
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
