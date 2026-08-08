@@ -78,6 +78,37 @@ describe('admin catalog mapping', () => {
     });
   });
 
+  it('normalizes DynamoDB numeric strings returned by the live Admin API', async () => {
+    const session = {
+      session_id: 'session-live',
+      title: 'Live payload',
+      description: 'description',
+      status: 'DRAFT',
+      review_status: 'PENDING',
+      item_count: '0',
+      created_at: '1786099954',
+      updated_at: '1786099954',
+    };
+    mockAdminApi.listAdminSessions.mockResolvedValueOnce({
+      items: [session],
+      next_token: null,
+    });
+    mockAdminApi.getDashboard.mockResolvedValueOnce({
+      session_counts: { DRAFT: 10 },
+      item_counts: { WAITING: 6 },
+      recent_sessions: [session],
+      truncated: false,
+    });
+
+    const api = createCatalogApi();
+    await expect(api.listAdminSessions()).resolves.toMatchObject({
+      items: [{ itemCount: 0, createdAt: 1786099954, updatedAt: 1786099954 }],
+    });
+    await expect(api.getDashboard()).resolves.toMatchObject({
+      recentSessions: [{ itemCount: 0, createdAt: 1786099954, updatedAt: 1786099954 }],
+    });
+  });
+
   it('maps item details and delegates only approved item commands', async () => {
     mockAdminApi.getItem.mockResolvedValueOnce({
       item_id: 'item-1',

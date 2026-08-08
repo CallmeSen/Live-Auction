@@ -64,8 +64,14 @@ function text(value: unknown): string {
 }
 
 function integer(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isInteger(value)) throw invalidResponse();
-  return value;
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value)) throw invalidResponse();
+    return value;
+  }
+  if (typeof value !== 'string' || !/^-?\d+$/.test(value)) throw invalidResponse();
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) throw invalidResponse();
+  return parsed;
 }
 
 function optionalText(value: unknown): string | undefined {
