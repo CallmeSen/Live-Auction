@@ -303,6 +303,7 @@ $functionNames = @(
     'admin_command'
 )
 $expectedRoutes = [ordered]@{
+    '/api/v1/users/me' = 'GET="query_service"'
     '/api/v1/auction-sessions' = 'GET="query_service",POST="session_service"'
     '/api/v1/auction-sessions/mine' = 'GET="query_service"'
     '/api/v1/auction-sessions/{session_id}' = 'GET="query_service"'

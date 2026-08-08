@@ -890,6 +890,19 @@ locals {
             (& $accepts $invalid) | Should Be $false
         }
     }
+
+    It 'includes the deployed Admin CloudFront origin in the default CORS allowlist' {
+        $input = Get-HclBlock $variables `
+            'variable\s+"stage3_cors_allowed_admin_origin"'
+
+        $input | Should Match 'type\s*=\s*string'
+        $input | Should Match `
+            'default\s*=\s*"https://d109et9edc4f35\.cloudfront\.net"'
+        $input | Should Match `
+            'var\.stage3_cors_allowed_admin_origin\s*==\s*""\s*\|\|'
+        $input | Should Match `
+            '!strcontains\(var\.stage3_cors_allowed_admin_origin,\s*"\*"\)'
+    }
 }
 
 Describe 'Stage 3 compute names and artifacts' {

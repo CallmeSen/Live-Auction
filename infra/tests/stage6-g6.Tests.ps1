@@ -109,17 +109,17 @@ Describe 'Stage 6 security and backup contract' {
         $security | Should Match 'aws_s3_bucket_versioning'
     }
 
-    It 'connects AWS Config compliance evidence to Security Hub CIS' {
+    It 'connects AWS Config evidence to IAM Access Analyzer policy validation' {
         foreach ($pattern in @(
             'aws_config_configuration_recorder',
             'aws_config_delivery_channel',
             'aws_config_configuration_recorder_status',
-            'aws_securityhub_account',
-            'aws_securityhub_standards_subscription',
-            'cis-aws-foundations-benchmark'
+            'aws_accessanalyzer_analyzer',
+            'type\s*=\s*"ACCOUNT"'
         )) {
             $security | Should Match $pattern
         }
+        $security | Should Not Match '(?i)securityhub|cis-aws-foundations-benchmark'
         $security | Should Not Match '(?i)aws_vpc|aws_subnet|aws_ecs|aws_rds_cluster'
     }
 

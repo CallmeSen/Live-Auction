@@ -81,7 +81,8 @@ Describe 'Stage 3 data rollout inputs' {
 
         $origins | Should Match 'type\s*=\s*list\(string\)'
         $origins | Should Match `
-            'default\s*=\s*\[\s*"http://localhost:5173"\s*\]'
+            '(?s)default\s*=\s*\[\s*"https://d1bt4phb59xk5x\.cloudfront\.net",\s*"https://d109et9edc4f35\.cloudfront\.net",?\s*\]'
+        $origins | Should Not Match 'http://localhost'
         $origins | Should Match `
             'length\(var\.media_allowed_origins\)\s*>\s*0'
         $origins | Should Match `
