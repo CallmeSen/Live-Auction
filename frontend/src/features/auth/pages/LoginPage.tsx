@@ -190,15 +190,6 @@ export default function LoginPage() {
         </Link>
       </p>
 
-      <p className="mt-3 text-center text-sm">
-        <Link
-          to="/auctions"
-          className="text-[var(--color-text-muted)] transition hover:text-[var(--color-primary)]"
-        >
-          Tiếp tục khám phá không cần đăng nhập
-        </Link>
-      </p>
-
     </div>
   );
 }

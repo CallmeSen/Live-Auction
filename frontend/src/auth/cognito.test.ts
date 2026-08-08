@@ -40,6 +40,7 @@ const validEnvironment = {
   VITE_REST_API_URL: 'https://rest.example.test/prod',
   VITE_REST_API_KEY: 'quota-key',
   VITE_WS_URL: 'wss://ws.example.test/prod',
+  VITE_MEDIA_BASE_URL: 'https://media.example.test',
 };
 
 for (const [name, value] of Object.entries(validEnvironment)) {

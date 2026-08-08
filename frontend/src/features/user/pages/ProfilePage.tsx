@@ -6,15 +6,22 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import useAuth from '../../../hooks/useAuth';
 import { getApiErrorMessage } from '../../../services/apiError';
 import { userService } from '../../../services/userService';
+import type { CatalogApi } from '../../../services/serverless/catalogApi';
+import { useCatalogApi } from '../../../services/serverless/useCatalogApi';
 
 type ProfileForm = {
   fullName: string;
   phone: string;
 };
 
-export default function ProfilePage() {
+type ProfilePageProps = {
+  catalogApi?: CatalogApi;
+};
+
+export default function ProfilePage({ catalogApi }: ProfilePageProps) {
   const navigate = useNavigate();
   const { user, logout, updateProfile: updateAuthProfile } = useAuth();
+  const api = useCatalogApi(catalogApi);
   const { theme, toggleTheme } = useTheme();
 
   const initialForm = useMemo<ProfileForm>(() => ({
@@ -24,7 +31,7 @@ export default function ProfilePage() {
 
   const [form, setForm] = useState<ProfileForm>(initialForm);
   const [savedForm, setSavedForm] = useState<ProfileForm>(initialForm);
-  const [createdAt, setCreatedAt] = useState('');
+  const [createdAt, setCreatedAt] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,7 +56,7 @@ export default function ProfilePage() {
   useEffect(() => {
     let active = true;
 
-    void userService.getProfile()
+    void api.getProfile()
       .then((profile) => {
         if (!active) return;
 
@@ -75,7 +82,7 @@ export default function ProfilePage() {
     return () => {
       active = false;
     };
-  }, [updateAuthProfile]);
+  }, [api, updateAuthProfile]);
 
   useEffect(() => {
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -155,11 +162,11 @@ export default function ProfilePage() {
     }
   };
 
-  const joined = createdAt
+  const joined = createdAt !== null
     ? new Intl.DateTimeFormat('vi-VN', {
         month: '2-digit',
         year: 'numeric',
-      }).format(new Date(createdAt))
+      }).format(new Date(createdAt * 1_000))
     : '--/----';
 
   return (

@@ -32,11 +32,11 @@ export default function AppRoutes() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
 
-      <Route element={<MainLayout />}>
-        <Route path="/auctions" element={<AuctionListPage />} />
-        <Route path="/auction-sessions/:id" element={<AuctionSessionDetailPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<MainLayout />}>
+          <Route path="/auctions" element={<AuctionListPage />} />
+          <Route path="/auction-sessions/:id" element={<AuctionSessionDetailPage />} />
 
-        <Route element={<ProtectedRoute />}>
           <Route path="/forbidden" element={<AccessDeniedPage />} />
 
           <Route element={<RoleRoute allowedRoles={['USER']} />}>

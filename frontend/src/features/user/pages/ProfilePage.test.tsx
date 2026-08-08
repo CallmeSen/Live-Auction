@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { CatalogApi } from '../../../services/serverless/catalogApi';
 
 const authState = vi.hoisted(() => ({
   logout: vi.fn(),
@@ -11,6 +12,10 @@ const authState = vi.hoisted(() => ({
 const userServiceMocks = vi.hoisted(() => ({
   getProfile: vi.fn(),
   updateProfile: vi.fn(),
+}));
+
+const catalogApiMocks = vi.hoisted(() => ({
+  getProfile: vi.fn(),
 }));
 
 vi.mock('../../../hooks/useAuth', () => ({
@@ -45,6 +50,10 @@ vi.mock('../../../services/userService', () => ({
   userService: userServiceMocks,
 }));
 
+vi.mock('../../../services/serverless/useCatalogApi', () => ({
+  useCatalogApi: (catalogApi: unknown) => catalogApi,
+}));
+
 import ProfilePage from './ProfilePage';
 
 function deferred<T>() {
@@ -55,11 +64,11 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-function renderProfile() {
+function renderProfile(catalogApi?: CatalogApi) {
   return render(
     <MemoryRouter initialEntries={['/profile']}>
       <Routes>
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile" element={<ProfilePage catalogApi={catalogApi} />} />
         <Route path="/auctions" element={<div>auction home</div>} />
       </Routes>
     </MemoryRouter>,
@@ -89,6 +98,28 @@ describe('ProfilePage logout', () => {
       createdAt: '2026-01-01T00:00:00Z',
     });
     userServiceMocks.updateProfile.mockReset();
+    catalogApiMocks.getProfile.mockReset();
+    catalogApiMocks.getProfile.mockResolvedValue({
+      id: 'seller-1',
+      email: 'seller@example.test',
+      fullName: 'Seller Profile',
+      phone: '0123456789',
+      role: 'USER',
+      status: 'ACTIVE',
+      isPrimaryAdmin: false,
+      createdAt: null,
+      updatedAt: null,
+    });
+  });
+
+  it('loads profile data through the serverless catalog client', async () => {
+    renderProfile({
+      getProfile: catalogApiMocks.getProfile,
+    } as unknown as CatalogApi);
+
+    expect(await screen.findByDisplayValue('Seller Profile')).toBeVisible();
+    expect(catalogApiMocks.getProfile).toHaveBeenCalledOnce();
+    expect(userServiceMocks.getProfile).not.toHaveBeenCalled();
   });
 
   it('awaits Cognito logout before navigating from the direct logout button', async () => {
@@ -96,7 +127,9 @@ describe('ProfilePage logout', () => {
     authState.logout.mockImplementation(() => signOut.promise);
     vi.stubGlobal('confirm', vi.fn(() => true));
     const user = userEvent.setup();
-    renderProfile();
+    renderProfile({
+      getProfile: catalogApiMocks.getProfile,
+    } as unknown as CatalogApi);
 
     const logoutButton = screen.getByRole('button', { name: /ng xuất/i });
     await user.click(logoutButton);
@@ -115,7 +148,9 @@ describe('ProfilePage logout', () => {
     const signOut = deferred<void>();
     authState.logout.mockImplementation(() => signOut.promise);
     const user = userEvent.setup();
-    renderProfile();
+    renderProfile({
+      getProfile: catalogApiMocks.getProfile,
+    } as unknown as CatalogApi);
 
     await screen.findByDisplayValue('Seller Profile');
     await user.click(screen.getByRole('button', { name: /cập nhật thông tin/i }));
@@ -138,7 +173,9 @@ describe('ProfilePage logout', () => {
       new Error('Cognito rejected sensitive-profile-marker'),
     );
     const user = userEvent.setup();
-    renderProfile();
+    renderProfile({
+      getProfile: catalogApiMocks.getProfile,
+    } as unknown as CatalogApi);
 
     const logoutButton = screen.getByRole('button', { name: /ng xuất/i });
     await user.click(logoutButton);

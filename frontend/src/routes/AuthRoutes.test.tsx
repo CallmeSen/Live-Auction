@@ -233,6 +233,21 @@ describe('App route role policy', () => {
 
     expect(screen.getByText(role === 'USER' ? 'auctions' : 'forbidden')).toBeInTheDocument();
   });
+
+  it.each(['/auctions', '/auction-sessions/session-1'] as const)(
+    'redirects anonymous visitors from %s to login',
+    (route) => {
+      setAuth();
+
+      render(
+        <MemoryRouter initialEntries={[route]}>
+          <AppRoutes />
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByText('login')).toBeInTheDocument();
+    },
+  );
 });
 
 describe('Navbar auth behavior', () => {
