@@ -5,7 +5,6 @@ locals {
   account_id        = data.aws_caller_identity.current.account_id
   audit_bucket      = "${var.name_prefix}-audit-${local.account_id}"
   trail_log_prefix  = "AWSLogs/${local.account_id}"
-  cis_standards_arn = "arn:${data.aws_partition.current.partition}:securityhub:${var.aws_region}::standards/cis-aws-foundations-benchmark/v/${var.securityhub_cis_version}"
 }
 
 resource "aws_s3_bucket" "audit" {
@@ -235,17 +234,7 @@ resource "aws_config_config_rule" "root_mfa_enabled" {
   depends_on = [aws_config_configuration_recorder_status.main]
 }
 
-resource "aws_securityhub_account" "main" {
-  count = var.enable_securityhub ? 1 : 0
-
-  auto_enable_controls     = true
-  enable_default_standards = false
-}
-
-resource "aws_securityhub_standards_subscription" "cis" {
-  count = var.enable_securityhub ? 1 : 0
-
-  standards_arn = local.cis_standards_arn
-
-  depends_on = [aws_securityhub_account.main]
+resource "aws_accessanalyzer_analyzer" "account" {
+  analyzer_name = var.access_analyzer_name
+  type          = "ACCOUNT"
 }

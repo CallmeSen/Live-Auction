@@ -29,3 +29,15 @@ output "admin_cloudfront_domain_name" {
 output "admin_cloudfront_origin" {
   value = "https://${aws_cloudfront_distribution.admin_frontend.domain_name}"
 }
+
+output "media_cloudfront_distribution_id" {
+  value = aws_cloudfront_distribution.media.id
+}
+
+output "media_cloudfront_domain_name" {
+  value = aws_cloudfront_distribution.media.domain_name
+}
+
+output "media_cloudfront_origin" {
+  value = "https://${aws_cloudfront_distribution.media.domain_name}"
+}

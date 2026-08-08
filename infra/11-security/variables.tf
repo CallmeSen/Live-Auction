@@ -23,18 +23,8 @@ variable "owner" {
   default = "thesis"
 }
 
-variable "securityhub_cis_version" {
-  type    = string
-  default = "1.4.0"
-
-  validation {
-    condition     = can(regex("^[0-9]+\\.[0-9]+\\.[0-9]+$", var.securityhub_cis_version))
-    error_message = "securityhub_cis_version must use semantic version form, for example 1.4.0."
-  }
-}
-
-variable "enable_securityhub" {
-  description = "Enable Security Hub CSPM and the CIS standards subscription."
-  type        = bool
-  default     = true
+variable "access_analyzer_name" {
+  description = "Account-level IAM Access Analyzer used for policy validation evidence."
+  type        = string
+  default     = "la-access-analyzer"
 }

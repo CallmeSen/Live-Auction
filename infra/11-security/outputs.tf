@@ -14,6 +14,10 @@ output "config_recorder_name" {
   value = aws_config_configuration_recorder.main.name
 }
 
-output "securityhub_cis_subscription_arn" {
-  value = try(aws_securityhub_standards_subscription.cis[0].id, null)
+output "access_analyzer_arn" {
+  value = aws_accessanalyzer_analyzer.account.arn
+}
+
+output "access_analyzer_name" {
+  value = aws_accessanalyzer_analyzer.account.analyzer_name
 }

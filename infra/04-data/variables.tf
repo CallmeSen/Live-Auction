@@ -30,8 +30,11 @@ variable "enable_stage3" {
 }
 
 variable "media_allowed_origins" {
-  type    = list(string)
-  default = ["http://localhost:5173"]
+  type = list(string)
+  default = [
+    "https://d1bt4phb59xk5x.cloudfront.net",
+    "https://d109et9edc4f35.cloudfront.net",
+  ]
 
   validation {
     condition = (

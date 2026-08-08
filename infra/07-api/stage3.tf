@@ -95,6 +95,7 @@ locals {
   stage3_cors_allowed_methods = "GET,POST,PUT,PATCH,OPTIONS"
 
   stage3_routes = {
+    "/api/v1/users/me"                                        = { GET = "query_service" }
     "/api/v1/auction-sessions"                                = { GET = "query_service", POST = "session_service" }
     "/api/v1/auction-sessions/mine"                           = { GET = "query_service" }
     "/api/v1/auction-sessions/{session_id}"                   = { GET = "query_service" }

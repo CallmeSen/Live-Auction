@@ -9,6 +9,7 @@ locals {
 
 provider "aws" {
   region              = var.aws_region
+  profile             = "la-admin"
   allowed_account_ids = ["233376973052"]
 
   default_tags {

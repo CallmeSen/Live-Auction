@@ -97,7 +97,7 @@ variable "stage3_cors_allowed_origin" {
 variable "stage3_cors_allowed_admin_origin" {
   description = "Exact Admin CloudFront origin allowed to read Stage 3 REST responses."
   type        = string
-  default     = ""
+  default     = "https://d109et9edc4f35.cloudfront.net"
 
   validation {
     condition = (
