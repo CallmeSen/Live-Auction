@@ -23,7 +23,9 @@ $RequiredOutputNames = @(
     'cognito_client_id',
     'stage3_rest_invoke_url',
     'stage3_rest_api_key_id',
-    'websocket_url'
+    'websocket_url',
+    'media_cloudfront_origin',
+    'media_cloudfront_distribution_id'
 )
 $RuntimeNames = @(
     'VITE_AWS_REGION',
@@ -31,7 +33,8 @@ $RuntimeNames = @(
     'VITE_COGNITO_CLIENT_ID',
     'VITE_REST_API_URL',
     'VITE_REST_API_KEY',
-    'VITE_WS_URL'
+    'VITE_WS_URL',
+    'VITE_MEDIA_BASE_URL'
 )
 
 function Invoke-AwsJson {
@@ -150,7 +153,7 @@ try {
 
     $handoff = @{}
     foreach ($name in $RequiredOutputNames) {
-        $moduleRoot = if ($name -like 'frontend_*' -or $name -like 'cloudfront_*') {
+        $moduleRoot = if ($name -like 'frontend_*' -or $name -like '*cloudfront*') {
             $EdgeRoot
         } elseif ($name -like 'cognito_*') {
             $IdentityRoot
@@ -167,6 +170,8 @@ try {
     Assert-HandoffValue 'stage3_rest_invoke_url' $handoff.stage3_rest_invoke_url '^https://[A-Za-z0-9.-]+(?:/[^\s]*)?$'
     Assert-HandoffValue 'websocket_url' $handoff.websocket_url '^wss://[A-Za-z0-9.-]+(?:/[^\s]*)?$'
     Assert-HandoffValue 'stage3_rest_api_key_id' $handoff.stage3_rest_api_key_id '^[A-Za-z0-9]+$'
+    Assert-HandoffValue 'media_cloudfront_origin' $handoff.media_cloudfront_origin '^https://[A-Za-z0-9.-]+$'
+    Assert-HandoffValue 'media_cloudfront_distribution_id' $handoff.media_cloudfront_distribution_id '^[A-Z0-9]{8,32}$'
 
     $apiKeyResponse = Invoke-AwsJson -Arguments @(
         'apigateway',
@@ -185,6 +190,7 @@ try {
         VITE_REST_API_URL = $handoff.stage3_rest_invoke_url
         VITE_REST_API_KEY = $apiKeyValue
         VITE_WS_URL = $handoff.websocket_url
+        VITE_MEDIA_BASE_URL = $handoff.media_cloudfront_origin
     }
     foreach ($name in $RuntimeNames) {
         $previousRuntimeValues[$name] = [Environment]::GetEnvironmentVariable($name, [EnvironmentVariableTarget]::Process)

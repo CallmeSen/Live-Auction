@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly VITE_REST_API_URL: string;
   readonly VITE_REST_API_KEY: string;
   readonly VITE_WS_URL: string;
+  readonly VITE_MEDIA_BASE_URL: string;
   readonly VITE_E2E_MOCK_AUTH?: string;
 }
 

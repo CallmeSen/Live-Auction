@@ -8,6 +8,7 @@ const validEnvironment = {
   VITE_REST_API_URL: 'https://rest.example.test/prod/',
   VITE_REST_API_KEY: 'quota-key',
   VITE_WS_URL: 'wss://ws.example.test/prod/',
+  VITE_MEDIA_BASE_URL: 'https://media.example.test/',
 };
 
 for (const [name, value] of Object.entries(validEnvironment)) {
@@ -27,6 +28,7 @@ describe('parseRuntimeConfig', () => {
       restApiUrl: 'https://rest.example.test/prod',
       restApiKey: 'quota-key',
       websocketUrl: 'wss://ws.example.test/prod',
+      mediaBaseUrl: 'https://media.example.test',
     });
   });
 
@@ -41,6 +43,7 @@ describe('parseRuntimeConfig', () => {
     'VITE_REST_API_URL',
     'VITE_REST_API_KEY',
     'VITE_WS_URL',
+    'VITE_MEDIA_BASE_URL',
   ])('rejects missing %s without echoing another value', (name) => {
     const secretMarker = 'must-not-appear';
     const environment = {

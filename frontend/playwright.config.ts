@@ -44,6 +44,7 @@ export default defineConfig({
         VITE_REST_API_URL: mockServerUrl,
         VITE_REST_API_KEY: 'e2e-local-api-key',
         VITE_WS_URL: 'ws://127.0.0.1:4174/ws',
+        VITE_MEDIA_BASE_URL: 'http://127.0.0.1:4174/media',
         VITE_E2E_MOCK_AUTH: 'true',
       },
     },

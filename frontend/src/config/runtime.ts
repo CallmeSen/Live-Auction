@@ -5,6 +5,7 @@ export type RuntimeConfig = {
   restApiUrl: string;
   restApiKey: string;
   websocketUrl: string;
+  mediaBaseUrl: string;
 };
 
 type RuntimeEnvironment = Readonly<Record<string, unknown>>;
@@ -15,7 +16,8 @@ type RuntimeEnvironmentName =
   | 'VITE_COGNITO_CLIENT_ID'
   | 'VITE_REST_API_URL'
   | 'VITE_REST_API_KEY'
-  | 'VITE_WS_URL';
+  | 'VITE_WS_URL'
+  | 'VITE_MEDIA_BASE_URL';
 
 const MAX_LENGTHS: Record<RuntimeEnvironmentName, number> = {
   VITE_AWS_REGION: 64,
@@ -24,6 +26,7 @@ const MAX_LENGTHS: Record<RuntimeEnvironmentName, number> = {
   VITE_REST_API_URL: 2048,
   VITE_REST_API_KEY: 512,
   VITE_WS_URL: 2048,
+  VITE_MEDIA_BASE_URL: 2048,
 };
 
 const REGION_PATTERN = /^[a-z]{2}(?:-[a-z0-9]+)+-[0-9]+$/;
@@ -65,7 +68,7 @@ function readMatchingString(
 
 function readUrl(
   environment: RuntimeEnvironment,
-  name: 'VITE_REST_API_URL' | 'VITE_WS_URL',
+  name: 'VITE_REST_API_URL' | 'VITE_WS_URL' | 'VITE_MEDIA_BASE_URL',
   allowedProtocols: readonly string[],
   productionProtocol: 'https:' | 'wss:',
 ): string {
@@ -129,6 +132,12 @@ export function parseRuntimeConfig(
       'VITE_WS_URL',
       ['ws:', 'wss:'],
       'wss:',
+    ),
+    mediaBaseUrl: readUrl(
+      environment,
+      'VITE_MEDIA_BASE_URL',
+      ['http:', 'https:'],
+      'https:',
     ),
   };
 }
