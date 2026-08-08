@@ -1,241 +1,151 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type {
-  MyBidListItemResponse,
-  MyBidOutcome,
-} from '../../../interfaces/bid';
-import { getApiErrorMessage } from '../../../services/apiError';
-import { bidService } from '../../../services/bidService';
-import { formatCurrency } from '../../../utils/formatCurrency';
-import { formatDateTime } from '../../../utils/formatDate';
+import type { CatalogApi } from '../../../services/serverless/catalogApi';
+import type { BidHistoryItem } from '../../../services/serverless/mappers';
+import { useCatalogApi } from '../../../services/serverless/useCatalogApi';
 
-type BidFilter = 'ALL' | 'ACTIVE' | 'WON' | 'LOST';
+const PAGE_SIZE = 20;
 
-const outcomeStyle: Record<
-  MyBidOutcome,
-  { label: string; className: string }
-> = {
-  LEADING: {
-    label: 'Đang dẫn đầu',
-    className:
-      'bg-[var(--color-success-bg)]/20 text-[var(--color-success)] border-[var(--color-success-border)]/30',
-  },
-  OUTBID: {
-    label: 'Đã bị vượt',
-    className:
-      'bg-[var(--color-danger-solid)]/10 text-[var(--color-danger)] border-[var(--color-danger-solid)]/30',
-  },
-  WON: {
-    label: 'Đã thắng',
-    className:
-      'bg-[var(--color-primary)]/15 text-[var(--color-primary)] border-[var(--color-primary)]/40',
-  },
-  LOST: {
-    label: 'Không thắng',
-    className:
-      'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border-strong)]',
-  },
+type MyBidsPageProps = {
+  catalogApi?: CatalogApi;
 };
 
-const filters: Array<{ value: BidFilter; label: string }> = [
-  { value: 'ALL', label: 'Tất cả' },
-  { value: 'ACTIVE', label: 'Đang tham gia' },
-  { value: 'WON', label: 'Đã thắng' },
-  { value: 'LOST', label: 'Không thắng' },
-];
-
-const isInFilter = (
-  bid: MyBidListItemResponse,
-  filter: BidFilter,
-) => {
-  if (filter === 'ALL') {
-    return true;
-  }
-
-  if (filter === 'ACTIVE') {
-    return bid.outcome === 'LEADING' || bid.outcome === 'OUTBID';
-  }
-
-  return bid.outcome === filter;
-};
-
-export default function MyBidsPage() {
-  const [bids, setBids] = useState<MyBidListItemResponse[]>([]);
-  const [selectedFilter, setSelectedFilter] =
-    useState<BidFilter>('ALL');
+export default function MyBidsPage({ catalogApi }: MyBidsPageProps) {
+  const api = useCatalogApi(catalogApi);
+  const [bids, setBids] = useState<BidHistoryItem[]>([]);
+  const [cursorStack, setCursorStack] = useState<Array<string | undefined>>([
+    undefined,
+  ]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(false);
+  const cursor = cursorStack[cursorStack.length - 1];
 
   useEffect(() => {
-    let cancelled = false;
-
-    const loadBids = async () => {
-      try {
-        const data = await bidService.getMyBids({
-          page: 1,
-          pageSize: 100,
-        });
-
-        if (!cancelled) {
-          setBids(data.items);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            getApiErrorMessage(
-              loadError,
-              'Không thể tải danh sách vật phẩm đã trả giá.',
-            ),
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadBids();
-
+    let active = true;
+    void api.listMyBids({
+      pageSize: PAGE_SIZE,
+      ...(cursor === undefined ? {} : { cursor }),
+    }).then(
+      (result) => {
+        if (!active) return;
+        setBids(result.items);
+        setNextCursor(result.nextCursor);
+        setLoading(false);
+      },
+      () => {
+        if (!active) return;
+        setError(true);
+        setLoading(false);
+      },
+    );
     return () => {
-      cancelled = true;
+      active = false;
     };
-  }, []);
-
-  const filteredBids = useMemo(
-    () => bids.filter((bid) => isInFilter(bid, selectedFilter)),
-    [bids, selectedFilter],
-  );
-
-  const countByFilter = (filter: BidFilter) =>
-    bids.filter((bid) => isInFilter(bid, filter)).length;
+  }, [api, cursor, retryKey]);
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
-      <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">
-        Hoạt động cá nhân
-      </span>
-
-      <h1 className="mt-2 font-display text-4xl">
-        Vật phẩm tôi đã trả giá
+    <main className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
+      <p className="font-mono-tag text-xs uppercase text-[var(--color-primary)]">
+        Hoạt động của tôi
+      </p>
+      <h1 className="mt-3 font-display text-4xl text-[var(--color-text)]">
+        Lịch sử trả giá
       </h1>
 
-      <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-        Mỗi vật phẩm chỉ hiển thị một lần với giá cao nhất bạn đã đặt.
-      </p>
-
-      <div className="mt-8 flex gap-2 overflow-x-auto">
-        {filters.map((filter) => (
-          <button
-            type="button"
-            key={filter.value}
-            onClick={() => setSelectedFilter(filter.value)}
-            className={`whitespace-nowrap rounded-full border px-4 py-2 text-xs ${selectedFilter === filter.value
-              ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-bg)]'
-              : 'border-[var(--color-border-strong)] text-[var(--color-text-muted)]'
-            }`}
-          >
-            {filter.label} {countByFilter(filter.value)}
-          </button>
-        ))}
-      </div>
-
       {loading && (
-        <p className="mt-8 text-sm text-[var(--color-text-muted)]">
-          Đang tải danh sách vật phẩm...
-        </p>
-      )}
-
-      {error && (
-        <p className="mt-8 rounded-lg border border-[var(--color-danger-border)] p-4 text-sm text-[var(--color-danger)]">
-          {error}
-        </p>
-      )}
-
-      {!loading && !error && filteredBids.length === 0 && (
-        <div className="mt-8 rounded-xl border border-dashed border-[var(--color-border-strong)] py-16 text-center">
-          <p className="font-display text-xl">
-            Chưa có vật phẩm phù hợp
-          </p>
-
-          <Link
-            to="/auctions"
-            className="mt-3 inline-block text-sm text-[var(--color-primary)]"
-          >
-            Khám phá các phiên đấu giá
-          </Link>
+        <div role="status" className="py-20 text-center text-sm text-[var(--color-text-muted)]">
+          Đang tải lịch sử trả giá...
         </div>
       )}
 
-      <div className="mt-6 space-y-4">
-        {filteredBids.map((bid) => {
-          const outcome = outcomeStyle[bid.outcome];
-          const displayedPrice =
-            bid.itemFinalPrice ?? bid.itemCurrentPrice;
-          const canBidAgain = bid.outcome === 'OUTBID';
+      {!loading && error && (
+        <div role="alert" className="mt-8 border-y border-[var(--color-danger-solid)]/60 py-10 text-center">
+          <p className="text-sm text-[var(--color-danger)]">
+            Không thể tải lịch sử trả giá.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setLoading(true);
+              setError(false);
+              setRetryKey((value) => value + 1);
+            }}
+            className="mt-4 rounded-md border border-[var(--color-border-strong)] px-4 py-2 text-sm"
+          >
+            Thử lại
+          </button>
+        </div>
+      )}
 
-          return (
-            <article
-              key={bid.itemId}
-              className="grid gap-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 sm:grid-cols-[1fr_auto] sm:items-center"
-            >
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span
-                    className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-wider ${outcome.className}`}
-                  >
-                    {outcome.label}
-                  </span>
+      {!loading && !error && bids.length === 0 && (
+        <div className="mt-8 border-y border-dashed border-[var(--color-border-strong)] py-16 text-center">
+          <p className="font-display text-xl">Chưa có lượt trả giá.</p>
+        </div>
+      )}
 
-                  <span className="rounded-full border border-[var(--color-border-strong)] px-3 py-1 text-[10px] text-[var(--color-text-soft)]">
-                    {bid.sessionStatus}
-                  </span>
+      {!loading && !error && bids.length > 0 && (
+        <div className="mt-8 overflow-x-auto border-y border-[var(--color-border)]">
+          <table className="w-full min-w-[680px] text-left text-sm">
+            <thead className="text-xs text-[var(--color-text-dim)]">
+              <tr>
+                <th className="py-4 pr-5 font-normal">Vật phẩm</th>
+                <th className="py-4 pr-5 font-normal">Mã yêu cầu</th>
+                <th className="py-4 pr-5 font-normal">Số tiền</th>
+                <th className="py-4 pr-5 font-normal">Trạng thái</th>
+                <th className="py-4 font-normal">Lý do</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bids.map((bid) => (
+                <tr key={bid.requestId} className="border-t border-[var(--color-border)]">
+                  <td className="py-5 pr-5">
+                    <Link to={`/auction-items/${encodeURIComponent(bid.itemId)}`} className="text-[var(--color-primary)]">
+                      {bid.itemId}
+                    </Link>
+                  </td>
+                  <td className="py-5 pr-5 font-mono text-xs">{bid.requestId}</td>
+                  <td className="py-5 pr-5 font-display text-lg">{bid.amount}</td>
+                  <td className="py-5 pr-5">{bid.status}</td>
+                  <td className="py-5">{bid.reason || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-                  <span className="text-xs text-[var(--color-text-dim)]">
-                    Lần trả gần nhất: {formatDateTime(bid.createdAt)}
-                  </span>
-                </div>
-
-                <h2 className="mt-2 font-display text-xl">
-                  {bid.itemTitle}
-                </h2>
-
-                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  Phiên: {bid.sessionTitle}
-                </p>
-
-                <div className="mt-3 flex flex-wrap gap-6 text-xs text-[var(--color-text-muted)]">
-                  <span>
-                    Giá cao nhất của bạn
-                    <strong className="ml-1 font-medium text-[var(--color-text)]">
-                      {formatCurrency(Number(bid.amount))}
-                    </strong>
-                  </span>
-
-                  <span>
-                    {bid.outcome === 'WON' || bid.outcome === 'LOST'
-                      ? 'Giá chốt'
-                      : 'Giá hiện tại'}
-                    <strong className="ml-1 font-medium text-[var(--color-primary)]">
-                      {formatCurrency(Number(displayedPrice))}
-                    </strong>
-                  </span>
-                </div>
-              </div>
-
-              <Link
-                to={`/auction-items/${bid.itemId}`}
-                className={`rounded-md px-4 py-2.5 text-center text-sm font-semibold transition ${canBidAgain
-                  ? 'bg-[var(--color-primary)] text-[var(--color-bg)] hover:bg-[var(--color-primary-hover)]'
-                  : 'border border-[var(--color-border-strong)] text-[var(--color-text)] hover:border-[var(--color-primary)]'
-                }`}
-              >
-                {canBidAgain ? 'Đặt giá lại' : 'Xem vật phẩm'}
-              </Link>
-            </article>
-          );
-        })}
-      </div>
-    </div>
+      {!loading && !error && (cursorStack.length > 1 || nextCursor !== null) && (
+        <nav aria-label="Phân trang" className="mt-9 flex justify-center gap-3">
+          <button
+            type="button"
+            disabled={cursorStack.length === 1}
+            onClick={() => {
+              setLoading(true);
+              setError(false);
+              setCursorStack((current) => current.slice(0, -1));
+            }}
+            className="rounded-md border border-[var(--color-border-strong)] px-4 py-2 text-sm disabled:opacity-40"
+          >
+            Trang trước
+          </button>
+          <button
+            type="button"
+            disabled={nextCursor === null}
+            onClick={() => {
+              if (nextCursor !== null) {
+                setLoading(true);
+                setError(false);
+                setCursorStack((current) => [...current, nextCursor]);
+              }
+            }}
+            className="rounded-md border border-[var(--color-border-strong)] px-4 py-2 text-sm disabled:opacity-40"
+          >
+            Trang sau
+          </button>
+        </nav>
+      )}
+    </main>
   );
 }

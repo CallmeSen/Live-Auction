@@ -139,6 +139,7 @@ class AuthService:
                 full_name=user.full_name,
                 role=user.role,
                 status=user.status,
+                is_primary_admin=user.is_primary_admin,
             ),
         )
 
@@ -160,7 +161,7 @@ class AuthService:
         if user is None:
             return
 
-        if user.status == UserStatus.BANNED:
+        if user.status == UserStatus.BANNED or user.role == UserRole.ADMIN:
             return
 
         raw_token = generate_raw_token()
@@ -226,6 +227,13 @@ class AuthService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 code="USER_NOT_FOUND",
                 message="User not found",
+            )
+
+        if user.role == UserRole.ADMIN:
+            raise AppException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                code="ADMIN_PASSWORD_MANAGED_BY_PRIMARY_ADMIN",
+                message="Administrator passwords are managed by the primary admin",
             )
 
         user.password_hash = hash_password(new_password)

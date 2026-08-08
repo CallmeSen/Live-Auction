@@ -144,6 +144,7 @@ async def create_initial_admin(config: InitialAdminConfig) -> int:
                 phone=config.phone,
                 role=UserRole.ADMIN,
                 status=UserStatus.ACTIVE,
+                is_primary_admin=True,
             )
 
             await repository.create(db=db, user=user)

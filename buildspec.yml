@@ -22,8 +22,8 @@ phases:
       - echo "=== Nếu có backend thì test, không có thì bỏ qua ==="
       - |
         if [ -d backend/tests/unit ]; then
-          pip install -q -r backend/common/requirements.txt pytest
-          cd backend && PYTHONPATH=common:. pytest tests/unit -q && cd ..
+          python -m pip install -q -r backend/common/requirements.txt -e backend/common pytest
+          cd backend && PYTHONPATH=. python -m pytest tests/unit -q -m 'not artifact_build' && cd ..
         else
           echo "Chưa có backend/tests — bỏ qua test (smoke test)."
         fi

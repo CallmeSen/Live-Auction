@@ -1,510 +1,283 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import Button from '../../../components/common/Button';
-import Input from '../../../components/common/Input';
-import { auctionSessionService } from '../../../services/auctionSessionService';
-import { auctionItemService } from '../../../services/auctionItemService';
-import { categoryService } from '../../../services/categoryService';
-import type { CategoryResponse } from '../../../interfaces/category';
-import { getApiErrorMessage } from '../../../services/apiError';
+import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
+import type { CatalogApi, RulesDto } from '../../../services/serverless/catalogApi';
+import { ServerlessApiError } from '../../../services/serverless/contracts';
+import { useCatalogApi } from '../../../services/serverless/useCatalogApi';
 
-const MAX_ITEM_IMAGES = 5;
-const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-]);
+const MAX_MONEY_CENTS = 100_000_000_000n;
 
-const formatDateTimeLocal = (date: Date): string => {
-  const pad = (value: number) => String(value).padStart(2, '0');
-
-  return [
-    date.getFullYear(),
-    '-',
-    pad(date.getMonth() + 1),
-    '-',
-    pad(date.getDate()),
-    'T',
-    pad(date.getHours()),
-    ':',
-    pad(date.getMinutes()),
-  ].join('');
+type RuleForm = {
+  minIncrement: string;
+  maxIncrement: string;
+  antiSnipeWindowSeconds: string;
+  antiSnipeExtendSeconds: string;
+  maxExtensions: string;
+  publicHistoryLimit: string;
 };
 
-const getMinimumStartTime = (): string => {
-  const minimum = new Date();
-  minimum.setSeconds(0, 0);
-  minimum.setMinutes(minimum.getMinutes() + 1);
-  return formatDateTimeLocal(minimum);
+const initialRules: RuleForm = {
+  minIncrement: '1',
+  maxIncrement: '1000',
+  antiSnipeWindowSeconds: '30',
+  antiSnipeExtendSeconds: '60',
+  maxExtensions: '10',
+  publicHistoryLimit: '20',
 };
 
-const initialForm = {
-  sessionTitle: '',
-  sessionDescription: '',
-  itemTitle: '',
-  itemDescription: '',
-  categoryId: '',
-  startingPrice: '',
-  minimumBidIncrement: '',
-  startTime: '',
-  endTime: '',
+function moneyCents(value: string): bigint | null {
+  const match = /^(0|[1-9]\d{0,9})(?:\.(\d{1,2}))?$/.exec(value.trim());
+  if (!match) return null;
+  const fraction = (match[2] ?? '').padEnd(2, '0');
+  const cents = BigInt(match[1]) * 100n + BigInt(fraction || '0');
+  return cents <= MAX_MONEY_CENTS ? cents : null;
+}
+
+function boundedInteger(value: string, minimum: number, maximum: number): number | null {
+  if (!/^\d+$/.test(value.trim())) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= minimum && parsed <= maximum
+    ? parsed
+    : null;
+}
+
+function conflictCode(error: unknown): string {
+  return error instanceof ServerlessApiError ? ` (${error.code})` : '';
+}
+
+type CreateAuctionPageProps = {
+  catalogApi?: CatalogApi;
 };
 
-export default function CreateAuctionPage() {
-  const navigate = useNavigate();
-
-  const [form, setForm] = useState(initialForm);
-  const [categories, setCategories] = useState<
-    CategoryResponse[]
-  >([]);
-  const [categoryError, setCategoryError] = useState('');
+export default function CreateAuctionPage({ catalogApi }: CreateAuctionPageProps) {
+  const api = useCatalogApi(catalogApi);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [rules, setRules] = useState<RuleForm>(initialRules);
+  const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
+  const [rulesSaved, setRulesSaved] = useState(false);
+  const [createOutcomeUnknown, setCreateOutcomeUnknown] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [minimumStartTime] = useState(getMinimumStartTime);
 
-  useEffect(() => {
-    let cancelled = false;
+  const updateRule = (field: keyof RuleForm, value: string) => {
+    setRules((current) => ({ ...current, [field]: value }));
+  };
 
-    const loadCategories = async () => {
+  const validatedRules = (): RulesDto | null => {
+    const minIncrement = moneyCents(rules.minIncrement);
+    const maxIncrement = moneyCents(rules.maxIncrement);
+    if (minIncrement === null || minIncrement <= 0n) {
+      setError('Bước giá tối thiểu phải lớn hơn 0 và có tối đa 2 chữ số thập phân.');
+      return null;
+    }
+    if (maxIncrement === null || maxIncrement <= 0n) {
+      setError('Bước giá tối đa không hợp lệ.');
+      return null;
+    }
+    if (maxIncrement < minIncrement) {
+      setError('Bước giá tối đa phải lớn hơn hoặc bằng bước giá tối thiểu.');
+      return null;
+    }
+
+    const antiSnipeWindow = boundedInteger(rules.antiSnipeWindowSeconds, 0, 3600);
+    const antiSnipeExtend = boundedInteger(rules.antiSnipeExtendSeconds, 0, 3600);
+    const maxExtensions = boundedInteger(rules.maxExtensions, 0, 100);
+    const publicHistoryLimit = boundedInteger(rules.publicHistoryLimit, 0, 100);
+    if (
+      antiSnipeWindow === null
+      || antiSnipeExtend === null
+      || maxExtensions === null
+      || publicHistoryLimit === null
+    ) {
+      setError('Giới hạn thời gian hoặc số lần gia hạn không hợp lệ.');
+      return null;
+    }
+
+    return {
+      min_increment: rules.minIncrement.trim(),
+      max_increment: rules.maxIncrement.trim(),
+      anti_snipe_window_s: antiSnipeWindow,
+      anti_snipe_extend_s: antiSnipeExtend,
+      max_extensions: maxExtensions,
+      public_history_limit: publicHistoryLimit,
+    };
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (submitting || rulesSaved || createOutcomeUnknown) return;
+
+    const normalizedTitle = title.trim();
+    const normalizedDescription = description.trim();
+    if (!normalizedTitle || normalizedTitle.length > 200) {
+      setError('Tên phiên phải có từ 1 đến 200 ký tự.');
+      return;
+    }
+    if (normalizedDescription.length > 2000) {
+      setError('Mô tả không được vượt quá 2000 ký tự.');
+      return;
+    }
+    const payload = validatedRules();
+    if (!payload) return;
+
+    setSubmitting(true);
+    setError('');
+    let sessionId = createdSessionId;
+
+    if (!sessionId) {
       try {
-        const result = await categoryService.getCategories({
-          page: 1,
-          size: 100,
-          status: 'ACTIVE',
+        const created = await api.createSession({
+          title: normalizedTitle,
+          description: normalizedDescription,
         });
-
-        if (!cancelled) {
-          setCategories(result.items);
-        }
+        sessionId = created.sessionId;
+        setCreatedSessionId(sessionId);
       } catch (requestError) {
-        if (!cancelled) {
-          setCategoryError(
-            getApiErrorMessage(
-              requestError,
-              'Không thể tải danh mục.',
-            ),
+        const knownFailure = requestError instanceof ServerlessApiError
+          && requestError.status >= 400
+          && requestError.status < 500
+          && requestError.code !== 'INVALID_ENVELOPE';
+        if (knownFailure) {
+          setError(`Không thể tạo bản nháp.${conflictCode(requestError)}`);
+        } else {
+          setCreateOutcomeUnknown(true);
+          setError(
+            'Kết quả tạo bản nháp chưa xác định. Hãy kiểm tra danh sách phiên trước khi thử lại.',
           );
         }
+        setSubmitting(false);
+        return;
       }
-    };
-
-    void loadCategories();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const update = (
-    field: keyof typeof form,
-    value: string,
-  ) => {
-    setForm((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-  };
-
-  const handleImageChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const files = Array.from(event.target.files ?? []);
-    setError('');
-
-    if (files.length === 0) {
-      setImageFiles([]);
-      return;
     }
-
-    if (files.length > MAX_ITEM_IMAGES) {
-      setImageFiles([]);
-      event.target.value = '';
-      setError('Mỗi vật phẩm chỉ được chọn tối đa 5 ảnh.');
-      return;
-    }
-
-    const invalidTypeFile = files.find(
-      (file) => !ALLOWED_IMAGE_TYPES.has(file.type),
-    );
-
-    if (invalidTypeFile) {
-      setImageFiles([]);
-      event.target.value = '';
-      setError(
-        `Ảnh "${invalidTypeFile.name}" không phải JPEG, PNG hoặc WEBP.`,
-      );
-      return;
-    }
-
-    const oversizedFile = files.find(
-      (file) => file.size > MAX_IMAGE_SIZE_BYTES,
-    );
-
-    if (oversizedFile) {
-      setImageFiles([]);
-      event.target.value = '';
-      setError(
-        `Ảnh "${oversizedFile.name}" vượt quá dung lượng 5 MB.`,
-      );
-      return;
-    }
-
-    setImageFiles(files);
-  };
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setError('');
-
-    const startingPrice = Number(form.startingPrice);
-    const minimumBidIncrement = Number(
-      form.minimumBidIncrement,
-    );
-    const startTime = new Date(form.startTime);
-    const endTime = new Date(form.endTime);
-
-    if (
-      Number.isNaN(startTime.getTime()) ||
-      Number.isNaN(endTime.getTime())
-    ) {
-      setError('Vui lòng nhập đầy đủ thời gian bắt đầu và kết thúc.');
-      return;
-    }
-
-    const currentTime = new Date();
-
-    if (startTime <= currentTime) {
-      setError(
-        'Thời gian bắt đầu phải sau thời điểm hiện tại.',
-      );
-      return;
-    }
-    if (!form.categoryId) {
-      setError('Vui lòng chọn danh mục.');
-      return;
-    }
-
-    if (
-      startingPrice <= 0 ||
-      minimumBidIncrement <= 0
-    ) {
-      setError(
-        'Giá khởi điểm và bước giá phải lớn hơn 0.',
-      );
-      return;
-    }
-
-    if (endTime <= startTime) {
-      setError(
-        'Thời gian kết thúc phải sau thời gian bắt đầu.',
-      );
-      return;
-    }
-
-    if (endTime <= new Date()) {
-      setError(
-        'Không thể tạo phiên có thời gian kết thúc trong quá khứ.',
-      );
-      return;
-    }
-
-    if (imageFiles.length === 0) {
-      setError('Vui lòng chọn từ 1 đến 5 ảnh cho vật phẩm.');
-      return;
-    }
-
-    let createdSessionId = '';
-    let createdItemId = '';
 
     try {
-      setLoading(true);
-
-      const session = await auctionSessionService.createSession({
-        title: form.sessionTitle.trim(),
-        description:
-          form.sessionDescription.trim() || null,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
-        minIncrement: minimumBidIncrement,
-      });
-
-      createdSessionId = session.id;
-
-      const createdItem = await auctionItemService.createItem(
-        session.id,
-        {
-          categoryId: form.categoryId,
-          title: form.itemTitle.trim(),
-          description: form.itemDescription.trim() || null,
-          startingPrice,
-        },
-      );
-
-      createdItemId = createdItem.id;
-
-      await auctionItemService.uploadImages(createdItem.id, {
-        files: imageFiles,
-        primaryIndex: 0,
-      });
-
-      navigate('/my-auctions', {
-        replace: true,
-        state: { created: true },
-      });
+      await api.putRules(sessionId, payload);
+      setRulesSaved(true);
     } catch (requestError) {
-      const message = getApiErrorMessage(
-        requestError,
-        'Không thể tạo phiên đấu giá.',
-      );
-
       setError(
-        createdItemId
-          ? `Phiên và vật phẩm đã được tạo nhưng chưa tải đủ ảnh: ${message}`
-          : createdSessionId
-            ? `Phiên đã được tạo nhưng chưa tạo được vật phẩm: ${message}`
-            : message,
+        `Phiên nháp ${sessionId} đã tạo nhưng chưa lưu được quy tắc.${conflictCode(requestError)}`,
       );
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10 sm:py-14">
-      <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">
-        Thành viên · Tạo phiên
-      </span>
+    <main className="mx-auto max-w-5xl px-6 py-10 sm:py-14">
+      <p className="font-mono-tag text-xs uppercase text-[var(--color-primary)]">
+        Kênh người bán
+      </p>
+      <h1 className="mt-3 font-display text-4xl">Tạo phiên đấu giá</h1>
 
-      <div className="mt-3">
-        <h1 className="font-display text-4xl">
-          Tạo phiên đấu giá mới
-        </h1>
-
-        <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-          Tạo thông tin phiên trước, sau đó vật phẩm sẽ
-          được thêm vào phiên vừa tạo.
-        </p>
-      </div>
-
-      <form
-        onSubmit={submit}
-        className="mt-9 grid gap-8 lg:grid-cols-2"
-      >
-        <section className="space-y-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 sm:p-8">
-          <div>
-            <span className="font-mono-tag text-xs uppercase tracking-[0.18em] text-[var(--color-primary)]">
-              Thông tin phiên
-            </span>
-
-            <h2 className="mt-2 font-display text-2xl">
-              Phiên đấu giá
-            </h2>
-          </div>
-
-          <Input
-            label="Tên phiên"
-            value={form.sessionTitle}
-            onChange={(event) =>
-              update('sessionTitle', event.target.value)
-            }
-            placeholder="Ví dụ: Phiên đấu giá đồ cổ tháng 7"
-            required
-          />
-
-          <label className="flex flex-col gap-1.5 text-xs font-mono-tag uppercase tracking-wider text-[var(--color-text-muted)]">
-            Mô tả phiên
-
-            <textarea
-              rows={4}
-              value={form.sessionDescription}
-              onChange={(event) =>
-                update(
-                  'sessionDescription',
-                  event.target.value,
-                )
-              }
-              placeholder="Giới thiệu chung về phiên đấu giá..."
-              className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3 font-sans text-sm normal-case tracking-normal text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-dim)] focus:border-[var(--color-primary)]"
-            />
-          </label>
-
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Input
-              label="Thời gian bắt đầu"
-              type="datetime-local"
-              min={minimumStartTime}
-              value={form.startTime}
-              onChange={(event) =>
-                update('startTime', event.target.value)
-              }
-              required
-            />
-
-            <Input
-              label="Thời gian kết thúc"
-              type="datetime-local"
-              min={form.startTime || minimumStartTime}
-              value={form.endTime}
-              onChange={(event) =>
-                update('endTime', event.target.value)
-              }
-              required
-            />
-          </div>
-
-          <Input
-            label="Bước giá tối thiểu"
-            type="number"
-            min="1"
-            value={form.minimumBidIncrement}
-            onChange={(event) =>
-              update(
-                'minimumBidIncrement',
-                event.target.value,
-              )
-            }
-            placeholder="500000"
-            required
-          />
-        </section>
-
-        <section className="space-y-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 sm:p-8">
-          <div>
-            <span className="font-mono-tag text-xs uppercase tracking-[0.18em] text-[var(--color-primary)]">
-              Thông tin vật phẩm
-            </span>
-
-            <h2 className="mt-2 font-display text-2xl">
-              Vật phẩm đầu tiên
-            </h2>
-          </div>
-
-          <Input
-            label="Tên vật phẩm"
-            value={form.itemTitle}
-            onChange={(event) =>
-              update('itemTitle', event.target.value)
-            }
-            placeholder="Ví dụ: Đồng hồ cơ Thụy Sĩ 1960"
-            required
-          />
-
-          <label className="flex flex-col gap-1.5 text-xs font-mono-tag uppercase tracking-wider text-[var(--color-text-muted)]">
-            Danh mục
-
-            <select
-              required
-              value={form.categoryId}
-              onChange={(event) =>
-                update('categoryId', event.target.value)
-              }
-              className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3 font-sans text-sm normal-case tracking-normal text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
-            >
-              <option value="">Chọn danh mục</option>
-
-              {categories.map((category) => (
-                <option
-                  key={category.id}
-                  value={category.id}
-                >
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {categoryError && (
-            <p className="text-xs text-[var(--color-danger)]">
-              {categoryError}
-            </p>
-          )}
-
-          <Input
-            label="Giá khởi điểm"
-            type="number"
-            min="1"
-            value={form.startingPrice}
-            onChange={(event) =>
-              update('startingPrice', event.target.value)
-            }
-            placeholder="10000000"
-            required
-          />
-
-          <label className="flex flex-col gap-1.5 text-xs font-mono-tag uppercase tracking-wider text-[var(--color-text-muted)]">
-            Mô tả vật phẩm
-
-            <textarea
-              rows={5}
-              required
-              value={form.itemDescription}
-              onChange={(event) =>
-                update(
-                  'itemDescription',
-                  event.target.value,
-                )
-              }
-              placeholder="Nguồn gốc, tình trạng, phụ kiện đi kèm..."
-              className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3 font-sans text-sm normal-case tracking-normal text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-dim)] focus:border-[var(--color-primary)]"
-            />
-          </label>
-
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-5">
-            <h3 className="font-display text-lg">
-              Hình ảnh vật phẩm
-            </h3>
-
-            <p className="mt-2 text-xs leading-5 text-[var(--color-text-muted)]">
-              Chọn từ 1 đến 5 ảnh JPEG, PNG hoặc WEBP; mỗi ảnh tối đa
-              5 MB. Ảnh đầu tiên sẽ được dùng làm ảnh đại diện.
-            </p>
-
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              onChange={handleImageChange}
-              required
-              className="mt-4 block w-full cursor-pointer rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-text-muted)] file:mr-4 file:rounded-md file:border-0 file:bg-[var(--color-primary)] file:px-4 file:py-2 file:text-xs file:font-semibold file:text-[var(--color-bg)]"
-            />
-
-            {imageFiles.length > 0 && (
-              <div className="mt-3 space-y-1 text-xs text-[var(--color-success)]">
-                <p>Đã chọn {imageFiles.length}/5 ảnh:</p>
-
-                <ul className="list-inside list-decimal text-[var(--color-text-muted)]">
-                  {imageFiles.map((file) => (
-                    <li key={`${file.name}-${file.lastModified}`} className="truncate">
-                      {file.name}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {error && (
-          <p className="rounded-md border border-[var(--color-danger-solid)]/40 bg-[var(--color-danger-solid)]/10 px-4 py-3 text-xs text-[var(--color-danger)] lg:col-span-2">
-            {error}
-          </p>
-        )}
-
-        <div className="grid grid-cols-2 gap-3 lg:col-span-2 lg:ml-auto lg:w-96">
-          <Link
-            to="/my-auctions"
-            className="rounded-md border border-[var(--color-border-strong)] px-5 py-2.5 text-center text-sm font-semibold text-[var(--color-text)]"
-          >
-            Hủy
-          </Link>
-
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Đang tạo...' : 'Tạo phiên'}
-          </Button>
+      {error && (
+        <div role="alert" className="mt-7 border-y border-[var(--color-danger-solid)]/60 py-4 text-sm text-[var(--color-danger)]">
+          {error}
         </div>
-      </form>
-    </div>
+      )}
+
+      {createOutcomeUnknown && (
+        <Link
+          to="/my-auctions"
+          className="mt-4 inline-block text-sm text-[var(--color-primary)]"
+        >
+          Kiểm tra danh sách phiên
+        </Link>
+      )}
+
+      {rulesSaved && createdSessionId ? (
+        <section className="mt-9 border-y border-[var(--color-success-border)] py-10">
+          <h2 className="font-display text-2xl">Bản nháp và quy tắc đã sẵn sàng</h2>
+          <p className="mt-3 text-sm text-[var(--color-text-muted)]">
+            Mã phiên: {createdSessionId}
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              to={`/auction-sessions/${encodeURIComponent(createdSessionId)}/items/create`}
+              className="rounded-md bg-[var(--color-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-bg)]"
+            >
+              Thêm vật phẩm
+            </Link>
+            <Link
+              to="/my-auctions"
+              className="rounded-md border border-[var(--color-border-strong)] px-5 py-3 text-sm"
+            >
+              Về danh sách phiên
+            </Link>
+          </div>
+        </section>
+      ) : (
+        <form onSubmit={handleSubmit} className="mt-9 grid gap-8 lg:grid-cols-2">
+          <section className="space-y-5 border-t border-[var(--color-border)] pt-6">
+            <h2 className="font-display text-2xl">Thông tin phiên</h2>
+            <label className="block text-sm">
+              <span className="text-[var(--color-text-muted)]">Tên phiên</span>
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                maxLength={200}
+                required
+                className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-[var(--color-text-muted)]">Mô tả</span>
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                maxLength={2000}
+                rows={6}
+                className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3"
+              />
+            </label>
+          </section>
+
+          <section className="space-y-5 border-t border-[var(--color-border)] pt-6">
+            <h2 className="font-display text-2xl">Quy tắc trả giá</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <RuleInput label="Bước giá tối thiểu" value={rules.minIncrement} onChange={(value) => updateRule('minIncrement', value)} />
+              <RuleInput label="Bước giá tối đa" value={rules.maxIncrement} onChange={(value) => updateRule('maxIncrement', value)} />
+              <RuleInput label="Cửa sổ chống sniping (giây)" value={rules.antiSnipeWindowSeconds} onChange={(value) => updateRule('antiSnipeWindowSeconds', value)} />
+              <RuleInput label="Thời gian gia hạn (giây)" value={rules.antiSnipeExtendSeconds} onChange={(value) => updateRule('antiSnipeExtendSeconds', value)} />
+              <RuleInput label="Số lần gia hạn tối đa" value={rules.maxExtensions} onChange={(value) => updateRule('maxExtensions', value)} />
+              <RuleInput label="Giới hạn lịch sử công khai" value={rules.publicHistoryLimit} onChange={(value) => updateRule('publicHistoryLimit', value)} />
+            </div>
+            <button
+              type="submit"
+              disabled={submitting || createOutcomeUnknown}
+              className="w-full rounded-md bg-[var(--color-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-bg)] disabled:opacity-50"
+            >
+              {createOutcomeUnknown
+                ? 'Chờ xác minh'
+                : submitting
+                ? 'Đang lưu...'
+                : createdSessionId
+                  ? 'Thử lưu lại quy tắc'
+                  : 'Tạo bản nháp'}
+            </button>
+          </section>
+        </form>
+      )}
+    </main>
+  );
+}
+
+type RuleInputProps = {
+  label: string;
+  value: string;
+  onChange(value: string): void;
+};
+
+function RuleInput({ label, value, onChange }: RuleInputProps) {
+  return (
+    <label className="block text-sm">
+      <span className="text-[var(--color-text-muted)]">{label}</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3"
+      />
+    </label>
   );
 }

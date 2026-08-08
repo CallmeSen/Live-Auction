@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, text
+from sqlalchemy import Boolean, String, text
 from sqlalchemy.dialects.mysql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -63,6 +63,13 @@ class User(
         nullable=False,
         default=UserStatus.ACTIVE,
         server_default=text("'ACTIVE'"),
+    )
+
+    is_primary_admin: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text("0"),
     )
 
     auction_sessions: Mapped[list["AuctionSession"]] = relationship(

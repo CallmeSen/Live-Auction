@@ -36,9 +36,30 @@ venv/
 # Environment variables
 .env
 
-.cursor
+# Terraform local state and cache
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# Build and dependency output
+build/
+node_modules/
+.venv*/
+*.egg-info/
+
+
 
 ./frontend/node_modules/
 ./frontend/dist/
 
 .cursorignore
+/.superpowers
+/assets
+/.tmp
+/.vscode
+
+./admin-frontend/node_modules/
+./admin-frontend/dist/

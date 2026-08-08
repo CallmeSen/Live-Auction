@@ -1,55 +1,48 @@
-import axios, {
-    type InternalAxiosRequestConfig,
-} from 'axios';
-import { logoutSession } from '../store/authStore';
+import axios from 'axios';
 
 const axiosClient = axios.create({
-    baseURL:
-        import.meta.env.VITE_API_BASE_URL ??
-        'http://localhost:8000/api/v1',
-    headers: {
-        Accept: 'application/json',
-    },
+  baseURL:
+    import.meta.env.VITE_REST_API_URL
+      ? `${import.meta.env.VITE_REST_API_URL}/api/v1`
+      : 'http://localhost:8000/api/v1',
+  headers: {
+    Accept: 'application/json',
+  },
 });
 
-axiosClient.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
-        const accessToken =
-            localStorage.getItem('accessToken');
+const getCognitoToken = (): string | null => {
+  const lastAuthUserKey = Object.keys(localStorage).find((key) =>
+    key.endsWith('.LastAuthUser'),
+  );
 
-        if (accessToken) {
-            config.headers.Authorization =
-                `Bearer ${accessToken}`;
-        }
+  if (!lastAuthUserKey) return null;
 
-        return config;
-    },
-);
+  const username = localStorage.getItem(lastAuthUserKey);
+  if (!username) return null;
 
-axiosClient.interceptors.response.use(
-    (response) => response,
-    (error: unknown) => {
-        if (axios.isAxiosError(error) && error.response?.status === 401) {
-            const requestUrl = error.config?.url ?? '';
-            const isAuthRequest = requestUrl.includes('/auth/');
-            const hasActiveSession = Boolean(
-                localStorage.getItem('accessToken'),
-            );
+  const prefix = lastAuthUserKey.replace('.LastAuthUser', '');
+  return (
+    localStorage.getItem(`${prefix}.${username}.idToken`) ??
+    localStorage.getItem(`${prefix}.${username}.accessToken`)
+  );
+};
 
-            // Một request bảo vệ có thể hoàn tất sau khi người dùng vừa
-            // chủ động đăng xuất. Khi token đã bị xóa, không được ép điều
-            // hướng lần hai sang /login.
-            if (!isAuthRequest && hasActiveSession) {
-                logoutSession();
+axiosClient.interceptors.request.use((config) => {
+  const token =
+    localStorage.getItem('accessToken') ??
+    getCognitoToken();
 
-                if (window.location.pathname !== '/login') {
-                    window.location.replace('/login');
-                }
-            }
-        }
+  const apiKey = import.meta.env.VITE_REST_API_KEY;
 
-        return Promise.reject(error);
-    },
-);
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  if (apiKey) {
+    config.headers['x-api-key'] = apiKey;
+  }
+
+  return config;
+});
 
 export default axiosClient;

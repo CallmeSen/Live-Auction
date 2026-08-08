@@ -1,320 +1,335 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import Button from '../../../components/common/Button';
-import Input from '../../../components/common/Input';
-import type { CategoryResponse } from '../../../interfaces/category';
-import { auctionItemService } from '../../../services/auctionItemService';
-import { categoryService } from '../../../services/categoryService';
-import { getApiErrorMessage } from '../../../services/apiError';
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import type {
+  CatalogApi,
+  CreateItemDto,
+  ImageMetadataDto,
+} from '../../../services/serverless/catalogApi';
+import type { PresignedPost } from '../../../services/serverless/contracts';
+import { ServerlessApiError } from '../../../services/serverless/contracts';
+import {
+  uploadPresignedPost,
+} from '../../../services/serverless/mediaUpload';
+import { useCatalogApi } from '../../../services/serverless/useCatalogApi';
 
-const MAX_IMAGES = 5;
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = new Set([
+const MAX_MONEY_CENTS = 100_000_000_000n;
+const ALLOWED_IMAGE_TYPES = new Set<ImageMetadataDto['content_type']>([
   'image/jpeg',
   'image/png',
   'image/webp',
 ]);
 
-const initialForm = {
-  title: '',
-  description: '',
-  categoryId: '',
-  startingPrice: '',
+type ItemForm = {
+  name: string;
+  description: string;
+  categoryId: string;
+  sequenceNumber: string;
+  startPrice: string;
+  durationSeconds: string;
 };
 
-export default function AuctionItemEditorPage() {
+const initialForm: ItemForm = {
+  name: '',
+  description: '',
+  categoryId: '',
+  sequenceNumber: '1',
+  startPrice: '',
+  durationSeconds: '90',
+};
+
+function boundedInteger(value: string, minimum: number, maximum: number): number | null {
+  if (!/^\d+$/.test(value.trim())) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= minimum && parsed <= maximum
+    ? parsed
+    : null;
+}
+
+function validMoney(value: string): boolean {
+  const match = /^(0|[1-9]\d{0,9})(?:\.(\d{1,2}))?$/.exec(value.trim());
+  if (!match) return false;
+  const cents = BigInt(match[1]) * 100n + BigInt((match[2] ?? '').padEnd(2, '0') || '0');
+  return cents <= MAX_MONEY_CENTS;
+}
+
+function isKnownClientFailure(error: unknown): boolean {
+  return error instanceof ServerlessApiError
+    && error.status >= 400
+    && error.status < 500
+    && error.code !== 'INVALID_ENVELOPE';
+}
+
+type AuctionItemEditorPageProps = {
+  catalogApi?: CatalogApi;
+  uploadMedia?: typeof uploadPresignedPost;
+};
+
+export default function AuctionItemEditorPage({
+  catalogApi,
+  uploadMedia = uploadPresignedPost,
+}: AuctionItemEditorPageProps) {
   const { sessionId, itemId } = useParams();
-  const navigate = useNavigate();
-  const editing = Boolean(itemId);
+  const api = useCatalogApi(catalogApi);
+  const inFlight = useRef(false);
   const [form, setForm] = useState(initialForm);
-  const [categories, setCategories] = useState<CategoryResponse[]>([]);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [existingImageCount, setExistingImageCount] = useState(0);
-  const [resolvedSessionId, setResolvedSessionId] = useState(sessionId ?? '');
-  const [loading, setLoading] = useState(editing);
-  const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [createdItemId, setCreatedItemId] = useState<string | null>(null);
+  const [presign, setPresign] = useState<PresignedPost | null>(null);
+  const [presignExpiresAt, setPresignExpiresAt] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [outcomeUnknown, setOutcomeUnknown] = useState<'create' | 'presign' | null>(null);
   const [error, setError] = useState('');
 
-  const remainingImageSlots = useMemo(
-    () => MAX_IMAGES - existingImageCount,
-    [existingImageCount],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        const categoryResult = await categoryService.getCategories({
-          page: 1,
-          size: 100,
-          status: 'ACTIVE',
-        });
-
-        if (!cancelled) {
-          setCategories(categoryResult.items);
-        }
-
-        if (itemId) {
-          const item = await auctionItemService.getItemById(itemId);
-
-          if (item.session.status !== 'SCHEDULED') {
-            throw new Error(
-              'Chỉ được sửa vật phẩm khi phiên đang chờ duyệt.',
-            );
-          }
-
-          if (!cancelled) {
-            setResolvedSessionId(item.sessionId);
-            setExistingImageCount(item.images.length);
-            setForm({
-              title: item.title,
-              description: item.description ?? '',
-              categoryId: item.categoryId ?? '',
-              startingPrice: item.startingPrice,
-            });
-          }
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            getApiErrorMessage(
-              loadError,
-              'Không thể tải thông tin vật phẩm.',
-            ),
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [itemId]);
-
-  const update = (field: keyof typeof form, value: string) => {
-    setForm((current) => ({ ...current, [field]: value }));
-  };
-
-  const selectImages = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const files = Array.from(event.target.files ?? []);
-    setError('');
-
-    if (files.length > remainingImageSlots) {
-      event.target.value = '';
-      setImageFiles([]);
-      setError(
-        `Vật phẩm chỉ được có tối đa 5 ảnh. Bạn còn ${remainingImageSlots} vị trí ảnh.`,
-      );
-      return;
-    }
-
-    const invalidFile = files.find(
-      (file) =>
-        !ALLOWED_IMAGE_TYPES.has(file.type) ||
-        file.size > MAX_IMAGE_SIZE_BYTES,
-    );
-
-    if (invalidFile) {
-      event.target.value = '';
-      setImageFiles([]);
-      setError(
-        `Ảnh "${invalidFile.name}" phải là JPEG, PNG hoặc WEBP và không quá 5 MB.`,
-      );
-      return;
-    }
-
-    setImageFiles(files);
-  };
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setError('');
-
-    if (!resolvedSessionId) {
-      setError('Không tìm thấy phiên đấu giá.');
-      return;
-    }
-
-    const startingPrice = Number(form.startingPrice);
-
-    if (!form.categoryId || startingPrice <= 0) {
-      setError('Vui lòng chọn danh mục và nhập giá khởi điểm hợp lệ.');
-      return;
-    }
-
-    if (!editing && imageFiles.length === 0) {
-      setError('Vui lòng chọn từ 1 đến 5 ảnh cho vật phẩm.');
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      const payload = {
-        categoryId: form.categoryId,
-        title: form.title.trim(),
-        description: form.description.trim() || null,
-        startingPrice,
-      };
-
-      const item = itemId
-        ? await auctionItemService.updateItem(itemId, payload)
-        : await auctionItemService.createItem(
-            resolvedSessionId,
-            payload,
-          );
-
-      if (imageFiles.length > 0) {
-        await auctionItemService.uploadImages(item.id, {
-          files: imageFiles,
-          primaryIndex: existingImageCount === 0 ? 0 : -1,
-        });
-      }
-
-      navigate(`/auction-sessions/${resolvedSessionId}`, {
-        replace: true,
-      });
-    } catch (saveError) {
-      setError(
-        getApiErrorMessage(
-          saveError,
-          editing
-            ? 'Không thể cập nhật vật phẩm.'
-            : 'Không thể thêm vật phẩm.',
-        ),
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
+  if (itemId) {
     return (
-      <div className="mx-auto max-w-3xl px-6 py-16 text-sm text-[var(--color-text-muted)]">
-        Đang tải thông tin vật phẩm...
-      </div>
+      <main className="mx-auto max-w-3xl px-6 py-12">
+        <p className="font-mono-tag text-xs uppercase text-[var(--color-primary)]">
+          Kênh người bán
+        </p>
+        <h1 className="mt-3 font-display text-4xl">Chỉnh sửa chưa được hỗ trợ</h1>
+        <p className="mt-4 text-sm text-[var(--color-text-muted)]">
+          API serverless hiện chỉ hỗ trợ tạo vật phẩm trong phiên nháp.
+        </p>
+        <Link to="/my-auctions" className="mt-6 inline-block text-sm text-[var(--color-primary)]">
+          Về danh sách phiên
+        </Link>
+      </main>
     );
   }
 
+  const update = (field: keyof ItemForm, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const selectImage = (event: ChangeEvent<HTMLInputElement>) => {
+    setImageFile(event.target.files?.[0] ?? null);
+    setError('');
+  };
+
+  const validate = (): CreateItemDto | null => {
+    const name = form.name.trim();
+    const description = form.description.trim();
+    const categoryId = form.categoryId.trim();
+    const sequenceNumber = boundedInteger(form.sequenceNumber, 1, 999_999);
+    const durationSeconds = boundedInteger(form.durationSeconds, 30, 86_400);
+
+    if (!name || name.length > 200) {
+      setError('Tên vật phẩm phải có từ 1 đến 200 ký tự.');
+      return null;
+    }
+    if (description.length > 2_000 || categoryId.length > 100) {
+      setError('Mô tả hoặc mã danh mục vượt quá giới hạn cho phép.');
+      return null;
+    }
+    if (sequenceNumber === null || durationSeconds === null || !validMoney(form.startPrice)) {
+      setError('Thứ tự, giá khởi điểm hoặc thời lượng không hợp lệ.');
+      return null;
+    }
+    if (!imageFile) {
+      setError('Chọn một ảnh JPEG, PNG hoặc WEBP cho vật phẩm.');
+      return null;
+    }
+    if (
+      !ALLOWED_IMAGE_TYPES.has(imageFile.type as ImageMetadataDto['content_type'])
+      || imageFile.size < 1
+      || imageFile.size > MAX_IMAGE_SIZE_BYTES
+    ) {
+      setError('Ảnh phải là JPEG, PNG hoặc WEBP và có dung lượng từ 1 byte đến 5 MB.');
+      return null;
+    }
+
+    return {
+      name,
+      description,
+      category_id: categoryId || null,
+      sequence_number: sequenceNumber,
+      start_price: form.startPrice.trim(),
+      duration_s: durationSeconds,
+    };
+  };
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (inFlight.current || completed || outcomeUnknown) return;
+    const payload = validate();
+    if (!payload || !sessionId || !imageFile) return;
+    if (presign && presignExpiresAt !== null && Date.now() >= presignExpiresAt) {
+      setOutcomeUnknown('presign');
+      setError('Liên kết tải ảnh đã hết hạn. Hãy kiểm tra vật phẩm trước khi thao tác tiếp.');
+      return;
+    }
+
+    inFlight.current = true;
+    setSubmitting(true);
+    setError('');
+    let stage: 'create' | 'presign' | 'upload' = createdItemId ? 'presign' : 'create';
+    try {
+      let resolvedItemId = createdItemId;
+      if (!resolvedItemId) {
+        const item = await api.createItem(sessionId, payload);
+        resolvedItemId = item.itemId;
+        setCreatedItemId(resolvedItemId);
+      }
+
+      stage = 'presign';
+      let resolvedPresign = presign;
+      if (!resolvedPresign) {
+        resolvedPresign = await api.presignItemImage(resolvedItemId, {
+          content_type: imageFile.type as ImageMetadataDto['content_type'],
+          size_bytes: imageFile.size,
+        });
+        setPresign(resolvedPresign);
+        setPresignExpiresAt(Date.now() + resolvedPresign.expiresIn * 1_000);
+      }
+
+      stage = 'upload';
+      await uploadMedia(resolvedPresign, imageFile);
+      setCompleted(true);
+    } catch (requestError) {
+      if (stage === 'upload') {
+        setError('Tải ảnh thất bại. Hãy thử tải ảnh lại.');
+      } else if (isKnownClientFailure(requestError)) {
+        setError(stage === 'create' ? 'Không thể tạo vật phẩm.' : 'Không thể chuẩn bị ảnh.');
+      } else {
+        setOutcomeUnknown(stage);
+        setError(
+          stage === 'create'
+            ? 'Kết quả tạo vật phẩm chưa xác định. Hãy kiểm tra phiên trước khi thử lại.'
+            : 'Kết quả chuẩn bị ảnh chưa xác định. Hãy kiểm tra vật phẩm trước khi thử lại.',
+        );
+      }
+    } finally {
+      inFlight.current = false;
+      setSubmitting(false);
+    }
+  };
+
+  const formLocked = submitting || createdItemId !== null || outcomeUnknown !== null;
+
   return (
-    <div className="mx-auto max-w-3xl px-6 py-10 sm:py-14">
-      <span className="font-mono-tag text-xs uppercase tracking-[0.2em] text-[var(--color-primary)]">
-        Thành viên · Quản lý vật phẩm
-      </span>
-      <h1 className="mt-3 font-display text-4xl">
-        {editing ? 'Sửa vật phẩm' : 'Thêm vật phẩm vào phiên'}
-      </h1>
-      <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-        Chỉ có thể thay đổi vật phẩm trong khi phiên đang chờ duyệt.
+    <main className="mx-auto max-w-3xl px-6 py-10 sm:py-14">
+      <p className="font-mono-tag text-xs uppercase text-[var(--color-primary)]">
+        Kênh người bán
       </p>
+      <h1 className="mt-3 font-display text-4xl">Tạo vật phẩm</h1>
 
-      <form
-        onSubmit={submit}
-        className="mt-8 space-y-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 sm:p-8"
-      >
-        <Input
-          label="Tên vật phẩm"
-          value={form.title}
-          onChange={(event) => update('title', event.target.value)}
-          required
-        />
+      {error && (
+        <div role="alert" className="mt-7 border-y border-[var(--color-danger-solid)]/60 py-4 text-sm text-[var(--color-danger)]">
+          {error}
+        </div>
+      )}
 
-        <label className="flex flex-col gap-1.5 text-xs font-mono-tag uppercase tracking-wider text-[var(--color-text-muted)]">
-          Danh mục
-          <select
-            required
-            value={form.categoryId}
-            onChange={(event) =>
-              update('categoryId', event.target.value)
-            }
-            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3 font-sans text-sm normal-case tracking-normal text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+      {outcomeUnknown && (
+        <Link
+          to={outcomeUnknown === 'create'
+            ? '/my-auctions'
+            : `/auction-sessions/${encodeURIComponent(sessionId ?? '')}`}
+          className="mt-4 inline-block text-sm text-[var(--color-primary)]"
+        >
+          Kiểm tra trạng thái
+        </Link>
+      )}
+
+      {completed ? (
+        <section
+          role="status"
+          aria-live="polite"
+          className="mt-9 border-y border-[var(--color-success-border)] py-10"
+        >
+          <h2 className="font-display text-2xl">Vật phẩm và ảnh đã sẵn sàng</h2>
+          <Link
+            to={`/auction-sessions/${encodeURIComponent(sessionId ?? '')}`}
+            className="mt-6 inline-block text-sm text-[var(--color-primary)]"
           >
-            <option value="">Chọn danh mục</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <Input
-          label="Giá khởi điểm"
-          type="number"
-          min="1"
-          value={form.startingPrice}
-          onChange={(event) =>
-            update('startingPrice', event.target.value)
-          }
-          required
-        />
-
-        <label className="flex flex-col gap-1.5 text-xs font-mono-tag uppercase tracking-wider text-[var(--color-text-muted)]">
-          Mô tả vật phẩm
-          <textarea
-            rows={5}
-            value={form.description}
-            onChange={(event) =>
-              update('description', event.target.value)
-            }
-            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3 font-sans text-sm normal-case tracking-normal text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
-          />
-        </label>
-
-        {remainingImageSlots > 0 && (
-          <label className="flex flex-col gap-2 text-xs font-mono-tag uppercase tracking-wider text-[var(--color-text-muted)]">
-            {editing ? 'Thêm ảnh' : 'Hình ảnh vật phẩm'}
-            <span className="font-sans normal-case tracking-normal">
-              {editing
-                ? `Đang có ${existingImageCount}/5 ảnh, có thể thêm tối đa ${remainingImageSlots} ảnh.`
-                : 'Chọn từ 1 đến 5 ảnh JPEG, PNG hoặc WEBP; mỗi ảnh tối đa 5 MB.'}
-            </span>
+            Về phiên đấu giá
+          </Link>
+        </section>
+      ) : (
+        <form onSubmit={submit} className="mt-9 space-y-5 border-t border-[var(--color-border)] pt-7">
+          <FormInput label="Tên vật phẩm" value={form.name} onChange={(value) => update('name', value)} maxLength={200} disabled={formLocked} />
+          <label className="block text-sm">
+            <span className="text-[var(--color-text-muted)]">Mô tả</span>
+            <textarea
+              value={form.description}
+              onChange={(event) => update('description', event.target.value)}
+              maxLength={2_000}
+              rows={5}
+              disabled={formLocked}
+              className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3"
+            />
+          </label>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormInput label="Mã danh mục" value={form.categoryId} onChange={(value) => update('categoryId', value)} maxLength={100} disabled={formLocked} />
+            <FormInput label="Thứ tự" value={form.sequenceNumber} onChange={(value) => update('sequenceNumber', value)} inputMode="numeric" disabled={formLocked} />
+            <FormInput label="Giá khởi điểm" value={form.startPrice} onChange={(value) => update('startPrice', value)} inputMode="decimal" disabled={formLocked} />
+            <FormInput label="Thời lượng (giây)" value={form.durationSeconds} onChange={(value) => update('durationSeconds', value)} inputMode="numeric" disabled={formLocked} />
+          </div>
+          <label className="block text-sm">
+            <span className="text-[var(--color-text-muted)]">Ảnh vật phẩm</span>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              multiple
-              required={!editing}
-              onChange={selectImages}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3 font-sans normal-case tracking-normal"
+              onChange={selectImage}
+              disabled={formLocked}
+              className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3"
             />
           </label>
-        )}
+          <div className="flex flex-wrap gap-3 pt-2">
+            {submitting ? (
+              <span
+                aria-disabled="true"
+                className="rounded-md border border-[var(--color-border-strong)] px-5 py-3 text-sm opacity-50"
+              >
+                Hủy
+              </span>
+            ) : (
+              <Link to={`/auction-sessions/${encodeURIComponent(sessionId ?? '')}`} className="rounded-md border border-[var(--color-border-strong)] px-5 py-3 text-sm">
+                Hủy
+              </Link>
+            )}
+            <button
+              type="submit"
+              disabled={submitting || outcomeUnknown !== null}
+              className="rounded-md bg-[var(--color-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-bg)] disabled:opacity-50"
+            >
+              {outcomeUnknown
+                ? 'Chờ xác minh'
+                : submitting
+                  ? 'Đang xử lý...'
+                  : presign
+                    ? 'Thử tải ảnh lại'
+                    : 'Tạo vật phẩm'}
+            </button>
+          </div>
+        </form>
+      )}
+    </main>
+  );
+}
 
-        {error && (
-          <p className="rounded-md border border-[var(--color-danger-solid)]/40 p-4 text-sm text-[var(--color-danger)]">
-            {error}
-          </p>
-        )}
+type FormInputProps = {
+  label: string;
+  value: string;
+  onChange(value: string): void;
+  maxLength?: number;
+  inputMode?: 'decimal' | 'numeric';
+  disabled?: boolean;
+};
 
-        <div className="grid grid-cols-2 gap-3">
-          <Link
-            to={
-              resolvedSessionId
-                ? `/auction-sessions/${resolvedSessionId}`
-                : '/my-auctions'
-            }
-            className="rounded-md border border-[var(--color-border-strong)] px-5 py-2.5 text-center text-sm font-semibold"
-          >
-            Hủy
-          </Link>
-          <Button type="submit" disabled={saving}>
-            {saving
-              ? 'Đang lưu...'
-              : editing
-                ? 'Lưu thay đổi'
-                : 'Thêm vật phẩm'}
-          </Button>
-        </div>
-      </form>
-    </div>
+function FormInput({ label, value, onChange, maxLength, inputMode, disabled }: FormInputProps) {
+  return (
+    <label className="block text-sm">
+      <span className="text-[var(--color-text-muted)]">{label}</span>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        maxLength={maxLength}
+        inputMode={inputMode}
+        disabled={disabled}
+        className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3"
+      />
+    </label>
   );
 }

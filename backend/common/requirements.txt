@@ -1,0 +1,4 @@
+aws-lambda-powertools[all]==3.31.1
+pydantic==2.13.4
+PyJWT[crypto]==2.13.0
+psycopg[binary]==3.3.4

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { ApiErrorResponse } from '../interfaces/error';
+import { ServerlessApiError } from './serverless/contracts';
 
 const CONNECTION_ERROR =
     'Không thể kết nối tới máy chủ. Hãy kiểm tra backend đang chạy trên cổng 8000.';
@@ -8,6 +9,10 @@ export const getApiErrorMessage = (
     error: unknown,
     fallbackMessage: string,
 ): string => {
+    if (error instanceof ServerlessApiError) {
+        return error.message;
+    }
+
     if (!axios.isAxiosError(error)) {
         return fallbackMessage;
     }

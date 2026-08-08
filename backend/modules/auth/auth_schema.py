@@ -89,6 +89,7 @@ class LoginUserResponse(BaseModel):
     full_name: str = Field(serialization_alias="fullName")
     role: UserRole
     status: UserStatus
+    is_primary_admin: bool = Field(serialization_alias="isPrimaryAdmin")
 
 
 class LoginData(BaseModel):
