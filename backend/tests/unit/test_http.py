@@ -46,7 +46,9 @@ def test_service_errors_store_stable_http_contract():
 
 
 def test_request_identity_is_frozen_and_uses_slots():
-    identity = RequestIdentity(sub="seller-sub", groups=frozenset({"SELLER"}))
+    identity = RequestIdentity(
+        sub="seller-sub", groups=frozenset({"SELLER"}), claims={}
+    )
 
     with pytest.raises(FrozenInstanceError):
         identity.sub = "forged-sub"

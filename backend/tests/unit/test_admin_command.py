@@ -31,11 +31,19 @@ ROOT = Path(__file__).parents[2]
 
 
 def seller(sub="seller-sub"):
-    return RequestIdentity(sub=sub, groups=frozenset({"USER"}))
+    return RequestIdentity(
+        sub=sub,
+        groups=frozenset({"USER"}),
+        claims={"sub": sub, "cognito:groups": "USER"},
+    )
 
 
 def admin(sub="admin-sub"):
-    return RequestIdentity(sub=sub, groups=frozenset({"ADMIN"}))
+    return RequestIdentity(
+        sub=sub,
+        groups=frozenset({"ADMIN"}),
+        claims={"sub": sub, "cognito:groups": "ADMIN"},
+    )
 
 
 @pytest.fixture
@@ -375,10 +383,11 @@ def test_schedule_requires_owner_draft_rules_items_and_future_start(
 @pytest.mark.parametrize(
     "identity",
     [
-        RequestIdentity(sub="seller-sub", groups=frozenset({"ADMIN"})),
+        RequestIdentity(sub="seller-sub", groups=frozenset({"ADMIN"}), claims={}),
         RequestIdentity(
             sub="another-seller",
             groups=frozenset({"ADMIN", "SELLER"}),
+            claims={},
         ),
     ],
 )
