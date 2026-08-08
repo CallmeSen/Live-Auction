@@ -24,6 +24,7 @@ vi.mock('../../../config/runtime', () => ({
     restApiUrl: 'https://rest.example.test',
     restApiKey: 'api-key',
     websocketUrl: 'wss://ws.example.test',
+    mediaBaseUrl: 'https://media.example.test',
   },
 }));
 
@@ -123,6 +124,7 @@ describe('AuctionDetailPage', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent(/đang tải/i);
     expect(await screen.findByRole('heading', { name: 'Signed print' })).toBeVisible();
+    expect(screen.getByText('1p 30s')).toBeVisible();
     expect(screen.getByLabelText('Giá hiện tại')).toHaveTextContent('120.00');
     expect(screen.getByText(/3 lần gia hạn/i)).toBeVisible();
     expect(roomHook).toHaveBeenCalledWith(expect.objectContaining({
@@ -130,6 +132,22 @@ describe('AuctionDetailPage', () => {
       catalogApi: api,
     }));
     expect(await screen.findByRole('button', { name: 'Xác nhận trả giá' })).toBeVisible();
+  });
+
+  it('renders the first catalog image on the item detail page', async () => {
+    const api = createApi();
+    api.getItem = vi.fn().mockResolvedValue({
+      ...item('WAITING'),
+      imageKeys: ['items/seller/item-1/cover.jpg'],
+    });
+
+    renderPage(api);
+
+    expect(await screen.findByRole('img', { name: 'Signed print' }))
+      .toHaveAttribute(
+        'src',
+        'https://media.example.test/items/seller/item-1/cover.jpg',
+      );
   });
 
   it('uses catalog status for non-live items and omits the live panel', async () => {

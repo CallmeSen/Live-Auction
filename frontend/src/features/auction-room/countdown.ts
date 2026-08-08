@@ -6,8 +6,11 @@ export function formatCountdown(totalSeconds: number): string {
   const hours = Math.floor(bounded / 3_600);
   const minutes = Math.floor((bounded % 3_600) / 60);
   const seconds = bounded % 60;
-  const clock = [minutes, seconds]
-    .map((value) => value.toString().padStart(2, '0'))
-    .join(':');
-  return hours > 0 ? `${hours.toString().padStart(2, '0')}:${clock}` : clock;
+  const parts: string[] = [];
+
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}p`);
+  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+
+  return parts.join(' ');
 }

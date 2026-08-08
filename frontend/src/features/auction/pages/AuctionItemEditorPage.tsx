@@ -1,6 +1,7 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type {
+  AuctionCategory,
   CatalogApi,
   CreateItemDto,
   ImageMetadataDto,
@@ -73,6 +74,8 @@ export default function AuctionItemEditorPage({
   const api = useCatalogApi(catalogApi);
   const inFlight = useRef(false);
   const [form, setForm] = useState(initialForm);
+  const [categories, setCategories] = useState<AuctionCategory[]>([]);
+  const [categoryError, setCategoryError] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [createdItemId, setCreatedItemId] = useState<string | null>(null);
   const [presign, setPresign] = useState<PresignedPost | null>(null);
@@ -81,6 +84,20 @@ export default function AuctionItemEditorPage({
   const [completed, setCompleted] = useState(false);
   const [outcomeUnknown, setOutcomeUnknown] = useState<'create' | 'presign' | null>(null);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    void api.listCategories({ pageSize: 100 })
+      .then((page) => {
+        if (!cancelled) setCategories(page.items.filter((category) => category.status === 'ACTIVE'));
+      })
+      .catch(() => {
+        if (!cancelled) setCategoryError('Không thể tải danh mục. Bạn có thể bỏ qua danh mục nếu chưa cần chọn.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
 
   if (itemId) {
     return (
@@ -105,6 +122,7 @@ export default function AuctionItemEditorPage({
 
   const selectImage = (event: ChangeEvent<HTMLInputElement>) => {
     setImageFile(event.target.files?.[0] ?? null);
+    event.target.value = '';
     setError('');
   };
 
@@ -261,7 +279,24 @@ export default function AuctionItemEditorPage({
             />
           </label>
           <div className="grid gap-5 sm:grid-cols-2">
-            <FormInput label="Mã danh mục" value={form.categoryId} onChange={(value) => update('categoryId', value)} maxLength={100} disabled={formLocked} />
+            <label className="block text-sm">
+              <span className="text-[var(--color-text-muted)]">Danh mục</span>
+              <select
+                aria-label="Danh mục"
+                value={form.categoryId}
+                onChange={(event) => update('categoryId', event.target.value)}
+                disabled={formLocked}
+                className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-4 py-3"
+              >
+                <option value="">Không chọn danh mục</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>{category.name}</option>
+                ))}
+              </select>
+              {categoryError && (
+                <span className="mt-2 block text-xs text-[var(--color-text-muted)]">{categoryError}</span>
+              )}
+            </label>
             <FormInput label="Thứ tự" value={form.sequenceNumber} onChange={(value) => update('sequenceNumber', value)} inputMode="numeric" disabled={formLocked} />
             <FormInput label="Giá khởi điểm" value={form.startPrice} onChange={(value) => update('startPrice', value)} inputMode="decimal" disabled={formLocked} />
             <FormInput label="Thời lượng (giây)" value={form.durationSeconds} onChange={(value) => update('durationSeconds', value)} inputMode="numeric" disabled={formLocked} />
@@ -276,6 +311,15 @@ export default function AuctionItemEditorPage({
               className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-3"
             />
           </label>
+          {imageFile && (
+            <span
+              role="status"
+              aria-label="Ảnh đã chọn"
+              className="block text-xs text-[var(--color-text-muted)]"
+            >
+              Đã chọn: {imageFile.name}
+            </span>
+          )}
           <div className="flex flex-wrap gap-3 pt-2">
             {submitting ? (
               <span

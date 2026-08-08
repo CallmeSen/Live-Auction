@@ -16,6 +16,7 @@ vi.mock('../../../config/runtime', () => ({
     restApiUrl: 'https://rest.example.test',
     restApiKey: 'api-key',
     websocketUrl: 'wss://ws.example.test',
+    mediaBaseUrl: 'https://media.example.test',
   },
 }));
 
@@ -92,9 +93,30 @@ describe('AuctionSessionDetailPage', () => {
     expect(screen.getByText('5.00')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Signed print' }))
       .toHaveAttribute('href', '/auction-items/item-1');
+    expect(screen.getByRole('link', { name: 'Xem chi tiết vật phẩm' }))
+      .toHaveAttribute('href', '/auction-items/item-1');
     expect(screen.queryByRole('button', {
       name: /duyệt|từ chối|hủy|xóa/i,
     })).not.toBeInTheDocument();
+  });
+
+  it('renders the first catalog image for an item in the session', async () => {
+    const api = createApi();
+    api.getSession = vi.fn().mockResolvedValue({
+      ...detail,
+      items: [{
+        ...detail.items[0],
+        imageKeys: ['items/seller/item-1/cover.jpg'],
+      }],
+    });
+
+    renderPage(api);
+
+    expect(await screen.findByRole('img', { name: 'Signed print' }))
+      .toHaveAttribute(
+        'src',
+        'https://media.example.test/items/seller/item-1/cover.jpg',
+      );
   });
 
   it('shows a sanitized error and retries', async () => {

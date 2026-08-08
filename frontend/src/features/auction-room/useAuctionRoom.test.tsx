@@ -17,6 +17,7 @@ vi.mock('../../config/runtime', () => ({
     restApiUrl: 'https://rest.example.test',
     restApiKey: 'api-key',
     websocketUrl: 'wss://socket.example.test/prod',
+    mediaBaseUrl: 'https://media.example.test',
   },
 }));
 

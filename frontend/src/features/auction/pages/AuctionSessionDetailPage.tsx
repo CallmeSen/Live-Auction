@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { CatalogApi } from '../../../services/serverless/catalogApi';
 import type { SessionDetail, SessionStatus } from '../../../services/serverless/mappers';
+import { runtimeConfig } from '../../../config/runtime';
+import { mediaUrlForKey } from '../../../services/serverless/media';
 import { useCatalogApi } from '../../../services/serverless/useCatalogApi';
 
 const statusLabel: Record<SessionStatus, string> = {
@@ -159,6 +161,15 @@ export default function AuctionSessionDetailPage({
                       <span>#{item.sequenceNumber}</span>
                       <span>{item.status}</span>
                     </div>
+                    {mediaUrlForKey(runtimeConfig.mediaBaseUrl, item.imageKeys[0]) && (
+                      <div className="mt-4 aspect-[4/3] overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
+                        <img
+                          src={mediaUrlForKey(runtimeConfig.mediaBaseUrl, item.imageKeys[0]) ?? undefined}
+                          alt={item.name}
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                    )}
                     <h3 className="mt-5 font-display text-2xl">
                       <Link
                         to={`/auction-items/${encodeURIComponent(item.id)}`}
@@ -173,6 +184,12 @@ export default function AuctionSessionDetailPage({
                     <p className="mt-5 border-t border-[var(--color-border)] pt-4 text-sm">
                       Giá khởi điểm: <span className="font-display text-lg">{item.startPrice}</span>
                     </p>
+                    <Link
+                      to={`/auction-items/${encodeURIComponent(item.id)}`}
+                      className="mt-5 rounded-md border border-[var(--color-primary)]/50 px-4 py-2.5 text-center text-sm text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10"
+                    >
+                      Xem chi tiết vật phẩm
+                    </Link>
                   </article>
                 ))}
               </div>

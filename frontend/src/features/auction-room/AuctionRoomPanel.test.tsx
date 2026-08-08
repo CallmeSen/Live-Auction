@@ -33,7 +33,7 @@ describe('AuctionRoomPanel', () => {
 
     expect(screen.getByLabelText('Giá hiện tại')).toHaveTextContent('101.25');
     expect(screen.getByLabelText('Người đang dẫn đầu')).toHaveTextContent('Bidder #21');
-    expect(screen.getByLabelText('Thời gian còn lại')).toHaveTextContent('00:10');
+    expect(screen.getByLabelText('Thời gian còn lại')).toHaveTextContent('10s');
     expect(screen.getByText(/2 lần gia hạn/i)).toBeVisible();
   });
 
@@ -48,10 +48,10 @@ describe('AuctionRoomPanel', () => {
 
     nowMs = 105_000;
     act(() => vi.advanceTimersByTime(1_000));
-    expect(screen.getByLabelText('Thời gian còn lại')).toHaveTextContent('00:05');
+    expect(screen.getByLabelText('Thời gian còn lại')).toHaveTextContent('5s');
 
     rerender(<AuctionRoomPanel {...baseProps} now={now} endTime={120} />);
-    expect(screen.getByLabelText('Thời gian còn lại')).toHaveTextContent('00:15');
+    expect(screen.getByLabelText('Thời gian còn lại')).toHaveTextContent('15s');
     unmount();
     expect(clearIntervalSpy).toHaveBeenCalled();
     clearIntervalSpy.mockRestore();

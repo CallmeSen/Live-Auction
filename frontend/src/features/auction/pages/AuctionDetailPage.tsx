@@ -4,9 +4,12 @@ import type { AuthRole } from '../../../auth/types';
 import useAuth from '../../../hooks/useAuth';
 import type { CatalogApi } from '../../../services/serverless/catalogApi';
 import type { AuctionItem } from '../../../services/serverless/mappers';
+import { mediaUrlForKey } from '../../../services/serverless/media';
+import { runtimeConfig } from '../../../config/runtime';
 import { useCatalogApi } from '../../../services/serverless/useCatalogApi';
 import AuctionRoomPanel from '../../auction-room/AuctionRoomPanel';
 import BidPanel from '../../auction-room/BidPanel';
+import { formatCountdown } from '../../auction-room/countdown';
 import { useAuctionRoom } from '../../auction-room/useAuctionRoom';
 
 type AuctionDetailPageProps = {
@@ -93,6 +96,15 @@ export default function AuctionDetailPage({ catalogApi }: AuctionDetailPageProps
       {!pageLoading && !pageError && pageItem && (
         <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_0.8fr]">
           <section>
+            {mediaUrlForKey(runtimeConfig.mediaBaseUrl, pageItem.imageKeys[0]) && (
+              <div className="mb-8 aspect-[4/3] max-w-2xl overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
+                <img
+                  src={mediaUrlForKey(runtimeConfig.mediaBaseUrl, pageItem.imageKeys[0]) ?? undefined}
+                  alt={pageItem.name}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-muted)]">
               <span className="rounded-full border border-[var(--color-border-strong)] px-3 py-1">
                 {pageItem.status}
@@ -113,7 +125,7 @@ export default function AuctionDetailPage({ catalogApi }: AuctionDetailPageProps
               </div>
               <div>
                 <dt className="text-xs text-[var(--color-text-dim)]">Thời lượng</dt>
-                <dd className="mt-2 font-display text-2xl">{pageItem.durationSeconds} giây</dd>
+                <dd className="mt-2 font-display text-2xl">{formatCountdown(pageItem.durationSeconds)}</dd>
               </div>
             </dl>
           </section>

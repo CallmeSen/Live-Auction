@@ -18,6 +18,7 @@ vi.mock('../../../config/runtime', () => ({
     restApiUrl: 'https://rest.example.test',
     restApiKey: 'api-key',
     websocketUrl: 'wss://ws.example.test',
+    mediaBaseUrl: 'https://media.example.test',
   },
 }));
 
@@ -30,6 +31,17 @@ function createApi() {
     listItems: vi.fn(),
     getItem: vi.fn(),
     listMyBids: vi.fn(),
+    listCategories: vi.fn().mockResolvedValue({
+      items: [{
+        id: 'prints',
+        name: 'Prints',
+        slug: 'prints',
+        status: 'ACTIVE',
+        createdAt: 1_700_000_000,
+        updatedAt: 1_700_000_100,
+      }],
+      nextCursor: null,
+    }),
     createSession: vi.fn(),
     putRules: vi.fn(),
     listMySessions: vi.fn(),
@@ -68,12 +80,44 @@ function renderCreate(api: CatalogApi, uploadMedia = vi.fn()) {
 async function fillForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Tên vật phẩm'), 'Signed print');
   await user.type(screen.getByLabelText('Mô tả'), 'Numbered print');
-  await user.type(screen.getByLabelText('Mã danh mục'), 'prints');
+  await user.selectOptions(screen.getByLabelText('Danh mục'), 'prints');
   await user.clear(screen.getByLabelText('Giá khởi điểm'));
   await user.type(screen.getByLabelText('Giá khởi điểm'), '100.00');
 }
 
 describe('AuctionItemEditorPage', () => {
+  it('loads active categories into the category selector', async () => {
+    const api = createApi();
+    api.listCategories = vi.fn().mockResolvedValue({
+      items: [
+        {
+          id: 'prints',
+          name: 'Prints',
+          slug: 'prints',
+          status: 'ACTIVE',
+          createdAt: 1_700_000_000,
+          updatedAt: 1_700_000_100,
+        },
+        {
+          id: 'archived',
+          name: 'Archived',
+          slug: 'archived',
+          status: 'INACTIVE',
+          createdAt: 1_700_000_000,
+          updatedAt: 1_700_000_100,
+        },
+      ],
+      nextCursor: null,
+    });
+    renderCreate(api);
+
+    const selector = await screen.findByRole('combobox', { name: 'Danh mục' });
+    expect(api.listCategories).toHaveBeenCalledWith({ pageSize: 100 });
+    expect(selector).toHaveValue('');
+    expect(selector).toHaveTextContent('Prints');
+    expect(selector).not.toHaveTextContent('Archived');
+  });
+
   it('creates, presigns, then directly uploads the selected image', async () => {
     const user = userEvent.setup();
     const api = createApi();
@@ -111,6 +155,48 @@ describe('AuctionItemEditorPage', () => {
       .toBeLessThan(uploadMedia.mock.invocationCallOrder[0]);
     expect(await screen.findByText(/vật phẩm và ảnh đã sẵn sàng/i)).toBeVisible();
     expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
+  });
+
+  it('replaces the selected image when the same file input is used again', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    api.createItem = vi.fn().mockResolvedValue({
+      itemId: 'item-1',
+      status: 'WAITING',
+      version: 1,
+    });
+    api.presignItemImage = vi.fn().mockResolvedValue(presign);
+    const uploadMedia = vi.fn().mockResolvedValue(undefined);
+    renderCreate(api, uploadMedia);
+
+    await fillForm(user);
+    const input = screen.getByLabelText('Ảnh vật phẩm');
+    const first = new File(['first'], 'first.png', { type: 'image/png' });
+    const replacement = new File(
+      ['replacement'],
+      'replacement.webp',
+      { type: 'image/webp' },
+    );
+    const changes = vi.fn();
+    input.addEventListener('change', changes);
+
+    await user.upload(input, first);
+    await user.upload(input, replacement);
+    await user.upload(input, replacement);
+
+    expect(changes).toHaveBeenCalledTimes(3);
+    expect(input).toHaveValue('');
+    expect(screen.getByRole('status', { name: 'Ảnh đã chọn' }))
+      .toHaveTextContent('replacement.webp');
+
+    await user.click(screen.getByRole('button', { name: 'Tạo vật phẩm' }));
+
+    await waitFor(() => expect(uploadMedia).toHaveBeenCalledTimes(1));
+    expect(api.presignItemImage).toHaveBeenCalledWith('item-1', {
+      content_type: 'image/webp',
+      size_bytes: replacement.size,
+    });
+    expect(uploadMedia).toHaveBeenCalledWith(presign, replacement);
   });
 
   it('rejects invalid image metadata before any request', async () => {
@@ -268,7 +354,7 @@ describe('AuctionItemEditorPage', () => {
     await screen.findByRole('alert');
     expect(screen.getByLabelText('Tên vật phẩm')).toBeDisabled();
     expect(screen.getByLabelText('Mô tả')).toBeDisabled();
-    expect(screen.getByLabelText('Mã danh mục')).toBeDisabled();
+    expect(screen.getByLabelText('Danh mục')).toBeDisabled();
     expect(screen.getByLabelText('Giá khởi điểm')).toBeDisabled();
   });
 
