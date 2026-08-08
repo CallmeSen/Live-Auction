@@ -48,6 +48,7 @@ def identity(sub="trusted-sub", *groups):
     return RequestIdentity(
         sub=sub,
         groups=frozenset(groups or ("USER",)),
+        claims={},
     )
 
 
@@ -211,15 +212,27 @@ def lookup_record(**overrides):
     return value
 
 
-def rest_event(method, path, query=None, sub=None, groups=None, body=None, origin=None):
+def rest_event(
+    method,
+    path,
+    query=None,
+    sub=None,
+    groups=None,
+    body=None,
+    origin=None,
+    claims=None,
+):
     request_context = {}
     if sub is not None:
+        authorizer_claims = {
+            "sub": sub,
+            "cognito:groups": groups,
+        }
+        if claims is not None:
+            authorizer_claims.update(claims)
         request_context = {
             "authorizer": {
-                "claims": {
-                    "sub": sub,
-                    "cognito:groups": groups,
-                }
+                "claims": authorizer_claims,
             }
         }
     headers = {"Content-Type": "application/json"}
@@ -242,6 +255,51 @@ def rest_event(method, path, query=None, sub=None, groups=None, body=None, origi
 
 def response_body(response):
     return json.loads(response["body"])
+
+
+def test_profile_route_uses_authorizer_claims():
+    response = service.handler(
+        rest_event(
+            "GET",
+            "/api/v1/users/me",
+            sub="user-1",
+            groups="USER",
+            claims={
+                "email": "seller@example.test",
+                "name": "Seller Example",
+                "phone_number": "+84901234567",
+            },
+        ),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    assert response_body(response) == {
+        "status": 200,
+        "code": "USER_PROFILE_FOUND",
+        "message": "User profile retrieved successfully",
+        "data": {
+            "id": "user-1",
+            "email": "seller@example.test",
+            "fullName": "Seller Example",
+            "phone": "+84901234567",
+            "role": "USER",
+            "status": "ACTIVE",
+            "isPrimaryAdmin": False,
+            "createdAt": None,
+            "updatedAt": None,
+        },
+    }
+
+
+def test_profile_route_requires_authorizer_identity():
+    response = service.handler(
+        rest_event("GET", "/api/v1/users/me"),
+        None,
+    )
+
+    assert response["statusCode"] == 401
+    assert response_body(response)["code"] == "UNAUTHORIZED"
 
 
 def assert_cors_headers(response):

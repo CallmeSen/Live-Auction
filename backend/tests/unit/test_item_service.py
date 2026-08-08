@@ -145,7 +145,9 @@ class FakeS3:
 
 
 def identity(sub="trusted-sub", *groups):
-    return RequestIdentity(sub=sub, groups=frozenset(groups or ("USER",)))
+    return RequestIdentity(
+        sub=sub, groups=frozenset(groups or ("USER",)), claims={}
+    )
 
 
 def session(**overrides):
@@ -880,6 +882,42 @@ def test_presign_accepts_size_exactly_equal_to_runtime_maximum():
         1,
         2048,
     ]
+
+
+def test_presign_accepts_dynamodb_decimal_item_version():
+    s3 = FakeS3()
+
+    result = service._presign_image(
+        identity(),
+        catalog_item(version=Decimal("1")),
+        presign_request(),
+        FakeCatalog(),
+        s3,
+        "la-media",
+        "image-1",
+        2048,
+    )
+
+    assert result["expires_in"] == 300
+    assert s3.presign_calls
+
+
+def test_presign_accepts_dynamodb_decimal_item_sequence_number():
+    s3 = FakeS3()
+
+    result = service._presign_image(
+        identity(),
+        catalog_item(sequence_number=Decimal("3")),
+        presign_request(),
+        FakeCatalog(),
+        s3,
+        "la-media",
+        "image-1",
+        2048,
+    )
+
+    assert result["expires_in"] == 300
+    assert s3.presign_calls
 
 
 def test_presign_caps_large_runtime_limit_at_hard_five_mib_maximum():

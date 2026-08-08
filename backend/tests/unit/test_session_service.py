@@ -63,7 +63,9 @@ class FakeCatalog:
 
 
 def identity(sub="trusted-sub", *groups):
-    return RequestIdentity(sub=sub, groups=frozenset(groups or ("USER",)))
+    return RequestIdentity(
+        sub=sub, groups=frozenset(groups or ("USER",)), claims={}
+    )
 
 
 def rest_event(method, path, body, sub="trusted-sub", groups="USER"):

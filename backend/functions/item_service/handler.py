@@ -4,6 +4,7 @@ import json
 import re
 import time
 import uuid
+from decimal import Decimal
 from functools import lru_cache
 from typing import Any
 
@@ -312,11 +313,9 @@ def _item_update_key(item: dict[str, Any], item_id: str) -> dict[str, str]:
     if item.get("entity_type") != "ITEM" or item.get("item_id") != item_id:
         raise RuntimeError("Catalog item has invalid item metadata")
     session_id = item.get("session_id")
-    sequence = item.get("sequence_number")
+    sequence = _item_sequence(item.get("sequence_number"))
     if not isinstance(session_id, str) or not session_id:
         raise RuntimeError("Catalog item is missing its session identifier")
-    if type(sequence) is not int or not 1 <= sequence <= 999999:
-        raise RuntimeError("Catalog item has an invalid sequence")
     expected_key = item_key(session_id, sequence, item_id)
     if item.get("pk") != expected_key["pk"] or item.get("sk") != expected_key["sk"]:
         raise RuntimeError("Catalog item key does not match item metadata")
@@ -330,6 +329,30 @@ def _image_keys(item: dict[str, Any]) -> list[str]:
     ):
         raise RuntimeError("Catalog item has invalid image metadata")
     return image_keys
+
+
+def _item_sequence(value: Any) -> int:
+    if type(value) is int:
+        sequence = value
+    elif isinstance(value, Decimal) and value.is_finite() and value == value.to_integral_value():
+        sequence = int(value)
+    else:
+        raise RuntimeError("Catalog item has an invalid sequence")
+    if not 1 <= sequence <= 999999:
+        raise RuntimeError("Catalog item has an invalid sequence")
+    return sequence
+
+
+def _item_version(value: Any) -> int:
+    if type(value) is int:
+        version = value
+    elif isinstance(value, Decimal) and value.is_finite() and value == value.to_integral_value():
+        version = int(value)
+    else:
+        raise RuntimeError("Catalog item has an invalid version")
+    if version < 1:
+        raise RuntimeError("Catalog item has an invalid version")
+    return version
 
 
 def _presign_image(
@@ -371,9 +394,7 @@ def _presign_image(
     image_keys = _image_keys(item)
     if len(image_keys) >= _MAX_IMAGES:
         raise Conflict("IMAGE_LIMIT_REACHED", "Item image limit was reached")
-    version = item.get("version")
-    if type(version) is not int:
-        raise RuntimeError("Catalog item has an invalid version")
+    version = _item_version(item.get("version"))
     update_key = _item_update_key(item, item_id)
 
     extension = _IMAGE_EXTENSIONS[body.content_type]
