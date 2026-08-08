@@ -19,6 +19,7 @@ const config: RuntimeConfig = {
   restApiUrl: 'https://rest.example.test/prod',
   restApiKey: 'api-key-secret',
   websocketUrl: 'wss://socket.example.test/prod',
+  mediaBaseUrl: 'https://media.example.test',
 };
 
 function response<T>(

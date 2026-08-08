@@ -2,6 +2,8 @@ import type { ServerlessRestClient } from './restClient';
 import { ServerlessApiError } from './contracts';
 import {
   mapBid,
+  mapCategory,
+  mapCategoryPage,
   mapCreateSessionResult,
   mapCreateItemResult,
   mapCursorPage,
@@ -11,9 +13,11 @@ import {
   mapPutRulesResult,
   mapScheduleSessionResult,
   mapPresignedPost,
+  mapUserProfile,
   type AuctionItem,
   type AuctionSession,
   type BidHistoryItem,
+  type AuctionCategory,
   type CursorPage,
   type CreateSessionResult,
   type CreateItemResult,
@@ -22,8 +26,11 @@ import {
   type SessionStatus,
   type PutRulesResult,
   type ScheduleSessionResult,
+  type UserProfile,
 } from './mappers';
 import type { PresignedPost } from './contracts';
+
+export type { AuctionCategory } from './mappers';
 
 export type CursorInput = { pageSize?: number; cursor?: string };
 
@@ -60,6 +67,7 @@ export type ImageMetadataDto = {
 };
 
 export type CatalogApi = {
+  getProfile(): Promise<UserProfile>;
   listSessions(input: CursorInput & { status?: SessionStatus }): Promise<CursorPage<AuctionSession>>;
   getSession(sessionId: string): Promise<SessionDetail>;
   listItems(input: CursorInput & {
@@ -69,6 +77,7 @@ export type CatalogApi = {
   }): Promise<CursorPage<AuctionItem>>;
   getItem(itemId: string): Promise<AuctionItem>;
   listMyBids(input: CursorInput): Promise<CursorPage<BidHistoryItem>>;
+  listCategories(input: CursorInput): Promise<CursorPage<AuctionCategory>>;
   createSession(payload: CreateSessionDto): Promise<CreateSessionResult>;
   putRules(sessionId: string, payload: RulesDto): Promise<PutRulesResult>;
   listMySessions(input: CursorInput): Promise<CursorPage<AuctionSession>>;
@@ -108,6 +117,11 @@ function forwardPage<T>(
 
 export function createCatalogApi(client: ServerlessRestClient): CatalogApi {
   return {
+    async getProfile() {
+      const envelope = await client.get<unknown>('/api/v1/users/me');
+      return mapUserProfile(envelope.data);
+    },
+
     async listSessions(input) {
       const envelope = await client.get<unknown>('/api/v1/auction-sessions', {
         params: definedParams({
@@ -154,6 +168,24 @@ export function createCatalogApi(client: ServerlessRestClient): CatalogApi {
         }),
       });
       return forwardPage(envelope.data, mapBid, input.cursor);
+    },
+
+    async listCategories(input) {
+      const envelope = await client.get<unknown>('/api/v1/categories', {
+        params: definedParams({
+          pageSize: input.pageSize,
+          paginationToken: input.cursor,
+        }),
+      });
+      const page = mapCategoryPage(envelope.data, mapCategory);
+      if (input.cursor !== undefined && page.nextCursor === input.cursor) {
+        throw new ServerlessApiError(
+          502,
+          'INVALID_RESPONSE_DATA',
+          'The server returned invalid category data.',
+        );
+      }
+      return page;
     },
 
     async createSession(payload) {

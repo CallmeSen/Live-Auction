@@ -18,6 +18,20 @@ export type ItemStatus =
 
 export type BidStatus = 'ACCEPTED' | 'REJECTED';
 
+export type CategoryStatus = 'ACTIVE' | 'INACTIVE';
+
+export type UserProfile = {
+  id: string;
+  email: string;
+  fullName: string;
+  phone: string;
+  role: 'USER' | 'ADMIN';
+  status: 'ACTIVE' | 'BANNED';
+  isPrimaryAdmin: boolean;
+  createdAt: number | null;
+  updatedAt: number | null;
+};
+
 export type CursorPage<T> = {
   items: T[];
   nextCursor: string | null;
@@ -84,6 +98,15 @@ export type BidHistoryItem = {
   createdAt?: number;
 };
 
+export type AuctionCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  status: CategoryStatus;
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type SessionDetail = {
   session: AuctionSession;
   rules: SessionRules | null;
@@ -129,6 +152,9 @@ const ITEM_STATUSES = new Set<ItemStatus>([
   'CANCELLED',
 ]);
 const BID_STATUSES = new Set<BidStatus>(['ACCEPTED', 'REJECTED']);
+const CATEGORY_STATUSES = new Set<CategoryStatus>(['ACTIVE', 'INACTIVE']);
+const USER_ROLES = new Set<UserProfile['role']>(['USER', 'ADMIN']);
+const USER_STATUSES = new Set<UserProfile['status']>(['ACTIVE', 'BANNED']);
 
 function invalidData(): ServerlessApiError {
   return new ServerlessApiError(
@@ -173,6 +199,10 @@ function optionalText(value: unknown): string | undefined {
 
 function optionalNumber(value: unknown): number | undefined {
   return value === undefined ? undefined : number(value);
+}
+
+function nullableNumber(value: unknown): number | null {
+  return value === null ? null : number(value);
 }
 
 function enumValue<T extends string>(value: unknown, allowed: Set<T>): T {
@@ -279,6 +309,50 @@ export function mapBid(value: unknown): BidHistoryItem {
   if (timestamp !== undefined) result.timestamp = timestamp;
   if (createdAt !== undefined) result.createdAt = createdAt;
   return result;
+}
+
+export function mapUserProfile(value: unknown): UserProfile {
+  const dto = record(value);
+  return {
+    id: nonEmptyText(dto.id),
+    email: nonEmptyText(dto.email),
+    fullName: nonEmptyText(dto.fullName),
+    phone: text(dto.phone),
+    role: enumValue(dto.role, USER_ROLES),
+    status: enumValue(dto.status, USER_STATUSES),
+    isPrimaryAdmin: typeof dto.isPrimaryAdmin === 'boolean'
+      ? dto.isPrimaryAdmin
+      : (() => { throw invalidData(); })(),
+    createdAt: nullableNumber(dto.createdAt),
+    updatedAt: nullableNumber(dto.updatedAt),
+  };
+}
+
+export function mapCategory(value: unknown): AuctionCategory {
+  const dto = record(value);
+  return {
+    id: text(dto.category_id),
+    name: nonEmptyText(dto.name),
+    slug: nonEmptyText(dto.slug),
+    status: enumValue(dto.status, CATEGORY_STATUSES),
+    createdAt: integer(dto.created_at),
+    updatedAt: integer(dto.updated_at),
+  };
+}
+
+export function mapCategoryPage<T>(
+  value: unknown,
+  mapper: (item: unknown) => T,
+): CursorPage<T> {
+  const dto = record(value);
+  if (!Array.isArray(dto.items)) throw invalidData();
+  if (dto.next_token !== null && typeof dto.next_token !== 'string') {
+    throw invalidData();
+  }
+  return {
+    items: dto.items.map(mapper),
+    nextCursor: dto.next_token,
+  };
 }
 
 export function mapCursorPage<T>(

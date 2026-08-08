@@ -59,6 +59,34 @@ const itemDto = {
 };
 
 describe('CatalogApi', () => {
+  it('loads the authenticated profile through the serverless API', async () => {
+    const { client, get } = createClient();
+    get.mockResolvedValue(envelope({
+      id: 'user-1',
+      email: 'seller@example.test',
+      fullName: 'Seller Example',
+      phone: '+84901234567',
+      role: 'USER',
+      status: 'ACTIVE',
+      isPrimaryAdmin: false,
+      createdAt: null,
+      updatedAt: null,
+    }));
+
+    await expect(createCatalogApi(client).getProfile()).resolves.toEqual({
+      id: 'user-1',
+      email: 'seller@example.test',
+      fullName: 'Seller Example',
+      phone: '+84901234567',
+      role: 'USER',
+      status: 'ACTIVE',
+      isPrimaryAdmin: false,
+      createdAt: null,
+      updatedAt: null,
+    });
+    expect(get).toHaveBeenCalledWith('/api/v1/users/me');
+  });
+
   it('maps session DTOs and forwards an opaque cursor unchanged', async () => {
     const { client, get } = createClient();
     get.mockResolvedValue(envelope({
@@ -198,6 +226,44 @@ describe('CatalogApi', () => {
         reason: 'LOW_INCREMENT',
       }],
       nextCursor: 'bid-cursor',
+    });
+  });
+
+  it('maps active categories using the category pagination contract', async () => {
+    const { client, get } = createClient();
+    get.mockResolvedValue(envelope({
+      items: [{
+        category_id: 'prints',
+        name: 'Prints',
+        slug: 'prints',
+        status: 'ACTIVE',
+        created_at: 1_700_000_000,
+        updated_at: 1_700_000_100,
+      }],
+      next_token: 'category-cursor',
+    }));
+
+    const result = await createCatalogApi(client).listCategories({
+      pageSize: 100,
+      cursor: 'previous-category-cursor',
+    });
+
+    expect(get).toHaveBeenCalledWith('/api/v1/categories', {
+      params: {
+        pageSize: 100,
+        paginationToken: 'previous-category-cursor',
+      },
+    });
+    expect(result).toEqual({
+      items: [{
+        id: 'prints',
+        name: 'Prints',
+        slug: 'prints',
+        status: 'ACTIVE',
+        createdAt: 1_700_000_000,
+        updatedAt: 1_700_000_100,
+      }],
+      nextCursor: 'category-cursor',
     });
   });
 
