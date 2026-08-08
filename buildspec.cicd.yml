@@ -1,0 +1,53 @@
+version: 0.2
+
+env:
+  variables:
+    FUNCTION_NAME: la-bid-processor
+    ALIAS_NAME: live
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.13
+      nodejs: 22
+    commands:
+      - python -m pip install --disable-pip-version-check -r backend/requirements.txt
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - python -m pytest backend/tests/unit -q
+      - npm ci --prefix frontend --ignore-scripts
+      - npm run typecheck --prefix frontend
+      - npm run lint --prefix frontend
+      - npm run build --prefix frontend
+  build:
+    commands:
+      - set -euo pipefail
+      - rm -rf backend/build/cicd-staging
+      - mkdir -p backend/build/cicd-staging
+      - cp backend/functions/bid_processor/*.py backend/build/cicd-staging/
+      - python backend/tools/deterministic_zip.py backend/build/cicd-staging backend/build/bid_processor.zip
+  post_build:
+    commands:
+      - set -euo pipefail
+      - CURRENT=$(aws lambda get-alias --function-name "$FUNCTION_NAME" --name "$ALIAS_NAME" --query FunctionVersion --output text)
+      - aws lambda update-function-code --function-name "$FUNCTION_NAME" --zip-file fileb://backend/build/bid_processor.zip >/dev/null
+      - aws lambda wait function-updated --function-name "$FUNCTION_NAME"
+      - TARGET=$(aws lambda publish-version --function-name "$FUNCTION_NAME" --query Version --output text)
+      - |
+        cat > appspec.yml <<EOF
+        version: 0.0
+        Resources:
+          - BidProcessor:
+              Type: AWS::Lambda::Function
+              Properties:
+                Name: "$FUNCTION_NAME"
+                Alias: "$ALIAS_NAME"
+                CurrentVersion: "$CURRENT"
+                TargetVersion: "$TARGET"
+        EOF
+      - test -s appspec.yml
+
+artifacts:
+  files:
+    - appspec.yml
