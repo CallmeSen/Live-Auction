@@ -1,794 +1,277 @@
-# Live Auction Backend
+# Live Auction
 
-## Deploy len AWS
+Hệ thống đấu giá realtime gồm frontend người dùng, admin frontend, backend
+FastAPI local và luồng AWS serverless hiện tại.
 
-Neu ban clone repository de chay serverless tren AWS account cua minh, doc
-[AWS Self-Hosted Setup](docs/aws-self-hosted-setup.md) truoc. Tai lieu nay bat
-dau tu clone, AWS profile khong dung root, remote Terraform state, thu tu deploy,
-kiem tra va teardown.
+## Trạng thái hiện tại
 
-Luu y: code AWS hien tai con pin vao account deploy ban dau. Nguoi dung account
-khac khong duoc chay Terraform apply cho den khi portability gate trong tai lieu
-pass.
+Production dùng Cognito, API Gateway, Lambda, DynamoDB, S3, WebSocket API và
+CloudFront. Thiết kế serverless hiện tại không cần tự tạo VPC, 2 AZ, Aurora,
+ECS hoặc ALB cho luồng này.
 
-A FastAPI backend for a live auction application.
+URL đang deploy:
 
-The backend currently supports:
+- User app: https://d1bt4phb59xk5x.cloudfront.net
+- Admin app: https://d109et9edc4f35.cloudfront.net/admin
 
+Không mặc định coi git push là deploy. Cách deploy được kiểm soát trong repo là
+chạy script deploy tương ứng, trừ khi pipeline đã được cấu hình và đã kiểm tra
+rõ stage deploy.
 
-* JWT access token generation
-* MySQL database
-* SQLAlchemy async database access
-* Docker and Docker Compose
-* Swagger API documentation
+## Quy tắc AWS bắt buộc
 
-## Technology Stack
+Mọi lệnh AWS và Terraform phải dùng IAM profile la-admin, không dùng root:
 
-* Python 3.11
-* FastAPI
-* Uvicorn
-* SQLAlchemy Async
-* MySQL 8
-* AsyncMy
-* Pydantic Settings
-* bcrypt
-* PyJWT
-* Docker
-* Docker Compose
+~~~powershell
+$env:AWS_PROFILE = 'la-admin'
+$env:AWS_REGION = 'ap-southeast-1'
 
-# Project Structure
+aws sts get-caller-identity --profile la-admin --region ap-southeast-1
+~~~
 
-```text
-Live-Auction/
-├── .env
-├── .env.example
-├── .gitignore
-├── docker-compose.yml
-└── backend/
-    ├── app/
-    │   ├── core/
-    │   │   ├── config.py
-    │   │   ├── database.py
-    │   │   └── security.py
-    │   └── main.py
-    ├── modules/
-    │   ├── auth/
-    │   │   ├── auth_router.py
-    │   │   ├── auth_schema.py
-    │   │   └── auth_service.py
-    │   └── users/
-    │       ├── user_model.py
-    │       └── user_repository.py
-    ├── .env
-    ├── .env.example
-    ├── .dockerignore
-    ├── Dockerfile
-    └── requirements.txt
-```
+Caller hiện tại phải thuộc account 233376973052 và ARN:
 
+~~~text
+arn:aws:iam::233376973052:user/la-admin
+~~~
 
-Docker Compose starts the backend and MySQL together so developers do not need to install and configure MySQL manually.
+Nếu STS trả root, account khác hoặc token hết hạn thì dừng lại. Không đổi sang
+root để vượt lỗi quyền. Với SSO, đăng nhập lại:
 
-# Requirements
+~~~powershell
+aws sso login --profile la-admin
+~~~
 
-Before running the project, install:
+Không commit access key, secret key, API key, Cognito password, file .env,
+.env.local, Terraform plan hoặc state.
 
-* Git
-* Docker Desktop
-* Docker Compose
-* Python 3.11, only if running without Docker
+## Công cụ cần có
 
-Check Docker:
+- Git
+- AWS CLI v2
+- Terraform >= 1.7
+- Node.js >= 20 và npm
+- Python 3.11+ cho FastAPI local; Python 3.13 khuyến nghị cho AWS build/test
+- Docker Desktop nếu chạy MySQL/FastAPI local hoặc build Lambda package
 
-```powershell
+Cài trên Windows bằng Chocolatey:
+
+~~~powershell
+choco install git terraform awscli nodejs-lts python docker-desktop -y
+~~~
+
+Đóng rồi mở lại PowerShell sau khi cài. Kiểm tra:
+
+~~~powershell
+git --version
+terraform version
+aws --version
+node --version
+npm --version
+python --version
 docker version
-docker compose version
-```
+~~~
 
-Docker Desktop must be running before using Docker commands.
+## Cấu trúc chính
 
-# Environment Configuration
+~~~text
+frontend/          User React app và script deploy CloudFront
+admin-frontend/    Admin React app và script deploy CloudFront
+backend/           FastAPI local, Lambda handlers và package build
+infra/             Terraform theo module/stage
+docs/              Runbook, design và backlog
+~~~
 
-## Root `.env`
+## Chạy frontend local
 
-Create a `.env` file in the same folder as `docker-compose.yml`.
+Frontend hiện tại gọi AWS serverless API, không dùng tài khoản demo trong README
+cũ. Từ thư mục frontend:
 
-```env
-MYSQL_CONTAINER_NAME=auction-mysql
-MYSQL_ROOT_PASSWORD=change_this_root_password
-MYSQL_DATABASE=auction_db
-MYSQL_USER=auction_user
-MYSQL_PASSWORD=change_this_user_password
+~~~powershell
+Set-Location .\frontend
+npm install --registry https://registry.npmjs.org/
+Copy-Item .env.example .env.local
+npm run dev
+~~~
 
-MYSQL_HOST_PORT=3307
-MYSQL_CONTAINER_PORT=3306
+.env.local phải có:
 
-BACKEND_CONTAINER_NAME=auction-backend
-BACKEND_HOST_PORT=8000
-BACKEND_CONTAINER_PORT=8000
+| Biến | Cần điền |
+|---|---|
+| VITE_AWS_REGION | Region Cognito/API, hiện tại ap-southeast-1 |
+| VITE_COGNITO_USER_POOL_ID | Output từ infra/03-identity |
+| VITE_COGNITO_CLIENT_ID | Output từ infra/03-identity |
+| VITE_REST_API_URL | Output stage3_rest_invoke_url từ infra/07-api |
+| VITE_REST_API_KEY | API key lấy process-local khi deploy, không commit |
+| VITE_WS_URL | Output websocket_url từ infra/07-api |
+| VITE_MEDIA_BASE_URL | Output media CloudFront từ infra/09-edge |
 
-DATABASE_URL=mysql+asyncmy://auction_user:change_this_user_password@mysql:3306/auction_db
+Không tự điền giá trị giả vào production. Script deploy tự lấy các output và API
+key nên không cần ghi API key vào source.
 
-JWT_SECRET_KEY=replace_with_a_long_random_secret
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+## Deploy frontend lên AWS
 
-# File uploads
-STORAGE_BACKEND=local
-UPLOAD_DIR=uploads
-MAX_UPLOAD_SIZE_MB=5
+Chạy từ repository root sau khi STS preflight pass:
 
-# Forgot password (SMTP) — see frontend/src/services/MISSING_BACKEND_APIS.md
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=youremail@gmail.com
-SMTP_PASSWORD=your_gmail_app_password
-SMTP_FROM_EMAIL=youremail@gmail.com
-FRONTEND_RESET_PASSWORD_URL=http://localhost:5173/reset-password
-PASSWORD_RESET_TOKEN_EXPIRE_MINUTES=15
-```
+~~~powershell
+aws sts get-caller-identity --profile la-admin --region ap-southeast-1
+.\frontend\deploy.ps1
+.\frontend\deploy.ps1 -Apply
+~~~
 
-Copy from the template:
+Không có -Apply chỉ chạy preflight. Có -Apply sẽ build frontend, sync lên S3 và
+tạo CloudFront invalidation.
 
-```powershell
-copy .env.example .env
-```
+### Các dòng cần điền trong frontend/deploy.ps1
 
-Generate a secure JWT secret:
+| Biến | Giá trị hiện tại | Ý nghĩa |
+|---|---|---|
+| $AwsProfile | la-admin | Tên profile AWS trên máy |
+| $AwsRegion | ap-southeast-1 | Region của resource |
+| $ExpectedAccount | 233376973052 | Account ID để chặn nhầm account |
+| $ExpectedArn | arn:aws:iam::233376973052:user/la-admin | Caller ARN được phép deploy |
 
-```powershell
-python -c "import secrets; print(secrets.token_hex(32))"
-```
+Không điền VITE_REST_API_KEY hoặc password vào script. Script lấy API key từ API
+Gateway trong process hiện tại rồi khôi phục biến môi trường sau khi chạy.
 
-Copy the generated value into:
+Nếu dùng account khác, không chỉ sửa bốn dòng trên. Terraform, remote state,
+IAM ARN, Cognito, CloudFront và integration test hiện còn pin vào account deploy
+hiện tại. Đọc docs/aws-self-hosted-setup.md và hoàn tất portability trước khi
+apply account khác.
 
-```env
-JWT_SECRET_KEY=generated-value
-```
+## Deploy admin frontend
 
-## Local backend `.env`
+~~~powershell
+aws sts get-caller-identity --profile la-admin --region ap-southeast-1
+.\admin-frontend\deploy.ps1
+.\admin-frontend\deploy.ps1 -Apply
+~~~
 
-Create:
+Các biến pin trong admin-frontend/deploy.ps1 có cùng ý nghĩa với user frontend.
+Runtime admin cần VITE_USER_APP_URL là URL CloudFront của user app. Script tự lấy
+giá trị này từ Terraform output.
 
-```text
-backend/.env
-```
+## Terraform serverless
 
-Use this file only when running FastAPI directly on Windows:
+Không chạy terraform apply ở root repository và không apply toàn bộ infra một
+lần. Thứ tự có dependency là:
 
-```env
-DATABASE_URL=mysql+asyncmy://auction_user:change_this_user_password@localhost:3307/auction_db
+~~~text
+03-identity
+04-data
+05-messaging
+06-compute
+06-compute/stage3-control-plane
+07-api
+09-edge
+frontend/deploy.ps1
+admin-frontend/deploy.ps1
+~~~
 
-JWT_SECRET_KEY=replace_with_the_same_or_another_local_secret
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+Mỗi module phải được init, plan và review riêng:
 
-STORAGE_BACKEND=local
-UPLOAD_DIR=uploads
-MAX_UPLOAD_SIZE_MB=5
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=youremail@gmail.com
-SMTP_PASSWORD=your_gmail_app_password
-SMTP_FROM_EMAIL=youremail@gmail.com
-FRONTEND_RESET_PASSWORD_URL=http://localhost:5173/reset-password
-PASSWORD_RESET_TOKEN_EXPIRE_MINUTES=15
-```
+~~~powershell
+$env:AWS_PROFILE = 'la-admin'
+$env:AWS_REGION = 'ap-southeast-1'
+terraform -chdir=infra/07-api init
+terraform -chdir=infra/07-api plan -var="enable_stage3=true" -var="aws_region=ap-southeast-1" -out=stage3.tfplan
+terraform -chdir=infra/07-api show -no-color stage3.tfplan
+terraform -chdir=infra/07-api apply stage3.tfplan
+~~~
 
-Copy from the template:
+Chỉ apply khi plan không có destroy/replace ngoài phạm vi task. Luôn đọc
+summary add/change/destroy trước khi apply. Không xóa state bucket hoặc lock
+table khi chưa hiểu dependency.
 
-```powershell
-copy backend\.env.example backend\.env
-```
+Bootstrap state và quy trình account mới được ghi trong
+docs/aws-self-hosted-setup.md.
 
-The database host is different depending on where FastAPI runs.
+## Chạy backend local bằng Docker
 
-When FastAPI runs inside Docker:
+Backend FastAPI là luồng local/legacy; production serverless chạy Lambda trong
+backend/functions. Từ repository root:
 
-```text
-mysql:3306
-```
+~~~powershell
+Copy-Item .env.example .env
+~~~
 
-When FastAPI runs directly on Windows:
+Trong .env, bắt buộc đổi các giá trị mẫu:
 
-```text
-localhost:3307
-```
+~~~env
+MYSQL_ROOT_PASSWORD=<mat-khau-root-mysql-local>
+MYSQL_PASSWORD=<mat-khau-user-mysql-local>
+JWT_SECRET_KEY=<chuoi-ngau-nhien-dai>
+~~~
 
-# Run the Project with Docker
+SMTP chỉ cần điền nếu cần gửi email reset password:
 
-## Problem 1: Docker must build the FastAPI image
+~~~env
+SMTP_USERNAME=<email>
+SMTP_PASSWORD=<gmail-app-password>
+SMTP_FROM_EMAIL=<email>
+~~~
 
-The backend image needs Python, project files, and packages from `requirements.txt`.
+Không dùng mật khẩu Gmail thật hoặc JWT mẫu. Chạy:
 
-## Solution
-
-From the project root:
-
-```powershell
-cd C:\Users\ADMIN\Documents\dhsg\projects\Live-Auction
-```
-
-Build and start all services:
-
-```powershell
-docker compose up --build -d
-```
-
-Docker will:
-
-```text
-Build backend image
-    ↓
-Create Docker network
-    ↓
-Start MySQL container
-    ↓
-Wait for MySQL health check
-    ↓
-Start FastAPI container
-```
-
-## Check container status
-
-```powershell
+~~~powershell
+docker compose up --build -d mysql backend
 docker compose ps
-```
-
-Expected result:
-
-```text
-auction-mysql      Up (healthy)
-auction-backend    Up
-```
-
-## View backend logs
-
-```powershell
-docker compose logs -f backend
-```
-
-A successful startup contains:
-
-```text
-Application startup complete.
-```
-
-## View MySQL logs
-
-```powershell
-docker compose logs -f mysql
-```
-
-## Open Swagger
-
-Open:
-
-```text
-http://localhost:8000/docs
-```
-
-OpenAPI JSON:
-
-```text
-http://localhost:8000/openapi.json
-```
-
-# Stop the Project
-
-Stop and remove containers and the project network:
-
-```powershell
-docker compose down
-```
-
-This keeps the MySQL volume and database data.
-
-Stop and delete the MySQL volume:
-
-```powershell
-docker compose down -v
-```
-
-Warning:
-
-```text
-docker compose down -v
-```
-
-deletes the database data stored in the Docker volume.
-
-# Restart the Project
-
-Restart all services:
-
-```powershell
-docker compose restart
-```
-
-Restart only the backend:
-
-```powershell
-docker compose restart backend
-```
-
-Restart only MySQL:
-
-```powershell
-docker compose restart mysql
-```
-
-# Rebuild After Dependency Changes
-
-When Python source code changes, Uvicorn reload usually detects the change automatically because the backend folder is mounted into the container.
-
-When `requirements.txt` or `Dockerfile` changes, rebuild the image:
-
-```powershell
-docker compose up --build -d
-```
-
-Force a clean backend rebuild:
-
-```powershell
-docker compose build --no-cache backend
-docker compose up -d
-```
-
-# Recreate Containers After `.env` Changes
-
-Changing `.env` does not automatically update environment variables inside an existing container.
-
-Recreate the containers:
-
-```powershell
-docker compose up -d --force-recreate
-```
-
-Or:
-
-```powershell
-docker compose down
-docker compose up --build -d
-```
-
-# Run the Backend Locally
-
-Use this method when MySQL runs in Docker but FastAPI runs directly on Windows.
-
-## Problem 1: The backend needs an isolated Python environment
-
-Different Python projects may require different package versions.
-
-## Solution
-
-Go to the backend folder:
-
-```powershell
-cd C:\Users\ADMIN\Documents\dhsg\projects\Live-Auction\backend
-```
-
-Create a virtual environment:
-
-```powershell
-python -m venv .venv
-```
-
-Activate it:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-A successful activation shows:
-
-```text
-(.venv) PS ...
-```
-
-## Problem 2: The backend dependencies must be installed
-
-## Solution
-
-Upgrade pip:
-
-```powershell
-python -m pip install --upgrade pip setuptools wheel
-```
-
-Install dependencies:
-
-```powershell
-python -m pip install -r requirements.txt
-```
-
-## Problem 3: MySQL must be running
-
-Start only MySQL through Docker:
-
-```powershell
-cd ..
-docker compose up -d mysql
-```
-
-Check its status:
-
-```powershell
-docker compose ps
-```
-
-## Problem 4: FastAPI must use the local database URL
-
-The local backend must connect through the Windows host port:
-
-```env
-DATABASE_URL=mysql+asyncmy://auction_user:password@localhost:3307/auction_db
-```
-
-This value belongs in:
-
-```text
-backend/.env
-```
-
-## Problem 5: Start FastAPI
-
-Return to the backend folder:
-
-```powershell
-cd backend
-```
-
-Run:
-
-```powershell
-python -m uvicorn app.main:app --reload
-```
-
-Open:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-# API Endpoints
-
-## Register User
-
-```http
-POST /api/v1/auth/register
-```
-
-Example request:
-
-```json
-{
-  "email": "seller@gmail.com",
-  "password": "123456",
-  "fullName": "Nguyen Van A",
-  "phone": "0901234567"
-}
-```
-
-## Login User
-
-```http
-POST /api/v1/auth/login
-```
-
-Example request:
-
-```json
-{
-  "email": "seller@gmail.com",
-  "password": "123456"
-}
-```
-
-Example success response:
-
-```json
-{
-  "status": 200,
-  "code": 1000,
-  "message": "Login successfully",
-  "data": {
-    "accessToken": "jwt-token",
-    "tokenType": "Bearer",
-    "user": {
-      "id": "user-uuid",
-      "email": "seller@gmail.com",
-      "fullName": "Nguyen Van A",
-      "role": "USER",
-      "status": "ACTIVE"
-    }
-  }
-}
-```
-
-# Database Commands
-
-Enter the MySQL container:
-
-```powershell
-docker compose exec mysql mysql -u root -p
-```
-
-Enter the root password from `.env`.
-
-Show databases:
-
-```sql
-SHOW DATABASES;
-```
-
-Select the auction database:
-
-```sql
-USE auction_db;
-```
-
-Show tables:
-
-```sql
-SHOW TABLES;
-```
-
-View users:
-
-```sql
-SELECT id, email, full_name, role, status
-FROM users;
-```
-
-Exit MySQL:
-
-```sql
-exit;
-```
-
-# Useful Docker Commands
-
-Show running containers:
-
-```powershell
-docker ps
-```
-
-Show all containers:
-
-```powershell
-docker ps -a
-```
-
-Show Compose services:
-
-```powershell
-docker compose ps
-```
-
-Show recent backend logs:
-
-```powershell
 docker compose logs --tail=50 backend
-```
+~~~
 
-Follow new backend logs:
+Mở Swagger tại http://localhost:8000/docs. Dừng container nhưng giữ data:
 
-```powershell
-docker compose logs -f --tail=20 backend
-```
+~~~powershell
+docker compose down
+~~~
 
-Enter the backend container:
+Xóa cả volume MySQL chỉ khi chấp nhận mất dữ liệu local:
 
-```powershell
-docker compose exec backend sh
-```
+~~~powershell
+docker compose down -v
+~~~
 
-Check installed Python packages:
+Migration Alembic xem tại backend/alembic/README.
 
-```powershell
-docker compose exec backend python -m pip list
-```
+## Kiểm tra trước khi deploy
 
-Compile-check Python files:
+Frontend:
 
-```powershell
-docker compose exec backend python -m compileall app modules
-```
+~~~powershell
+Set-Location .\frontend
+npm run typecheck
+npm run lint
+npm test
+npm run build
+~~~
 
-Display the final Compose configuration:
+Backend unit test:
 
-```powershell
-docker compose config
-```
+~~~powershell
+Set-Location .\backend
+python -m pytest tests/unit
+~~~
 
-Do not share the output publicly because it may contain environment secrets.
+Terraform/Pester test:
 
-# Common Errors
+~~~powershell
+Set-Location ..
+Invoke-Pester .\infra\tests\stage3-api.Tests.ps1
+Invoke-Pester .\infra\tests\stage4-deploy.Tests.ps1
+~~~
 
-## Container name already exists
+## Tài liệu liên quan
 
-Error:
+- docs/aws-self-hosted-setup.md
+- docs/live-auction-planning/live-auction-master-backlog.md
+- live-auction-full-system-setup-codepipeline.md
+- docs/live-auction-planning/emergency-cost-stop-runbook.md
 
-```text
-The container name "/auction-mysql" is already in use
-```
+## Nguyên tắc không được bỏ qua
 
-Remove the old container:
-
-```powershell
-docker rm -f auction-mysql
-```
-
-Then run:
-
-```powershell
-docker compose up --build -d
-```
-
-## Missing `cryptography`
-
-Error:
-
-```text
-cryptography package is required for caching_sha2_password
-```
-
-Add to `requirements.txt`:
-
-```text
-cryptography
-```
-
-Then rebuild:
-
-```powershell
-docker compose build --no-cache backend
-docker compose up -d
-```
-
-## Missing environment variable
-
-Error:
-
-```text
-database_url
-Field required
-```
-
-Check:
-
-```text
-Live-Auction/.env
-backend/.env
-```
-
-Verify Compose variables:
-
-```powershell
-docker compose config
-```
-
-## Wrong database host
-
-Inside Docker, use:
-
-```env
-DATABASE_URL=mysql+asyncmy://user:password@mysql:3306/auction_db
-```
-
-For local FastAPI, use:
-
-```env
-DATABASE_URL=mysql+asyncmy://user:password@localhost:3307/auction_db
-```
-
-## Port already in use
-
-Check which process uses port `8000`:
-
-```powershell
-netstat -ano | findstr :8000
-```
-
-Do not run local Uvicorn and the Docker backend on port `8000` at the same time.
-
-## Python indentation error
-
-Check Python syntax:
-
-```powershell
-docker compose exec backend python -m compileall app modules
-```
-
-Use four spaces for each Python indentation level.
-
-## Old errors still appear in logs
-
-Docker logs keep historical messages.
-
-View only recent logs:
-
-```powershell
-docker compose logs --tail=30 backend
-```
-
-# Git Ignore
-
-Do not commit environment secrets, virtual environments, or generated Python files.
-
-Example `.gitignore`:
-
-```gitignore
-# Environment variables
-.env
-backend/.env
-
-# Python
-.venv/
-backend/.venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# IDE
-.vscode/
-.idea/
-
-# Testing and cache
-.pytest_cache/
-.mypy_cache/
-```
-
-Commit example configuration files instead:
-
-```text
-.env.example
-backend/.env.example
-```
-
-# Complete Docker Execution Flow
-
-```text
-Clone the project
-    ↓
-Create root .env
-    ↓
-Configure MySQL and JWT values
-    ↓
-Start Docker Desktop
-    ↓
-Run docker compose up --build -d
-    ↓
-Docker starts MySQL
-    ↓
-MySQL becomes healthy
-    ↓
-Docker starts FastAPI
-    ↓
-SQLAlchemy connects to auction_db
-    ↓
-FastAPI application starts
-    ↓
-Open http://localhost:8000/docs
-```
-
-# Quick Start
-
-```powershell
-cd C:\Users\ADMIN\Documents\dhsg\projects\Live-Auction
-
-docker compose up --build -d
-
-docker compose ps
-
-docker compose logs --tail=30 backend
-```
-
-Open:
-
-```text
-http://localhost:8000/docs
-```
+- Không dùng root cho AWS CLI, Terraform hoặc deploy.
+- Không gửi credential, API key, token hoặc password vào chat/Git.
+- Luôn đọc Terraform plan trước apply.
+- Không chạy destroy nếu chưa có plan destroy được review.
+- Không coi git push là deploy thành công nếu chưa có pipeline evidence hoặc
+  chưa chạy script deploy.

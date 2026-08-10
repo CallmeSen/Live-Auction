@@ -600,10 +600,10 @@ def test_get_session_strongly_reads_meta_rules_and_consumes_item_pages():
         ],
         query_responses=[
             {
-                "Items": [item_record("i2", 2)],
+                "Items": [item_record("i2", 2, status="SOLD")],
                 "LastEvaluatedKey": first_page_key,
             },
-            {"Items": [item_record("i1", 1)]},
+            {"Items": [item_record("i1", 1, status="SOLD")]},
         ],
     )
 
@@ -656,6 +656,55 @@ def test_get_session_strongly_reads_meta_rules_and_consumes_item_pages():
     assert all("seller_sub" not in item for item in result["items"])
     assert all("pk" not in item for item in result["items"])
     assert catalog.scan_calls == []
+
+
+def test_get_session_hides_waiting_items_from_non_owner():
+    catalog = FakeTable(
+        get_responses=[
+            {"Item": session_record()},
+            {"Item": rules_record()},
+        ],
+        query_responses=[
+            {
+                "Items": [
+                    item_record("i1", 1, status="WAITING"),
+                    item_record("i2", 2, status="SOLD"),
+                ]
+            }
+        ],
+    )
+
+    result = service._get_session(
+        catalog,
+        FakeTable(),
+        identity("bidder-sub", "BIDDER"),
+        "s1",
+    )
+
+    assert [item["item_id"] for item in result["items"]] == ["i2"]
+
+
+@pytest.mark.parametrize(
+    "viewer",
+    [
+        identity("seller-sub", "SELLER"),
+        identity("admin-sub", "ADMIN"),
+    ],
+)
+def test_get_session_keeps_waiting_items_for_owner_or_admin(viewer):
+    catalog = FakeTable(
+        get_responses=[
+            {"Item": session_record()},
+            {"Item": rules_record()},
+        ],
+        query_responses=[
+            {"Items": [item_record("i1", 1, status="WAITING")]}
+        ],
+    )
+
+    result = service._get_session(catalog, FakeTable(), viewer, "s1")
+
+    assert [item["item_id"] for item in result["items"]] == ["i1"]
 
 
 def test_get_session_enriches_a_live_item_from_the_state_table():

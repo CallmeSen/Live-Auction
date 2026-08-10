@@ -10,15 +10,20 @@ $document.PreserveWhitespace = $true
 $document.Load($resolvedPath)
 
 $original = $document.SelectSingleNode('/mxfile/diagram[@name="Original - Before Review"]')
+$page01 = $document.SelectSingleNode('/mxfile/diagram[@name="01 - Complete AWS System Design"]')
 $catalog = $document.SelectSingleNode('/mxfile/diagram[@name="06 - AWS PNG Icon Catalog"]')
 if ($null -eq $original) {
     throw 'Original - Before Review diagram page was not found.'
+}
+if ($null -eq $page01) {
+    throw '01 - Complete AWS System Design diagram page was not found.'
 }
 if ($null -eq $catalog) {
     throw '06 - AWS PNG Icon Catalog diagram page was not found.'
 }
 
 $cells = $original.SelectSingleNode('mxGraphModel/root')
+$page01Cells = $page01.SelectSingleNode('mxGraphModel/root')
 $catalogCells = $catalog.SelectSingleNode('mxGraphModel/root')
 
 function Get-Cell([string]$Id) {
@@ -48,6 +53,14 @@ function Set-CellValue([string]$Id, [string]$Value) {
 
 function Set-CellStyle([string]$Id, [string]$Style) {
     (Get-Cell $Id).SetAttribute('style', $Style)
+}
+
+function Set-Page01CellValue([string]$Id, [string]$Value) {
+    $cell = $page01Cells.SelectSingleNode("mxCell[@id='$Id']")
+    if ($null -eq $cell) {
+        throw "Page 01 cell was not found: $Id"
+    }
+    $cell.SetAttribute('value', $Value)
 }
 
 function Set-IconCell {
@@ -305,6 +318,46 @@ Set-MarkerNearCell 'Hf92xAZXMRnNjoGPw4W6-159' 'M5' 'Hf92xAZXMRnNjoGPw4W6-127' 'l
 Set-MarkerNearCell 'Hf92xAZXMRnNjoGPw4W6-160' 'M6' 'Hf92xAZXMRnNjoGPw4W6-108' 'left'
 Set-MarkerNearCell 'Hf92xAZXMRnNjoGPw4W6-161' 'M7' 'Hf92xAZXMRnNjoGPw4W6-109' 'left'
 Set-MarkerNearCell 'Hf92xAZXMRnNjoGPw4W6-162' 'M8' 'Hf92xAZXMRnNjoGPw4W6-110' 'left'
+
+# Page 01 is the copy used for the high-level architecture view. Keep only
+# the AWS service name under each icon so the page stays readable at a glance.
+$page01ServiceLabels = @{
+    'Hf92xAZXMRnNjoGPw4W6-12' = 'CloudFront'
+    'Hf92xAZXMRnNjoGPw4W6-32' = 'Lambda'
+    'Hf92xAZXMRnNjoGPw4W6-34' = 'S3'
+    'Hf92xAZXMRnNjoGPw4W6-40' = 'CodeBuild'
+    'Hf92xAZXMRnNjoGPw4W6-41' = 'S3'
+    'Hf92xAZXMRnNjoGPw4W6-52' = 'Cognito'
+    'Hf92xAZXMRnNjoGPw4W6-53' = 'Lambda'
+    'Hf92xAZXMRnNjoGPw4W6-54' = 'Lambda'
+    'Hf92xAZXMRnNjoGPw4W6-55' = 'API Gateway'
+    'Hf92xAZXMRnNjoGPw4W6-71' = 'Lambda'
+    'Hf92xAZXMRnNjoGPw4W6-74' = 'API Gateway'
+    'Hf92xAZXMRnNjoGPw4W6-75' = 'Lambda'
+    'Hf92xAZXMRnNjoGPw4W6-76' = 'Lambda'
+    'Hf92xAZXMRnNjoGPw4W6-77' = 'Lambda'
+    'Hf92xAZXMRnNjoGPw4W6-82' = 'S3'
+    'Hf92xAZXMRnNjoGPw4W6-88' = 'EventBridge'
+    'Hf92xAZXMRnNjoGPw4W6-90' = 'DynamoDB'
+    'Hf92xAZXMRnNjoGPw4W6-91' = 'SQS'
+    'Hf92xAZXMRnNjoGPw4W6-95' = 'DynamoDB'
+    'Hf92xAZXMRnNjoGPw4W6-98' = 'DynamoDB'
+    'Hf92xAZXMRnNjoGPw4W6-100' = 'DynamoDB'
+    'Hf92xAZXMRnNjoGPw4W6-103' = 'S3'
+    'Hf92xAZXMRnNjoGPw4W6-107' = 'CloudWatch'
+    'Hf92xAZXMRnNjoGPw4W6-108' = 'S3'
+    'Hf92xAZXMRnNjoGPw4W6-109' = 'S3'
+    'Hf92xAZXMRnNjoGPw4W6-110' = 'AWS Backup'
+    'Hf92xAZXMRnNjoGPw4W6-112' = 'IAM Access Analyzer'
+    'Hf92xAZXMRnNjoGPw4W6-113' = 'CloudTrail'
+    'Hf92xAZXMRnNjoGPw4W6-114' = 'IAM'
+    'Hf92xAZXMRnNjoGPw4W6-125' = 'SNS'
+    'Hf92xAZXMRnNjoGPw4W6-126' = 'CloudWatch'
+    'Hf92xAZXMRnNjoGPw4W6-127' = 'AWS Config'
+}
+foreach ($entry in $page01ServiceLabels.GetEnumerator()) {
+    Set-Page01CellValue $entry.Key $entry.Value
+}
 
 $document.Save($resolvedPath)
 Write-Output 'Updated Original - Before Review with deployed AWS resources and page 6 embedded icons.'

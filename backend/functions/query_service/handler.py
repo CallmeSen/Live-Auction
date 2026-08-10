@@ -468,6 +468,10 @@ def _get_session(
         and "ADMIN" not in identity.groups
     ):
         raise NotFound("SESSION_NOT_FOUND", "Session was not found")
+    can_view_private_items = (
+        identity.sub == session.get("seller_sub")
+        or "ADMIN" in identity.groups
+    )
     rules = catalog.get_item(
         Key=rules_key(session_id),
         ConsistentRead=True,
@@ -504,6 +508,8 @@ def _get_session(
     items.sort(key=lambda item: item.get("sequence_number", 0))
     item_views = []
     for item in items:
+        if item.get("status") == _ITEM_PRIVATE_STATUS and not can_view_private_items:
+            continue
         item_view = _item_view(item)
         if item.get("status") == "LIVE":
             state = state_table.get_item(

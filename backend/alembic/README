@@ -1,1 +1,133 @@
-Generic single-database configuration.
+# Alembic migrations
+
+Thư mục này chứa migration schema MySQL cho FastAPI local. Alembic đọc
+DATABASE_URL từ backend/.env thông qua backend/alembic/env.py; giá trị trong
+alembic.ini chỉ là fallback cấu hình.
+
+## Chuẩn bị
+
+Chạy từ thư mục backend:
+
+~~~powershell
+Set-Location .\backend
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+~~~
+
+Nếu chưa có virtual environment:
+
+~~~powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+~~~
+
+backend/.env phải có database URL hợp lệ:
+
+~~~env
+DATABASE_URL=mysql+asyncmy://auction_user:<password>@localhost:3307/auction_db
+~~~
+
+Khi chạy Alembic bên trong backend container, host database là mysql và port
+là 3306:
+
+~~~powershell
+docker compose exec backend alembic upgrade head
+~~~
+
+Khi chạy Alembic trực tiếp trên Windows, host database thường là localhost và
+port 3307:
+
+~~~powershell
+Set-Location .\backend
+alembic upgrade head
+~~~
+
+## Lệnh thường dùng
+
+Xem revision hiện tại:
+
+~~~powershell
+alembic current
+~~~
+
+Nâng database lên revision mới nhất:
+
+~~~powershell
+alembic upgrade head
+~~~
+
+Nâng một revision:
+
+~~~powershell
+alembic upgrade +1
+~~~
+
+Hạ một revision:
+
+~~~powershell
+alembic downgrade -1
+~~~
+
+Xem lịch sử:
+
+~~~powershell
+alembic history
+~~~
+
+Tạo migration sau khi thay đổi model:
+
+~~~powershell
+alembic revision --autogenerate -m "describe schema change"
+~~~
+
+Autogenerate chỉ là bản nháp. Phải đọc file migration, kiểm tra thao tác
+drop/rename/index/nullable và test trên database local trước khi apply production.
+
+## Quy tắc migration
+
+- Không sửa migration đã apply trên môi trường dùng chung.
+- Không xóa file revision cũ để sửa lỗi lịch sử.
+- Một migration phải có cả upgrade và downgrade hợp lý.
+- Không chạy downgrade production nếu chưa có backup và plan được review.
+- Không ghi password vào alembic.ini hoặc commit backend/.env.
+- Chạy migration trước khi khởi động code yêu cầu schema mới.
+
+Kiểm tra revision hiện có:
+
+~~~powershell
+Get-ChildItem .\alembic\versions
+~~~
+
+## Lỗi thường gặp
+
+### Can't connect to MySQL
+
+Kiểm tra container:
+
+~~~powershell
+docker compose ps mysql
+docker compose logs --tail=50 mysql
+~~~
+
+Nhớ phân biệt:
+
+- Uvicorn/Alembic trên host: localhost:3307
+- Uvicorn/Alembic trong Docker: mysql:3306
+
+### database_url is required
+
+Tạo backend/.env từ backend/.env.example và điền DATABASE_URL cùng
+JWT_SECRET_KEY. File này được đọc bởi backend/app/core/config.py.
+
+### Revision không tồn tại
+
+Đảm bảo đang chạy lệnh từ thư mục backend, không phải từ repository root, và
+kiểm tra alembic/versions có đầy đủ file.
+
+## AWS note
+
+Alembic này dành cho FastAPI/MySQL local. Luồng AWS serverless Stage 3 dùng
+DynamoDB và không chạy Alembic để tạo schema runtime. Mọi AWS CLI/Terraform vẫn
+phải dùng profile la-admin và không dùng root.
