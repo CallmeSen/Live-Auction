@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CatalogApi } from '../../../services/serverless/catalogApi';
 
 vi.mock('../../../hooks/useAuth', () => ({
@@ -20,7 +20,14 @@ vi.mock('../../../config/runtime', () => ({
   },
 }));
 
+vi.mock('../../auction-room/useAuctionRoom', () => ({
+  useAuctionRoom: vi.fn(),
+}));
+
 import AuctionSessionDetailPage from './AuctionSessionDetailPage';
+import { useAuctionRoom } from '../../auction-room/useAuctionRoom';
+
+const roomHook = vi.mocked(useAuctionRoom);
 
 function createApi() {
   return {
@@ -81,6 +88,10 @@ function renderPage(api: CatalogApi) {
 }
 
 describe('AuctionSessionDetailPage', () => {
+  beforeEach(() => {
+    roomHook.mockReset();
+  });
+
   it('renders the serverless session, rules, and item list as read-only data', async () => {
     const api = createApi();
     api.getSession = vi.fn().mockResolvedValue(detail);
@@ -98,6 +109,47 @@ describe('AuctionSessionDetailPage', () => {
     expect(screen.queryByRole('button', {
       name: /duyệt|từ chối|hủy|xóa/i,
     })).not.toBeInTheDocument();
+  });
+
+  it('renders the realtime current price for a live item', async () => {
+    const liveItem = {
+      ...detail.items[0],
+      status: 'LIVE' as const,
+      live: {
+        status: 'LIVE' as const,
+        currentPrice: '110.00',
+        endTime: 1_800_000_000,
+        extensionCount: 0,
+      },
+    };
+    const api = createApi();
+    api.getSession = vi.fn().mockResolvedValue({
+      ...detail,
+      session: { ...detail.session, status: 'LIVE' as const },
+      items: [liveItem],
+    });
+    roomHook.mockReturnValue({
+      connectionState: 'joined',
+      item: liveItem,
+      currentPrice: '125.00',
+      endTime: 1_800_000_000,
+      highestBidderAlias: 'Bidder #1',
+      bidderAlias: null,
+      extensionCount: 1,
+      lastEvent: null,
+      retry: vi.fn(),
+      sendBid: vi.fn(),
+    });
+
+    renderPage(api);
+
+    expect(await screen.findByRole('heading', { name: 'Evening sale' })).toBeVisible();
+    expect(screen.getByText('100.00')).toBeVisible();
+    expect(screen.getByText('125.00')).toBeVisible();
+    expect(roomHook).toHaveBeenCalledWith({
+      itemId: 'item-1',
+      catalogApi: api,
+    });
   });
 
   it('renders the first catalog image for an item in the session', async () => {

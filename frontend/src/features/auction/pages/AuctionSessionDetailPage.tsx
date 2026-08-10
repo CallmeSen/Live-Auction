@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { CatalogApi } from '../../../services/serverless/catalogApi';
-import type { SessionDetail, SessionStatus } from '../../../services/serverless/mappers';
+import type {
+  AuctionItem,
+  SessionDetail,
+  SessionStatus,
+} from '../../../services/serverless/mappers';
 import { runtimeConfig } from '../../../config/runtime';
 import { mediaUrlForKey } from '../../../services/serverless/media';
 import { useCatalogApi } from '../../../services/serverless/useCatalogApi';
+import { useAuctionRoom } from '../../auction-room/useAuctionRoom';
 
 const statusLabel: Record<SessionStatus, string> = {
   DRAFT: 'Bản nháp',
@@ -23,6 +28,25 @@ function formatEpoch(value: number | undefined): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value * 1000));
+}
+
+function SessionItemCurrentPrice({
+  item,
+  catalogApi,
+}: {
+  item: AuctionItem;
+  catalogApi: CatalogApi;
+}) {
+  const room = useAuctionRoom({
+    itemId: item.id,
+    catalogApi,
+  });
+  const currentPrice = room.currentPrice
+    ?? item.live?.currentPrice
+    ?? item.finalPrice
+    ?? item.startPrice;
+
+  return <span>{currentPrice}</span>;
 }
 
 type AuctionSessionDetailPageProps = {
@@ -181,9 +205,22 @@ export default function AuctionSessionDetailPage({
                     <p className="mt-3 line-clamp-2 flex-1 text-sm leading-6 text-[var(--color-text-muted)]">
                       {item.description || 'Vật phẩm chưa có mô tả.'}
                     </p>
-                    <p className="mt-5 border-t border-[var(--color-border)] pt-4 text-sm">
-                      Giá khởi điểm: <span className="font-display text-lg">{item.startPrice}</span>
-                    </p>
+                    <dl className="mt-5 grid gap-3 border-t border-[var(--color-border)] pt-4 text-sm sm:grid-cols-2">
+                      <div>
+                        <dt className="text-[var(--color-text-dim)]">Giá khởi điểm</dt>
+                        <dd className="mt-1 font-display text-lg">{item.startPrice}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[var(--color-text-dim)]">Giá hiện tại</dt>
+                        <dd className="mt-1 font-display text-lg text-[var(--color-primary)]">
+                          {item.status === 'LIVE' && item.live ? (
+                            <SessionItemCurrentPrice item={item} catalogApi={api} />
+                          ) : (
+                            item.finalPrice ?? item.startPrice
+                          )}
+                        </dd>
+                      </div>
+                    </dl>
                     <Link
                       to={`/auction-items/${encodeURIComponent(item.id)}`}
                       className="mt-5 rounded-md border border-[var(--color-primary)]/50 px-4 py-2.5 text-center text-sm text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10"
