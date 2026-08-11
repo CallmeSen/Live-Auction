@@ -260,12 +260,6 @@ Invoke-Pester .\infra\tests\stage3-api.Tests.ps1
 Invoke-Pester .\infra\tests\stage4-deploy.Tests.ps1
 ~~~
 
-## Tài liệu liên quan
-
-- docs/aws-self-hosted-setup.md
-- docs/live-auction-planning/live-auction-master-backlog.md
-- live-auction-full-system-setup-codepipeline.md
-- docs/live-auction-planning/emergency-cost-stop-runbook.md
 
 ## Nguyên tắc không được bỏ qua
 
